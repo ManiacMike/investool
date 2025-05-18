@@ -177,6 +177,12 @@ func FlagsCheckerOptions() []cli.Flag {
 			Usage:       "最低股息率",
 			DefaultText: fmt.Sprint(core.DefaultCheckerOptions.MinGxl),
 		},
+		&cli.StringFlag{
+			Name:        "checker.output_format",
+			Value:       core.DefaultCheckerOptions.OutputFormat,
+			Usage:       "输出格式 (table 或 markdown)",
+			DefaultText: core.DefaultCheckerOptions.OutputFormat,
+		},
 	}
 }
 
@@ -207,6 +213,7 @@ func NewCheckerOptions(c *cli.Context) core.CheckerOptions {
 	checkerOpts.IsCheckRevGrow = c.Bool("checker.is_check_rev_grow")
 	checkerOpts.IsCheckNetprofitGrow = c.Bool("checker.is_check_netprofit_grow")
 	checkerOpts.MinGxl = c.Float64("checker.min_gxl")
+	checkerOpts.OutputFormat = c.String("checker.output_format")
 	return checkerOpts
 }
 

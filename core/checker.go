@@ -67,6 +67,8 @@ type CheckerOptions struct {
 	IsCheckNetprofitGrow bool `json:"is_check_netprofit_grow" form:"checker_is_check_netprofit_grow"`
 	// 最低股息率
 	MinGxl float64 `json:"min_gxl"                 form:"checker_min_gxl"`
+	// 输出格式: table或markdown
+	OutputFormat string `json:"output_format"           form:"checker_output_format"`
 }
 
 // DefaultCheckerOptions 默认检测值
@@ -95,6 +97,7 @@ var DefaultCheckerOptions = CheckerOptions{
 	IsCheckRevGrow:       true,
 	IsCheckNetprofitGrow: true,
 	MinGxl:               0.0,
+	OutputFormat:         "table",
 }
 
 // Checker 检测器实例
@@ -714,7 +717,7 @@ func (c Checker) CheckFundStocks(ctx context.Context, fund *models.Fund) (result
 	return
 }
 
-//FundStocksSimilarity 基金持仓相似度
+// FundStocksSimilarity 基金持仓相似度
 type FundStocksSimilarity struct {
 	Fund *models.Fund `json:"fund"`
 	// 1:完全相同 0:完全不同

@@ -27,11 +27,21 @@ func Check(ctx context.Context, keywords []string, opts core.CheckerOptions) (re
 		checkResult, ok := checker.CheckFundamentals(ctx, stock)
 		k := fmt.Sprintf("%s-%s", stock.BaseInfo.SecurityNameAbbr, stock.BaseInfo.Secucode)
 		results[k] = checkResult
-		table := newTable()
-		if !ok {
-			renderTable(table, checkResult, []string{k, "FAILED"})
+
+		if opts.OutputFormat == "markdown" {
+			if !ok {
+				renderMarkdown(checkResult, []string{k, "FAILED"})
+			} else {
+				renderMarkdown(checkResult, []string{k, "OK"})
+			}
 		} else {
-			renderTable(table, checkResult, []string{k, "OK"})
+			// 默认使用表格输出
+			table := newTable()
+			if !ok {
+				renderTable(table, checkResult, []string{k, "FAILED"})
+			} else {
+				renderTable(table, checkResult, []string{k, "OK"})
+			}
 		}
 	}
 	return results, nil
@@ -73,4 +83,32 @@ func renderTable(table *tablewriter.Table, checkResult core.CheckResult, footers
 		}
 	}
 	table.Render()
+}
+
+// renderMarkdown 以Markdown格式输出检测结果
+func renderMarkdown(checkResult core.CheckResult, footers []string) {
+	// 输出标题
+	fmt.Printf("## %s 检测结果: %s\n\n", footers[0], footers[1])
+
+	// 输出表格头部
+	fmt.Println("| 检测指标 | 检测结果 |")
+	fmt.Println("| --- | --- |")
+
+	// 输出表格内容
+	for k, m := range checkResult {
+		desc := strings.ReplaceAll(m["desc"], "<br/>", "<br>")
+		if m["ok"] == "false" {
+			// 失败项目使用高亮标记
+			fmt.Printf("| **%s** | **%s** |\n", k, desc)
+		} else {
+			fmt.Printf("| %s | %s |\n", k, desc)
+		}
+	}
+
+	// 输出结果
+	if footers[1] == "OK" {
+		fmt.Printf("\n**检测结果: %s** ✅\n\n", footers[1])
+	} else {
+		fmt.Printf("\n**检测结果: %s** ❌\n\n", footers[1])
+	}
 }
