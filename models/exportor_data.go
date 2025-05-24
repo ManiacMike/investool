@@ -128,6 +128,10 @@ type ExportorData struct {
 	FreeHoldersTop10 string `json:"free_holders_top_10"       csv:"十大流通股东"`
 	// 主力净流入
 	MainMoneyNetInflows string `json:"main_money_net_inflows"    csv:"主力资金净流入"`
+	// 巴菲特评分
+	BuffettScore float64 `json:"buffett_score" csv:"巴菲特评分"`
+	// 巴菲特评分描述
+	BuffettScoreDesc string `json:"buffett_score_desc" csv:"巴菲特评分描述"`
 }
 
 // GetHeaderValueMap 获取以 csv tag 为 key 的 Data map
@@ -248,6 +252,8 @@ func NewExportorData(ctx context.Context, stock Stock) ExportorData {
 		NetcashFree:         goutils.YiWanString(stock.NetcashFree),
 		FreeHoldersTop10:    stock.FreeHoldersTop10.String(),
 		MainMoneyNetInflows: stock.MainMoneyNetInflows.String(),
+		BuffettScore:        stock.BuffettScore.TotalScore,
+		BuffettScoreDesc:    stock.BuffettScore.ScoreDescription,
 	}
 }
 

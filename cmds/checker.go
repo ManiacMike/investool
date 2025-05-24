@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/axiaoxin-com/investool/core"
+	"github.com/axiaoxin-com/investool/models"
 	"github.com/axiaoxin-com/logging"
 	"github.com/olekukonko/tablewriter"
 )
@@ -30,17 +31,17 @@ func Check(ctx context.Context, keywords []string, opts core.CheckerOptions) (re
 
 		if opts.OutputFormat == "markdown" {
 			if !ok {
-				renderMarkdown(checkResult, []string{k, "FAILED"})
+				renderMarkdown(checkResult, []string{k, "FAILED"}, stock)
 			} else {
-				renderMarkdown(checkResult, []string{k, "OK"})
+				renderMarkdown(checkResult, []string{k, "OK"}, stock)
 			}
 		} else {
 			// 默认使用表格输出
 			table := newTable()
 			if !ok {
-				renderTable(table, checkResult, []string{k, "FAILED"})
+				renderTable(table, checkResult, []string{k, "FAILED"}, stock)
 			} else {
-				renderTable(table, checkResult, []string{k, "OK"})
+				renderTable(table, checkResult, []string{k, "OK"}, stock)
 			}
 		}
 	}
@@ -60,7 +61,7 @@ func newTable() *tablewriter.Table {
 	return table
 }
 
-func renderTable(table *tablewriter.Table, checkResult core.CheckResult, footers []string) {
+func renderTable(table *tablewriter.Table, checkResult core.CheckResult, footers []string, stock models.Stock) {
 	footerValColor := tablewriter.FgRedColor
 	if footers[1] == "OK" {
 		footerValColor = tablewriter.FgGreenColor
@@ -82,11 +83,18 @@ func renderTable(table *tablewriter.Table, checkResult core.CheckResult, footers
 			table.Append(row)
 		}
 	}
+
+	// 添加巴菲特评分
+	buffettRow := []string{"巴菲特评分", fmt.Sprintf("总分: %.1f分\n%s",
+		stock.BuffettScore.TotalScore,
+		strings.ReplaceAll(stock.BuffettScore.ScoreDescription, "<br/>", "\n"))}
+	table.Append(buffettRow)
+
 	table.Render()
 }
 
 // renderMarkdown 以Markdown格式输出检测结果
-func renderMarkdown(checkResult core.CheckResult, footers []string) {
+func renderMarkdown(checkResult core.CheckResult, footers []string, stock models.Stock) {
 	// 输出标题
 	fmt.Printf("## %s 检测结果: %s\n\n", footers[0], footers[1])
 
@@ -104,6 +112,12 @@ func renderMarkdown(checkResult core.CheckResult, footers []string) {
 			fmt.Printf("| %s | %s |\n", k, desc)
 		}
 	}
+
+	// 添加巴菲特评分
+	buffettDesc := strings.ReplaceAll(stock.BuffettScore.ScoreDescription, "\n", "<br>")
+	fmt.Printf("| 巴菲特评分 | 总分: %.1f分<br>%s |\n",
+		stock.BuffettScore.TotalScore,
+		buffettDesc)
 
 	// 输出结果
 	if footers[1] == "OK" {

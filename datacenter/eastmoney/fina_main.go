@@ -451,23 +451,40 @@ func (e EastMoney) QueryHistoricalFinaMainData(ctx context.Context, secuCode str
 	beginTime := time.Now()
 	apiurl, err := goutils.NewHTTPGetURLWithQueryString(ctx, apiurl, params)
 	if err != nil {
+		logging.Error(ctx, "构建URL失败", zap.Error(err))
 		return nil, err
 	}
+	logging.Info(ctx, "完整API URL", zap.String("url", apiurl))
+
 	resp := RespFinaMainData{}
 	err = goutils.HTTPGET(ctx, e.HTTPClient, apiurl, nil, &resp)
 	latency := time.Now().Sub(beginTime).Milliseconds()
-	logging.Debug(
-		ctx,
-		"EastMoney QueryHistoricalFinaMainData "+apiurl+" end",
-		zap.Int64("latency(ms)", latency),
-		// zap.Any("resp", resp),
-	)
+
 	if err != nil {
+		logging.Error(ctx, "HTTP请求失败", zap.Error(err))
 		return nil, err
 	}
+
+	logging.Info(ctx, "API响应",
+		zap.Int("code", resp.Code),
+		zap.String("message", resp.Message),
+		zap.Bool("success", resp.Success),
+		zap.Int("data_length", len(resp.Result.Data)),
+		zap.Int64("latency_ms", latency))
+
 	if resp.Code != 0 {
+		logging.Error(ctx, "API返回错误",
+			zap.Int("code", resp.Code),
+			zap.String("message", resp.Message))
 		return nil, fmt.Errorf("%s %#v", secuCode, resp)
 	}
+
+	if len(resp.Result.Data) > 0 {
+		logging.Info(ctx, "获取到的数据",
+			zap.Int("总条数", len(resp.Result.Data)),
+			zap.String("最新报告期", resp.Result.Data[0].ReportDate))
+	}
+
 	return resp.Result.Data, nil
 }
 

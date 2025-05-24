@@ -170,7 +170,7 @@ func (c Checker) CheckFundamentals(ctx context.Context, stock models.Stock) (res
 			c.Options.CheckYears,
 			eastmoney.FinaReportTypeYear,
 		) {
-			desc = fmt.Sprintf("ROE%d年内未逐年递增:<br/>%+v", c.Options.CheckYears, roeList)
+			desc = fmt.Sprintf("ROE%d年内未逐年递增:\n%+v", c.Options.CheckYears, roeList)
 			ok = false
 			itemOK = false
 		}

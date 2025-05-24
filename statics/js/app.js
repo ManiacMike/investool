@@ -268,6 +268,12 @@ $(document).ready(function () {
                 '<td class="hide st_54">' +
                 stock.main_money_net_inflows +
                 "</td>" +
+                '<td class="hide st_55">' +
+                stock.buffett_score.total_score.toFixed(1) +
+                "</td>" +
+                '<td class="hide st_56">' +
+                stock.buffett_score.score_description.replace(/\n/g, "<br/>") +
+                "</td>" +
                 "</tr>"
             );
           });
