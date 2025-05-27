@@ -71,6 +71,12 @@ func renderTable(table *tablewriter.Table, checkResult core.CheckResult, footers
 		tablewriter.Colors{tablewriter.Bold, footerValColor},
 		tablewriter.Colors{tablewriter.Bold, footerValColor},
 	)
+	table.SetRowLine(true)
+	table.SetAutoWrapText(true)
+	table.SetColWidth(80)
+	table.SetColumnAlignment([]int{tablewriter.ALIGN_LEFT, tablewriter.ALIGN_LEFT})
+	table.SetHeaderAlignment(tablewriter.ALIGN_LEFT)
+
 	for k, m := range checkResult {
 		row := []string{k, strings.ReplaceAll(m["desc"], "<br/>", "\n")}
 
@@ -85,9 +91,11 @@ func renderTable(table *tablewriter.Table, checkResult core.CheckResult, footers
 	}
 
 	// 添加巴菲特评分
+	buffettDesc := strings.ReplaceAll(stock.BuffettScore.ScoreDescription, "<br/>", "\n")
+	buffettDesc = strings.ReplaceAll(buffettDesc, "  ", " ")
 	buffettRow := []string{"巴菲特评分", fmt.Sprintf("总分: %.1f分\n%s",
 		stock.BuffettScore.TotalScore,
-		strings.ReplaceAll(stock.BuffettScore.ScoreDescription, "<br/>", "\n"))}
+		buffettDesc)}
 	table.Append(buffettRow)
 
 	table.Render()

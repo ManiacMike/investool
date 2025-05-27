@@ -498,7 +498,7 @@ func (s *Stock) calculateBuffettScore(ctx context.Context) BuffettScore {
 	s.calculateRepurchaseScore(ctx)
 
 	// 计算总分
-	totalScore := s.BuffettScore.ROEScore +
+	rawTotalScore := s.BuffettScore.ROEScore +
 		s.BuffettScore.CashFlowScore +
 		s.BuffettScore.ProfitGrowthScore +
 		s.BuffettScore.DebtRatioScore +
@@ -509,19 +509,24 @@ func (s *Stock) calculateBuffettScore(ctx context.Context) BuffettScore {
 		s.BuffettScore.DividendScore +
 		s.BuffettScore.RepurchaseScore
 
+	// 将110分制换算成100分制
+	totalScore := rawTotalScore * 100 / 110
+
 	// 生成评分说明
 	var desc strings.Builder
-	desc.WriteString(fmt.Sprintf("总分(100分): %.1f\n", totalScore))
+	desc.WriteString(fmt.Sprintf("总分(100分): %.1f (原始得分: %.1f)\n\n", totalScore, rawTotalScore))
 	desc.WriteString(fmt.Sprintf("ROE(20分): %.1f\n", s.BuffettScore.ROEScore))
 	desc.WriteString(fmt.Sprintf("现金流(15分): %.1f\n", s.BuffettScore.CashFlowScore))
 	desc.WriteString(fmt.Sprintf("利润增长(15分): %.1f\n", s.BuffettScore.ProfitGrowthScore))
 	desc.WriteString(fmt.Sprintf("负债率(10分): %.1f\n", s.BuffettScore.DebtRatioScore))
 	desc.WriteString(fmt.Sprintf("护城河(10分): %.1f\n", s.BuffettScore.MoatScore))
 	desc.WriteString(fmt.Sprintf("管理层(10分): %.1f\n", s.BuffettScore.ManagementScore))
-	desc.WriteString(fmt.Sprintf("估值(15分): %.1f - PE: %.1f, PEG: %.1f\n", s.BuffettScore.ValuationScore, s.BaseInfo.PE, s.PEG))
+	desc.WriteString(fmt.Sprintf("估值(15分): %.1f\n", s.BuffettScore.ValuationScore))
+	desc.WriteString(fmt.Sprintf("  PE: %.1f\n", s.BaseInfo.PE))
+	desc.WriteString(fmt.Sprintf("  PEG: %.1f\n\n", s.PEG))
 	desc.WriteString(fmt.Sprintf("研发投入(5分): %.1f\n", s.BuffettScore.RDScore))
 	desc.WriteString(fmt.Sprintf("分红(5分): %.1f\n", s.BuffettScore.DividendScore))
-	desc.WriteString(fmt.Sprintf("回购(5分): %.1f\n", s.BuffettScore.RepurchaseScore))
+	desc.WriteString(fmt.Sprintf("回购(5分): %.1f", s.BuffettScore.RepurchaseScore))
 
 	s.BuffettScore.ScoreDescription = desc.String()
 	s.BuffettScore.TotalScore = totalScore
@@ -596,23 +601,47 @@ func (s *Stock) calculateCashFlowScore(ctx context.Context) {
 		return
 	}
 
-	positiveCount := 0
+	operatePositiveCount := 0
+	freePositiveCount := 0
 	for i := 0; i < 3 && i < len(s.HistoricalCashflowList); i++ {
-		if s.HistoricalCashflowList[i].NetcashOperate > 0 {
-			positiveCount++
+		cf := s.HistoricalCashflowList[i]
+		if cf.NetcashOperate > 0 {
+			operatePositiveCount++
+		}
+		// 计算自由现金流
+		var freeCashFlow float64
+		if cf.NetcashInvest < 0 {
+			freeCashFlow = cf.NetcashOperate + cf.NetcashInvest
+		} else {
+			freeCashFlow = cf.NetcashOperate - cf.NetcashInvest
+		}
+		if freeCashFlow > 0 {
+			freePositiveCount++
 		}
 	}
 
-	switch positiveCount {
+	// 经营现金流和自由现金流各占一半分数
+	operateScore := 0.0
+	switch operatePositiveCount {
 	case 3:
-		s.BuffettScore.CashFlowScore = 15
+		operateScore = 7.5
 	case 2:
-		s.BuffettScore.CashFlowScore = 10
+		operateScore = 5.0
 	case 1:
-		s.BuffettScore.CashFlowScore = 5
-	default:
-		s.BuffettScore.CashFlowScore = 0
+		operateScore = 2.5
 	}
+
+	freeScore := 0.0
+	switch freePositiveCount {
+	case 3:
+		freeScore = 7.5
+	case 2:
+		freeScore = 5.0
+	case 1:
+		freeScore = 2.5
+	}
+
+	s.BuffettScore.CashFlowScore = operateScore + freeScore
 }
 
 // calculateProfitGrowthScore 计算利润增长评分
@@ -737,18 +766,169 @@ func (s *Stock) calculateManagementScore(ctx context.Context) {
 
 // calculateRDScore 计算研发投入评分
 func (s *Stock) calculateRDScore(ctx context.Context) {
-	// 暂时固定为5分,因为缺少研发投入数据
-	s.BuffettScore.RDScore = 5.0
+	if len(s.HistoricalGincomeList) == 0 {
+		s.BuffettScore.RDScore = 0
+		return
+	}
+
+	// 获取最近三年的研发投入数据
+	var rdExpenses []float64
+	var revenues []float64
+	count := 0
+
+	for i := 0; i < len(s.HistoricalGincomeList) && count < 3; i++ {
+		// 只统计年报数据
+		if s.HistoricalGincomeList[i].ReportType != eastmoney.FinaReportTypeYear {
+			continue
+		}
+		rdExpenses = append(rdExpenses, s.HistoricalGincomeList[i].ResearchExpense)
+		revenues = append(revenues, s.HistoricalGincomeList[i].TotalOperateIncome)
+		count++
+	}
+
+	if len(rdExpenses) == 0 {
+		s.BuffettScore.RDScore = 0
+		return
+	}
+
+	// 1. 计算研发投入占营收比例（最近一年）
+	rdRatio := rdExpenses[0] / revenues[0] * 100
+
+	// 2. 计算研发投入增长率
+	var rdGrowth float64
+	if len(rdExpenses) >= 2 {
+		rdGrowth = (rdExpenses[0] - rdExpenses[1]) / math.Abs(rdExpenses[1]) * 100
+	}
+
+	// 3. 评分规则：
+	// - 研发投入占营收比例 >= 5%: 3分
+	// - 研发投入占营收比例 >= 3%: 2分
+	// - 研发投入占营收比例 >= 1%: 1分
+	// - 研发投入同比增长 >= 30%: 2分
+	// - 研发投入同比增长 >= 10%: 1分
+	score := 0.0
+
+	if rdRatio >= 5 {
+		score += 3
+	} else if rdRatio >= 3 {
+		score += 2
+	} else if rdRatio >= 1 {
+		score += 1
+	}
+
+	if rdGrowth >= 30 {
+		score += 2
+	} else if rdGrowth >= 10 {
+		score += 1
+	}
+
+	s.BuffettScore.RDScore = score
+	logging.Infof(ctx, "[%s] 研发投入评分：%.1f分 (投入占比:%.2f%%, 同比增长:%.2f%%)",
+		s.BaseInfo.SecurityNameAbbr, score, rdRatio, rdGrowth)
 }
 
 // calculateDividendScore 计算分红评分
 func (s *Stock) calculateDividendScore(ctx context.Context) {
-	// 暂时固定为5分,因为缺少分红数据
-	s.BuffettScore.DividendScore = 5.0
+	if len(s.HistoricalCashflowList) == 0 {
+		s.BuffettScore.DividendScore = 0
+		return
+	}
+
+	// 获取最近三年的分红数据
+	var dividends []float64
+	var profits []float64
+	count := 0
+
+	for i := 0; i < len(s.HistoricalCashflowList) && count < 3; i++ {
+		// 只统计年报数据
+		if s.HistoricalCashflowList[i].ReportType != eastmoney.FinaReportTypeYear {
+			continue
+		}
+		dividends = append(dividends, s.HistoricalCashflowList[i].AssignDividendPorfit)
+		// 从对应的利润表中获取净利润数据
+		if i < len(s.HistoricalGincomeList) {
+			profits = append(profits, s.HistoricalGincomeList[i].ParentNetprofit)
+		}
+		count++
+	}
+
+	if len(dividends) == 0 || len(profits) == 0 {
+		s.BuffettScore.DividendScore = 0
+		return
+	}
+
+	// 1. 计算最近一年的分红率
+	dividendRatio := dividends[0] / profits[0] * 100
+
+	// 2. 计算连续分红年数
+	continuousYears := 0
+	for _, dividend := range dividends {
+		if dividend <= 0 {
+			break
+		}
+		continuousYears++
+	}
+
+	// 3. 评分规则：
+	// - 分红率 >= 50%: 3分
+	// - 分红率 >= 30%: 2分
+	// - 分红率 >= 10%: 1分
+	// - 连续分红3年: 2分
+	// - 连续分红2年: 1分
+	score := 0.0
+
+	if dividendRatio >= 50 {
+		score += 3
+	} else if dividendRatio >= 30 {
+		score += 2
+	} else if dividendRatio >= 10 {
+		score += 1
+	}
+
+	if continuousYears >= 3 {
+		score += 2
+	} else if continuousYears >= 2 {
+		score += 1
+	}
+
+	s.BuffettScore.DividendScore = score
+	logging.Infof(ctx, "[%s] 分红评分：%.1f分 (分红率:%.2f%%, 连续分红年数:%d)",
+		s.BaseInfo.SecurityNameAbbr, score, dividendRatio, continuousYears)
 }
 
 // calculateRepurchaseScore 计算回购评分
 func (s *Stock) calculateRepurchaseScore(ctx context.Context) {
 	// 暂时固定为5分,因为缺少回购数据
 	s.BuffettScore.RepurchaseScore = 5.0
+}
+
+func (s *Stock) String() string {
+	var sb strings.Builder
+
+	rawTotalScore := s.BuffettScore.ROEScore +
+		s.BuffettScore.CashFlowScore +
+		s.BuffettScore.ProfitGrowthScore +
+		s.BuffettScore.DebtRatioScore +
+		s.BuffettScore.MoatScore +
+		s.BuffettScore.ManagementScore +
+		s.BuffettScore.ValuationScore +
+		s.BuffettScore.RDScore +
+		s.BuffettScore.DividendScore +
+		s.BuffettScore.RepurchaseScore
+
+	sb.WriteString(fmt.Sprintf("总分: %.1f分 (原始得分: %.1f)\n", s.BuffettScore.TotalScore, rawTotalScore))
+	sb.WriteString(fmt.Sprintf("总分(100分): %.1f (原始得分: %.1f)\n", s.BuffettScore.TotalScore, rawTotalScore))
+	sb.WriteString(fmt.Sprintf("ROE(20分): %.1f\n", s.BuffettScore.ROEScore))
+	sb.WriteString(fmt.Sprintf("现金流(15分): %.1f\n", s.BuffettScore.CashFlowScore))
+	sb.WriteString(fmt.Sprintf("利润增长(15分): %.1f\n", s.BuffettScore.ProfitGrowthScore))
+	sb.WriteString(fmt.Sprintf("负债率(10分): %.1f\n", s.BuffettScore.DebtRatioScore))
+	sb.WriteString(fmt.Sprintf("护城河(10分): %.1f\n", s.BuffettScore.MoatScore))
+	sb.WriteString(fmt.Sprintf("管理层(10分): %.1f\n", s.BuffettScore.ManagementScore))
+	sb.WriteString(fmt.Sprintf("估值(15分): %.1f\n", s.BuffettScore.ValuationScore))
+	sb.WriteString(fmt.Sprintf("PE: %.1f  PEG: %.1f\n", s.BaseInfo.PE, s.PEG))
+	sb.WriteString(fmt.Sprintf("研发投入(5分): %.1f\n", s.BuffettScore.RDScore))
+	sb.WriteString(fmt.Sprintf("分红(5分): %.1f\n", s.BuffettScore.DividendScore))
+	sb.WriteString(fmt.Sprintf("回购(5分): %.1f\n", s.BuffettScore.RepurchaseScore))
+
+	return sb.String()
 }
