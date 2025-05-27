@@ -27,3 +27,4 @@ app
 statics/js/app.min.*.js
 *.json
 cron/*.json
+.idea/
