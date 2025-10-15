@@ -504,12 +504,12 @@
             <label for="tech">技术面评分（手动输入）</label>
             <div class="radio-group">
                 <label class="radio-label">
-                    <input type="radio" name="tech" value="0">
-                    <span class="radio-text">0 - 差</span>
+                    <input type="radio" name="tech" value="1">
+                    <span class="radio-text">1 - 差</span>
                 </label>
                 <label class="radio-label">
-                    <input type="radio" name="tech" value="1" checked>
-                    <span class="radio-text">1 - 中性</span>
+                    <input type="radio" name="tech" value="2" checked>
+                    <span class="radio-text">2 - 中性</span>
                 </label>
                 <label class="radio-label">
                     <input type="radio" name="tech" value="3">
@@ -844,7 +844,7 @@
             // 前端计算（兼容旧数据）
             pegScore = Math.max(0, Math.min(1, (0.5 - parseFloat(peg)) / 0.4));
             expectScore = (parseFloat(expect) - 1) / 4;
-            techScore = parseFloat(tech) / 3;
+            techScore = (parseFloat(tech) - 1) / 2; // 1->0, 2->0.5, 3->1
             buffettScoreNormalized = parseFloat(buffettScore) / 100;
             totalScore = 0.4 * pegScore + 0.2 * expectScore + 0.2 * techScore + 0.2 * buffettScoreNormalized;
         }

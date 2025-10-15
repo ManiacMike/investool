@@ -372,6 +372,56 @@
             background: #d5d8dc;
         }
 
+        .radio-group {
+            display: flex;
+            flex-direction: row;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .radio-label {
+            display: flex;
+            align-items: center;
+            padding: 8px 12px;
+            border: 2px solid #ecf0f1;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: white;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .radio-label:hover {
+            border-color: #3498db;
+            background: #f8f9fa;
+        }
+
+        .radio-label input[type="radio"] {
+            margin-right: 8px;
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+            accent-color: #3498db;
+        }
+
+        .radio-label input[type="radio"]:checked + .radio-text {
+            color: #3498db;
+            font-weight: 700;
+        }
+
+        .radio-label:has(input[type="radio"]:checked) {
+            border-color: #3498db;
+            background: rgba(52, 152, 219, 0.05);
+        }
+
+        .radio-text {
+            color: #34495e;
+            font-size: 13px;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+
         @media (max-width: 768px) {
             .header {
                 flex-direction: column;
@@ -397,6 +447,20 @@
                 margin: 20% auto;
                 padding: 30px 20px;
             }
+
+            .radio-group {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .radio-label {
+                padding: 12px 15px;
+                flex: none;
+            }
+
+            .radio-text {
+                font-size: 15px;
+            }
         }
     </style>
 </head>
@@ -412,7 +476,8 @@
                 <div class="total-position">
                     <div class="total-label">当前总仓位</div>
                     <div class="total-value" id="totalPosition">0 万元</div>
-                </div>
+        </div>
+                <button class="add-stock-btn" onclick="analyzePositionDeviation()">📊 分析仓位</button>
                 <button class="add-stock-btn" onclick="openModal()">➕ 添加持仓</button>
             </div>
         </div>
@@ -425,7 +490,7 @@
                 <div class="empty-state-hint">点击右上角"添加持仓"按钮开始</div>
             </div>
         </div>
-    </div>
+        </div>
 
     <!-- 添加持仓 Modal -->
     <div id="addStockModal" class="modal">
@@ -442,15 +507,58 @@
                 <label>持股数量</label>
                 <input type="number" id="newStockShares" placeholder="例如: 100" min="0">
             </div>
+            <div class="form-group">
+                <label>市场预期值（手动输入）</label>
+            <div class="radio-group">
+                <label class="radio-label">
+                        <input type="radio" name="newExpect" value="1">
+                    <span class="radio-text">1 - 很差</span>
+                </label>
+                <label class="radio-label">
+                        <input type="radio" name="newExpect" value="2">
+                    <span class="radio-text">2 - 较差</span>
+                </label>
+                <label class="radio-label">
+                        <input type="radio" name="newExpect" value="3" checked>
+                    <span class="radio-text">3 - 中性</span>
+                </label>
+                <label class="radio-label">
+                        <input type="radio" name="newExpect" value="4">
+                    <span class="radio-text">4 - 较好</span>
+                </label>
+                <label class="radio-label">
+                        <input type="radio" name="newExpect" value="5">
+                    <span class="radio-text">5 - 很好</span>
+                </label>
+            </div>
+        </div>
+            <div class="form-group">
+                <label>技术面评分（手动输入）</label>
+            <div class="radio-group">
+                <label class="radio-label">
+                        <input type="radio" name="newTech" value="1">
+                        <span class="radio-text">1 - 差</span>
+                </label>
+                <label class="radio-label">
+                        <input type="radio" name="newTech" value="2" checked>
+                        <span class="radio-text">2 - 中性</span>
+                </label>
+                <label class="radio-label">
+                        <input type="radio" name="newTech" value="3">
+                    <span class="radio-text">3 - 好</span>
+                </label>
+            </div>
+            </div>
             <div class="modal-actions">
                 <button class="btn btn-secondary" onclick="closeModal()">取消</button>
                 <button class="btn btn-primary" onclick="addStock()">确认添加</button>
-            </div>
         </div>
     </div>
+</div>
 
-    <script>
+<script>
         let holdings = [];
+        let stockAnalysisData = {}; // 存储后端返回的分析数据
 
         // 模拟API数据
         const mockStockData = {
@@ -463,15 +571,59 @@
 
         function loadHoldings() {
             const saved = localStorage.getItem('stockHoldings');
-            if (saved) {
-                try {
+        if (saved) {
+            try {
                     holdings = JSON.parse(saved);
                     renderStocks();
                     updateTotalPosition();
-                } catch (e) {
+            } catch (e) {
                     holdings = [];
                 }
             }
+        }
+
+        // 调用后端接口分析仓位偏离度
+        function analyzePositionDeviation() {
+            if (holdings.length === 0) {
+                alert('请先添加持仓记录');
+                return;
+            }
+
+            const requestData = {
+                holdings: holdings.map(holding => ({
+                    stock_name: holding.name,
+                    shares: holding.shares,
+                    expect: holding.expect || 3, // 默认中性
+                    tech: holding.tech || 1     // 默认中性
+                }))
+            };
+
+            fetch('/invest/position-deviation', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(requestData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.Error) {
+                    alert('分析失败: ' + data.Error);
+            return;
+        }
+
+                if (data.Results) {
+                    stockAnalysisData = data.Results;
+                    renderStocks();
+                    updateTotalPosition();
+                } else {
+                    alert('未获取到分析结果');
+                }
+            })
+            .catch(error => {
+                console.error('分析错误:', error);
+                alert('分析失败，请稍后重试');
+            });
         }
 
         function saveHoldings() {
@@ -487,34 +639,50 @@
             document.getElementById('addStockModal').style.display = 'none';
             document.getElementById('newStockName').value = '';
             document.getElementById('newStockShares').value = '';
+            // 重置radio按钮为默认值
+            document.querySelector('input[name="newExpect"][value="3"]').checked = true;
+            document.querySelector('input[name="newTech"][value="2"]').checked = true;
         }
 
         function addStock() {
             const name = document.getElementById('newStockName').value.trim();
             const shares = parseFloat(document.getElementById('newStockShares').value);
+            const expectRadio = document.querySelector('input[name="newExpect"]:checked');
+            const techRadio = document.querySelector('input[name="newTech"]:checked');
 
             if (!name) {
-                alert('请输入股票名称！');
-                return;
-            }
+            alert('请输入股票名称！');
+            return;
+        }
 
             if (isNaN(shares) || shares <= 0) {
                 alert('请输入有效的持股数量！');
-                return;
+            return;
+        }
+
+            if (!expectRadio || !techRadio) {
+                alert('请选择市场预期值和技术面评分！');
+            return;
             }
+
+            const expect = parseInt(expectRadio.value);
+            const tech = parseInt(techRadio.value);
 
             // 检查是否已存在
             const existingIndex = holdings.findIndex(h => h.name === name);
             if (existingIndex >= 0) {
-                holdings[existingIndex].shares = shares;
+                holdings[existingIndex] = { name, shares, expect, tech };
             } else {
-                holdings.push({ name, shares });
+                holdings.push({ name, shares, expect, tech });
             }
 
             saveHoldings();
             renderStocks();
             updateTotalPosition();
             closeModal();
+            
+            // 自动分析仓位偏离度
+            analyzePositionDeviation();
         }
 
         function deleteStock(index) {
@@ -541,18 +709,38 @@
             }
 
             grid.innerHTML = holdings.map((holding, index) => {
-                const stockData = mockStockData[holding.name] || { currentPrice: 0, targetAmount: 0 };
-                const currentAmount = (holding.shares * stockData.currentPrice) / 10000;
-                const targetAmount = stockData.targetAmount;
-                const diff = targetAmount - currentAmount;
-                const deviation = targetAmount > 0 ? Math.abs((diff / targetAmount) * 100) : 0;
+                // 优先使用后端分析数据，如果没有则使用mock数据
+                let stockData;
+                if (stockAnalysisData.holdings && stockAnalysisData.holdings[index]) {
+                    const analysisData = stockAnalysisData.holdings[index];
+                    stockData = {
+                        currentPrice: analysisData.current_price,
+                        targetAmount: analysisData.target_amount,
+                        currentAmount: analysisData.current_amount,
+                        diff: analysisData.amount_diff,
+                        deviation: analysisData.deviation_percent,
+                        deviationLevel: analysisData.deviation_level
+                    };
+                } else {
+                    // 使用mock数据作为fallback
+                    stockData = mockStockData[holding.name] || { currentPrice: 0, targetAmount: 0 };
+                    stockData.currentAmount = (holding.shares * stockData.currentPrice) / 10000;
+                    stockData.diff = stockData.targetAmount - stockData.currentAmount;
+                    stockData.deviation = stockData.targetAmount > 0 ? Math.abs((stockData.diff / stockData.targetAmount) * 100) : 0;
+                    stockData.deviationLevel = 'low';
+                    if (stockData.deviation > 30) {
+                        stockData.deviationLevel = 'high';
+                    } else if (stockData.deviation > 15) {
+                        stockData.deviationLevel = 'medium';
+                    }
+                }
 
                 let deviationClass = 'low';
                 let deviationText = '偏离度低';
-                if (deviation > 30) {
+                if (stockData.deviationLevel === 'high') {
                     deviationClass = 'high';
                     deviationText = '偏离度高';
-                } else if (deviation > 15) {
+                } else if (stockData.deviationLevel === 'medium') {
                     deviationClass = 'medium';
                     deviationText = '偏离度中';
                 }
@@ -569,22 +757,22 @@
                         <div class="stock-metrics">
                             <div class="metric-row">
                                 <span class="metric-label">当前持仓</span>
-                                <span class="metric-value">${currentAmount.toFixed(2)} 万</span>
+                                <span class="metric-value">${stockData.currentAmount.toFixed(2)} 万</span>
                             </div>
                             <div class="metric-row">
                                 <span class="metric-label">目标仓位</span>
-                                <span class="metric-value">${targetAmount.toFixed(2)} 万</span>
+                                <span class="metric-value">${stockData.targetAmount.toFixed(2)} 万</span>
                             </div>
                             <div class="metric-row">
                                 <span class="metric-label">差额</span>
-                                <span class="metric-value ${diff >= 0 ? 'positive' : 'negative'}">
-                                    ${diff >= 0 ? '+' : ''}${diff.toFixed(2)} 万
+                                <span class="metric-value ${stockData.diff >= 0 ? 'positive' : 'negative'}">
+                                    ${stockData.diff >= 0 ? '+' : ''}${stockData.diff.toFixed(2)} 万
                                 </span>
                             </div>
                             <div class="metric-row">
                                 <span class="metric-label">偏离度</span>
                                 <span class="deviation-badge ${deviationClass}">
-                                    ${deviationText} ${deviation.toFixed(1)}%
+                                    ${deviationText} ${stockData.deviation.toFixed(1)}%
                                 </span>
                             </div>
                         </div>
@@ -595,12 +783,20 @@
 
         function updateTotalPosition() {
             let total = 0;
-            holdings.forEach(holding => {
-                const stockData = mockStockData[holding.name];
-                if (stockData) {
-                    total += (holding.shares * stockData.currentPrice) / 10000;
-                }
-            });
+            
+            // 优先使用后端分析数据
+            if (stockAnalysisData.summary && stockAnalysisData.summary.total_current_position !== undefined) {
+                total = stockAnalysisData.summary.total_current_position;
+            } else {
+                // 使用mock数据作为fallback
+                holdings.forEach(holding => {
+                    const stockData = mockStockData[holding.name];
+                    if (stockData) {
+                        total += (holding.shares * stockData.currentPrice) / 10000;
+                    }
+                });
+            }
+            
             document.getElementById('totalPosition').textContent = `${total.toFixed(2)} 万元`;
         }
 
@@ -623,9 +819,9 @@
             if (e.key === 'Enter') {
                 addStock();
             }
-        });
+    });
 
         loadHoldings();
-    </script>
+</script>
 </body>
 </html>
