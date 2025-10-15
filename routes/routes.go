@@ -19,5 +19,6 @@ func Routes(app *gin.Engine) {
 	app.GET("/materials", Materials)
 	app.POST("/fund/query_by_stock", QueryFundByStock)
 	app.GET("/fund/managers", FundManagers)
-	app.GET("/your_new_page", YourNewPageHandler)
+	app.GET("/invest/holding-calculator", InvestHoldingHandler)
+	app.GET("/invest/query-stock", QueryStockDataHandler)
 }
