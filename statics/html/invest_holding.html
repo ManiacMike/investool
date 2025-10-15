@@ -113,6 +113,26 @@
             transform: scale(1.1);
         }
 
+        .high-peg-item {
+            border-left-color: #e74c3c !important;
+            background: #fdf2f2 !important;
+        }
+
+        .high-peg-badge {
+            background: #e74c3c;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 10px;
+            margin-left: 8px;
+            font-weight: 700;
+        }
+
+        .no-buy {
+            color: #e74c3c !important;
+            font-weight: 700;
+        }
+
         .history-stock-name {
             font-weight: 700;
             color: #34495e;
@@ -740,10 +760,15 @@
         }
 
         historyList.innerHTML = history.map((item, index) => `
-                <div class="history-item">
+                <div class="history-item ${item.isPegHigh ? 'high-peg-item' : ''}">
                     <div class="history-content" onclick="loadHistoryItem(${index})">
-                        <div class="history-stock-name">${item.stockName}</div>
-                        <div class="history-amount">${item.finalAmount} 万元</div>
+                        <div class="history-stock-name">
+                            ${item.stockName}
+                            ${item.isPegHigh ? '<span class="high-peg-badge">⚠️ PEG过高</span>' : ''}
+                        </div>
+                        <div class="history-amount ${item.isPegHigh ? 'no-buy' : ''}">
+                            ${item.isPegHigh ? '不建议买入' : item.finalAmount + ' 万元'}
+                        </div>
                         <div class="history-details">
                             PE: ${item.pe} | 增长率: ${item.growth}% | PEG: ${item.peg}<br>
                             市场预期: ${item.expect} | 技术面: ${item.tech} | 巴菲特: ${item.buffettScore}分<br>
@@ -765,6 +790,15 @@
         document.getElementById('growth').value = item.growth;
         document.querySelector(`input[name="expect"][value="${item.expect}"]`).checked = true;
         document.querySelector(`input[name="tech"][value="${item.tech}"]`).checked = true;
+
+        // 恢复当前股票数据（如果存在）
+        if (item.isPegHigh !== undefined) {
+            currentStockData = {
+                buffett_score: {
+                    total_score: parseFloat(item.buffettScore)
+                }
+            };
+        }
 
         // 只显示结果，不添加到历史记录
         displayResults(item);
@@ -794,15 +828,28 @@
     }
 
     function displayResults(data) {
-        const { pe, growth, peg, expect, tech, buffettScore, finalAmount, shareCount, currentPrice } = data;
+        const { pe, growth, peg, expect, tech, buffettScore, finalAmount, shareCount, currentPrice, isPegHigh } = data;
         const pegScore = Math.max(0, Math.min(1, (0.5 - parseFloat(peg)) / 0.4));
         const expectScore = (parseFloat(expect) - 1) / 4;
         const techScore = parseFloat(tech) / 3;
         const buffettScoreNormalized = parseFloat(buffettScore) / 100;
         const totalScore = 0.4 * pegScore + 0.2 * expectScore + 0.2 * techScore + 0.2 * buffettScoreNormalized;
 
-        document.getElementById('positionValue').textContent = finalAmount;
-        document.getElementById('result').style.display = 'block';
+        const resultDiv = document.getElementById('result');
+        const positionValue = document.getElementById('positionValue');
+        
+        if (isPegHigh) {
+            // PEG > 1 时的样式
+            resultDiv.style.background = 'linear-gradient(135deg, #e74c3c 0%, #c0392b 100%)';
+            positionValue.textContent = '0';
+            positionValue.innerHTML = '0<br><small style="font-size: 14px; opacity: 0.9;">不建议买入</small>';
+        } else {
+            // 正常情况
+            resultDiv.style.background = 'linear-gradient(135deg, #1abc9c 0%, #16a085 100%)';
+            positionValue.textContent = finalAmount;
+        }
+        
+        resultDiv.style.display = 'block';
 
         document.getElementById('peValue').textContent = pe;
         document.getElementById('growthValue').textContent = growth + '%';
@@ -879,8 +926,9 @@
         // 新的权重分配：PEG 40%，市场预期 20%，技术面 20%，巴菲特评分 20%
         const totalScore = 0.4 * pegScore + 0.2 * expectScore + 0.2 * techScore + 0.2 * buffettScoreNormalized;
         const amount = 3 + 17 * totalScore;
-        const finalAmount = Math.min(Math.max(amount, 3), 20);
-        if(peg > 1) {
+        let finalAmount = Math.min(Math.max(amount, 3), 20);
+        const isPegHigh = peg > 1;
+        if(isPegHigh) {
             finalAmount = 0;
         }
 
@@ -909,6 +957,7 @@
             finalAmount: finalAmount.toFixed(2),
             shareCount: shareCount,
             currentPrice: currentPrice.toFixed(2),
+            isPegHigh: isPegHigh,
             timestamp
         };
 
