@@ -20,155 +20,12 @@
         }
 
         .app-container {
-            display: flex;
-            gap: 20px;
-            max-width: 1400px;
+            max-width: 1000px;
             margin: 0 auto;
         }
 
-        .history-panel {
-            flex: 0 0 400px;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
-            padding: 30px;
-            max-height: calc(100vh - 40px);
-            overflow-y: auto;
-        }
-
-        .history-title {
-            color: #34495e;
-            font-size: 24px;
-            font-weight: 700;
-            margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        .clear-all-btn {
-            background: #95a5a6;
-            border: none;
-            border-radius: 4px;
-            padding: 6px 12px;
-            color: white;
-            cursor: pointer;
-            font-size: 12px;
-            transition: all 0.3s ease;
-            width: 50px;
-        }
-
-        .clear-all-btn:hover {
-            background: #7f8c8d;
-            transform: scale(1.05);
-        }
-
-        .history-list {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-
-        .history-item {
-            background: #f8f9fa;
-            border-radius: 8px;
-            padding: 15px;
-            border-left: 4px solid #3498db;
-            transition: all 0.3s ease;
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            gap: 10px;
-        }
-
-        .history-item:hover {
-            transform: translateX(5px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        }
-
-        .history-content {
-            flex: 1;
-            cursor: pointer;
-        }
-
-        .delete-btn {
-            background: #f8f9fa;
-            border: none;
-            border-radius: 4px;
-            padding: 8px 12px;
-            color: white;
-            cursor: pointer;
-            font-size: 14px;
-            transition: all 0.3s ease;
-            opacity: 0.7;
-            flex-shrink: 0;
-            align-self: flex-start;
-            margin-top: 0;
-            width: 50px;
-        }
-
-        .delete-btn:hover {
-            background: #c0392b;
-            opacity: 1;
-            transform: scale(1.1);
-        }
-
-        .high-peg-item {
-            border-left-color: #e74c3c !important;
-            background: #fdf2f2 !important;
-        }
-
-        .high-peg-badge {
-            background: #e74c3c;
-            color: white;
-            padding: 2px 6px;
-            border-radius: 3px;
-            font-size: 10px;
-            margin-left: 8px;
-            font-weight: 700;
-        }
-
-        .no-buy {
-            color: #e74c3c !important;
-            font-weight: 700;
-        }
-
-        .history-stock-name {
-            font-weight: 700;
-            color: #34495e;
-            font-size: 16px;
-            margin-bottom: 8px;
-        }
-
-        .history-amount {
-            color: #27ae60;
-            font-size: 24px;
-            font-weight: 700;
-            margin-bottom: 8px;
-        }
-
-        .history-details {
-            font-size: 12px;
-            color: #7f8c8d;
-            line-height: 1.6;
-        }
-
-        .history-time {
-            font-size: 11px;
-            color: #95a5a6;
-            margin-top: 8px;
-            text-align: right;
-        }
-
-        .empty-history {
-            text-align: center;
-            color: #95a5a6;
-            padding: 40px 20px;
-            font-size: 14px;
-        }
 
         .container {
-            flex: 1;
             background: white;
             border-radius: 8px;
             box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
@@ -412,16 +269,66 @@
             font-weight: 700;
         }
 
+        .score-section {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #3498db;
+        }
+
+        .score-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .score-name {
+            font-weight: 700;
+            color: #34495e;
+            font-size: 16px;
+        }
+
+        .score-value {
+            font-weight: 700;
+            color: #27ae60;
+            font-size: 18px;
+        }
+
+        .score-level {
+            background: #3498db;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .score-level.excellent {
+            background: #27ae60;
+        }
+
+        .score-level.good {
+            background: #f39c12;
+        }
+
+        .score-level.average {
+            background: #e67e22;
+        }
+
+        .score-level.poor {
+            background: #e74c3c;
+        }
+
+        .score-description {
+            font-size: 12px;
+            color: #7f8c8d;
+            line-height: 1.4;
+            white-space: pre-line;
+        }
+
         @media (max-width: 1024px) {
-            .app-container {
-                flex-direction: column;
-            }
-
-            .history-panel {
-                flex: 1;
-                max-height: 400px;
-            }
-
             .container {
                 max-height: none;
             }
@@ -430,21 +337,10 @@
 </head>
 <body>
 <div class="app-container">
-    <!-- 左侧历史记录面板 -->
-    <div class="history-panel">
-        <div class="history-title">
-            <span>📜 计算历史</span>
-            <button class="clear-all-btn" onclick="clearAllHistory()" title="清空所有历史">🗑️ 清空</button>
-        </div>
-        <div class="history-list" id="historyList">
-            <div class="empty-history">暂无历史记录</div>
-        </div>
-    </div>
-
-    <!-- 右侧计算器 -->
+    <!-- 股票分析器 -->
     <div class="container">
-        <h1>📊 买入金额计算器</h1>
-        <p class="subtitle">基于TTM PEG、市场预期和技术面评分</p>
+        <h1>📊 股票分析评分系统</h1>
+        <p class="subtitle">基于巴菲特、彼得·林奇、威廉·欧奈尔三大投资大师评分体系</p>
 
         <div class="input-group">
             <label for="stockName">股票名称</label>
@@ -457,110 +353,9 @@
             <div class="hint">输入股票名称或代码，点击查询按钮获取最新数据</div>
         </div>
 
-        <div class="input-group">
-            <label for="pe">TTM 市盈率 (PE)</label>
-            <div class="input-wrapper">
-                <input type="number" id="pe" step="0.1" min="0" placeholder="例如: 15.5">
-            </div>
-            <div class="hint">当前市盈率</div>
-        </div>
 
-        <div class="input-group">
-            <label for="growth">利润同比增长率</label>
-            <div class="input-wrapper">
-                <input type="number" id="growth" step="0.1" placeholder="例如: 25.5">
-                <span class="input-suffix">%</span>
-            </div>
-            <div class="hint">利润增长百分比</div>
-        </div>
-
-        <div class="input-group">
-            <label for="expect">市场预期值（手动输入）</label>
-            <div class="radio-group">
-                <label class="radio-label">
-                    <input type="radio" name="expect" value="1">
-                    <span class="radio-text">1 - 很差</span>
-                </label>
-                <label class="radio-label">
-                    <input type="radio" name="expect" value="2">
-                    <span class="radio-text">2 - 较差</span>
-                </label>
-                <label class="radio-label">
-                    <input type="radio" name="expect" value="3" checked>
-                    <span class="radio-text">3 - 中性</span>
-                </label>
-                <label class="radio-label">
-                    <input type="radio" name="expect" value="4">
-                    <span class="radio-text">4 - 较好</span>
-                </label>
-                <label class="radio-label">
-                    <input type="radio" name="expect" value="5">
-                    <span class="radio-text">5 - 很好</span>
-                </label>
-            </div>
-        </div>
-
-        <div class="input-group">
-            <label for="tech">技术面评分（手动输入）</label>
-            <div class="radio-group">
-                <label class="radio-label">
-                    <input type="radio" name="tech" value="1">
-                    <span class="radio-text">1 - 差</span>
-                </label>
-                <label class="radio-label">
-                    <input type="radio" name="tech" value="2" checked>
-                    <span class="radio-text">2 - 中性</span>
-                </label>
-                <label class="radio-label">
-                    <input type="radio" name="tech" value="3">
-                    <span class="radio-text">3 - 好</span>
-                </label>
-            </div>
-        </div>
-
-        <button onclick="calculate()">计算建议金额</button>
-
-        <div class="result" id="result">
-            <div class="result-label">建议买入金额</div>
-            <div class="result-value" id="positionValue">0</div>
-            <div class="result-unit">万元</div>
-        </div>
-
-        <div class="breakdown" id="breakdown">
-            <div class="breakdown-title">计算明细</div>
-            <div class="breakdown-item">
-                <span>TTM 市盈率 (PE)</span>
-                <span class="breakdown-value" id="peValue">0</span>
-            </div>
-            <div class="breakdown-item">
-                <span>利润增长率</span>
-                <span class="breakdown-value" id="growthValue">0%</span>
-            </div>
-            <div class="breakdown-item" style="padding-top: 10px; border-top: 1px solid #d5d8dc;">
-                <span>计算得到 PEG</span>
-                <span class="breakdown-value" id="pegValue">0</span>
-            </div>
-            <div class="breakdown-item" style="margin-top: 15px; padding-top: 15px; border-top: 2px solid #bdc3c7;">
-                <span>PEG 得分 (40%权重)</span>
-                <span class="breakdown-value" id="pegScore">0</span>
-            </div>
-            <div class="breakdown-item">
-                <span>市场预期得分 (20%权重)</span>
-                <span class="breakdown-value" id="expectScore">0</span>
-            </div>
-            <div class="breakdown-item">
-                <span>技术面得分 (20%权重)</span>
-                <span class="breakdown-value" id="techScore">0</span>
-            </div>
-            <div class="breakdown-item">
-                <span>巴菲特评分 (20%权重)</span>
-                <span class="breakdown-value" id="buffettScore">0</span>
-            </div>
-            <div class="breakdown-item" style="margin-top: 15px; padding-top: 15px; border-top: 2px solid #bdc3c7;">
-                <span style="color: #34495e; font-weight: 700;">综合得分</span>
-                <span class="breakdown-value" id="totalScore">0</span>
-            </div>
-        </div>
+        <!-- 股票信息展示区域 -->
+        <div id="stockInfoContainer" style="margin-top: 30px;"></div>
     </div>
 </div>
 
@@ -622,405 +417,143 @@
     }
 
     function showStockInfo(stock) {
-        // 创建或更新股票信息显示区域
-        let infoDiv = document.getElementById('stockInfo');
-        if (!infoDiv) {
-            infoDiv = document.createElement('div');
-            infoDiv.id = 'stockInfo';
-            infoDiv.style.cssText = `
-                margin-top: 15px;
-                padding: 15px;
-                background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
-                border-radius: 6px;
-                color: white;
-                font-size: 14px;
-                line-height: 1.6;
-            `;
-            document.getElementById('stockName').closest('.input-group').appendChild(infoDiv);
+        const container = document.getElementById('stockInfoContainer');
+        
+        // 计算综合评分
+        const avgScore = ((stock.buffett_score?.total_score || 0) + 
+                         (stock.lynch_score?.total_score || 0) + 
+                         (stock.oneil_score?.total_score || 0)) / 3;
+        
+        // 根据综合评分设置颜色
+        let scoreColor = '#e74c3c'; // 较差
+        let scoreLevel = '较差';
+        if (avgScore >= 80) {
+            scoreColor = '#27ae60';
+            scoreLevel = '优秀';
+        } else if (avgScore >= 60) {
+            scoreColor = '#f39c12';
+            scoreLevel = '良好';
+        } else if (avgScore >= 40) {
+            scoreColor = '#e67e22';
+            scoreLevel = '一般';
         }
 
-        let buffettScoreHtml = '';
-        if (stock.buffett_score) {
-            const score = stock.buffett_score;
-            const totalScore = score.total_score || 0;
-            const scoreColor = '#ffffff';
-            const scoreLevel = totalScore >= 70 ? '优秀' : totalScore >= 50 ? '良好' : '一般';
-            
-            buffettScoreHtml = `
-                <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.3);">
-                    <div style="font-weight: 700; margin-bottom: 5px;">🏆 巴菲特评分</div>
-                    <div style="font-size: 18px; font-weight: 700; color: ${scoreColor};">
-                        ${totalScore.toFixed(1)}分 (${scoreLevel})
+        container.innerHTML = `
+            <div style="background: white; border-radius: 12px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15); overflow: hidden;">
+                <!-- 股票基本信息 -->
+                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 25px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h2 style="margin: 0; font-size: 24px; font-weight: 700;">${stock.name}</h2>
+                        <div style="background: rgba(255,255,255,0.2); padding: 8px 15px; border-radius: 20px; font-size: 14px;">
+                            ${stock.code}
+                        </div>
                     </div>
-                    <div style="font-size: 12px; margin-top: 5px; opacity: 0.9;">
-                        ROE: ${(score.roe_score || 0).toFixed(1)} | 
-                        现金流: ${(score.cash_flow_score || 0).toFixed(1)} | 
-                        利润增长: ${(score.profit_growth_score || 0).toFixed(1)} | 
-                        估值: ${(score.valuation_score || 0).toFixed(1)}
-                    </div>
-                    <div style="margin-top: 8px;">
-                        <button onclick="toggleBuffettDetails()" style="
-                            background: rgba(255,255,255,0.2); 
-                            border: 1px solid rgba(255,255,255,0.3); 
-                            color: white; 
-                            padding: 4px 8px; 
-                            border-radius: 4px; 
-                            font-size: 11px; 
-                            cursor: pointer;
-                        ">查看详细评分</button>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; font-size: 14px;">
+                        <div><strong>行业:</strong> ${stock.industry || '未知'}</div>
+                        <div><strong>当前价格:</strong> ${stock.current_price || '未知'}</div>
+                        <div><strong>市值:</strong> ${stock.market_cap ? (stock.market_cap / 100000000).toFixed(2) + '亿元' : '未知'}</div>
+                        <div><strong>PE:</strong> ${stock.pe ? stock.pe.toFixed(2) : '未知'}</div>
                     </div>
                 </div>
-            `;
-        }
 
-        infoDiv.innerHTML = `
-            <div style="font-weight: 700; margin-bottom: 8px;">📈 查询结果</div>
-            <div><strong>${stock.name}</strong> (${stock.code})</div>
-            <div>行业: ${stock.industry || '未知'}</div>
-            <div>当前价格: ${stock.current_price || '未知'}</div>
-            <div>市值: ${stock.market_cap ? (stock.market_cap / 100000000).toFixed(2) + '亿元' : '未知'}</div>
-            ${buffettScoreHtml}
+                <!-- 综合评分 -->
+                <div style="padding: 25px; text-align: center; border-bottom: 1px solid #ecf0f1;">
+                    <div style="font-size: 16px; color: #7f8c8d; margin-bottom: 10px;">综合评分</div>
+                    <div style="font-size: 48px; font-weight: 700; color: ${scoreColor}; margin-bottom: 5px;">${avgScore.toFixed(1)}</div>
+                    <div style="font-size: 18px; color: ${scoreColor}; font-weight: 700;">${scoreLevel}</div>
+                </div>
+
+                <!-- 三大评分体系 -->
+                <div style="padding: 25px;">
+                    <h3 style="margin: 0 0 20px 0; color: #34495e; font-size: 18px; font-weight: 700;">📊 三大投资大师评分体系</h3>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr; gap: 20px;">
+                        ${stock.buffett_score ? createScoreCard('巴菲特', stock.buffett_score, '#3498db', '🏆') : ''}
+                        ${stock.lynch_score ? createScoreCard('彼得·林奇', stock.lynch_score, '#27ae60', '📈') : ''}
+                        ${stock.oneil_score ? createScoreCard('威廉·欧奈尔', stock.oneil_score, '#e67e22', '🚀') : ''}
+                    </div>
+                </div>
+
+                <!-- Coze AI分析结果 -->
+                ${stock.coze_analysis ? createCozeAnalysisCard(stock.coze_analysis) : ''}
+            </div>
+        `;
+    }
+
+    function createScoreCard(name, score, color, icon) {
+        const totalScore = score.total_score || 0;
+        const scoreLevel = totalScore >= 80 ? '优秀' : totalScore >= 60 ? '良好' : totalScore >= 40 ? '一般' : '较差';
+        
+        return `
+            <div style="border: 2px solid ${color}; border-radius: 12px; padding: 20px; background: linear-gradient(135deg, ${color}15 0%, ${color}05 100%);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span style="font-size: 24px;">${icon}</span>
+                        <h4 style="margin: 0; color: #34495e; font-size: 16px; font-weight: 700;">${name}评分</h4>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="font-size: 24px; font-weight: 700; color: ${color};">${totalScore.toFixed(1)}分</div>
+                        <div style="font-size: 12px; color: ${color}; font-weight: 700;">${scoreLevel}</div>
+                    </div>
+                </div>
+                
+                ${score.score_description ? `
+                    <div style="font-size: 12px; color: #7f8c8d; line-height: 1.6; white-space: pre-line;">
+                        ${score.score_description}
+                    </div>
+                ` : ''}
+            </div>
+        `;
+    }
+
+    function createCozeAnalysisCard(analysis) {
+        return `
+            <div style="padding: 25px; border-top: 1px solid #ecf0f1;">
+                <h3 style="margin: 0 0 20px 0; color: #34495e; font-size: 18px; font-weight: 700;">🤖 AI智能分析</h3>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+                    <div style="text-align: center; padding: 15px; background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%); color: white; border-radius: 8px;">
+                        <div style="font-weight: 700; margin-bottom: 8px;">🏭 行业前景</div>
+                        <div style="font-size: 20px; font-weight: 700;">${analysis.industry_prospect_score.toFixed(1)}分</div>
+                    </div>
+                    <div style="text-align: center; padding: 15px; background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%); color: white; border-radius: 8px;">
+                        <div style="font-weight: 700; margin-bottom: 8px;">👑 行业龙头</div>
+                        <div style="font-size: 20px; font-weight: 700;">${analysis.industry_leader_score.toFixed(1)}分</div>
+                    </div>
+                    <div style="text-align: center; padding: 15px; background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); color: white; border-radius: 8px;">
+                        <div style="font-weight: 700; margin-bottom: 8px;">💡 新概念</div>
+                        <div style="font-size: 20px; font-weight: 700;">${analysis.new_concept_score.toFixed(1)}分</div>
+                    </div>
+                </div>
+                
+                ${analysis.analysis ? `
+                    <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                        <div style="font-weight: 700; color: #34495e; margin-bottom: 8px;">📝 分析说明</div>
+                        <div style="font-size: 14px; color: #7f8c8d; line-height: 1.6;">${analysis.analysis}</div>
+                    </div>
+                ` : ''}
+                
+                ${analysis.data_source ? `
+                    <div style="font-size: 12px; color: #95a5a6; text-align: right;">
+                        📊 数据来源: ${analysis.data_source}
+                    </div>
+                ` : ''}
+            </div>
         `;
     }
 
     let currentStockData = null;
 
-    function toggleBuffettDetails() {
-        let detailsDiv = document.getElementById('buffettDetails');
-        if (detailsDiv) {
-            detailsDiv.remove();
-            return;
-        }
+    // 移除所有计算和历史记录相关的函数
+    // 只保留查询股票数据的功能
 
-        if (!currentStockData || !currentStockData.buffett_score) {
-            return;
-        }
-
-        const score = currentStockData.buffett_score;
-        const infoDiv = document.getElementById('stockInfo');
-        
-        detailsDiv = document.createElement('div');
-        detailsDiv.id = 'buffettDetails';
-        detailsDiv.style.cssText = `
-            margin-top: 10px;
-            padding: 15px;
-            background: rgba(0,0,0,0.1);
-            border-radius: 6px;
-            font-size: 13px;
-            line-height: 1.6;
-        `;
-
-        detailsDiv.innerHTML = `
-            <div style="font-weight: 700; margin-bottom: 10px; color: #fff;">📊 详细评分明细</div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-                <div>ROE评分 (20分): <span style="color: #3498db; font-weight: 700;">${(score.roe_score || 0).toFixed(1)}</span></div>
-                <div>现金流评分 (15分): <span style="color: #3498db; font-weight: 700;">${(score.cash_flow_score || 0).toFixed(1)}</span></div>
-                <div>利润增长评分 (15分): <span style="color: #3498db; font-weight: 700;">${(score.profit_growth_score || 0).toFixed(1)}</span></div>
-                <div>估值评分 (15分): <span style="color: #3498db; font-weight: 700;">${(score.valuation_score || 0).toFixed(1)}</span></div>
-                <div>负债率评分 (10分): <span style="color: #3498db; font-weight: 700;">${(score.debt_ratio_score || 0).toFixed(1)}</span></div>
-                <div>护城河评分 (10分): <span style="color: #3498db; font-weight: 700;">${(score.moat_score || 0).toFixed(1)}</span></div>
-                <div>管理层评分 (10分): <span style="color: #3498db; font-weight: 700;">${(score.management_score || 0).toFixed(1)}</span></div>
-                <div>研发投入评分 (5分): <span style="color: #3498db; font-weight: 700;">${(score.rd_score || 0).toFixed(1)}</span></div>
-                <div>分红评分 (5分): <span style="color: #3498db; font-weight: 700;">${(score.dividend_score || 0).toFixed(1)}</span></div>
-                <div>回购评分 (5分): <span style="color: #3498db; font-weight: 700;">${(score.repurchase_score || 0).toFixed(1)}</span></div>
-            </div>
-            <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.2);">
-                <div style="font-weight: 700; color: #fff;">评分说明:</div>
-                <div style="margin-top: 5px; font-size: 12px; opacity: 0.9;">
-                    ${(score.score_description || '').replace(/\n/g, '<br>')}
-                </div>
-            </div>
-        `;
-
-        infoDiv.appendChild(detailsDiv);
-    }
-
-    function loadHistory() {
-        const saved = localStorage.getItem('stockCalculatorHistory');
-        if (saved) {
-            try {
-                history = JSON.parse(saved);
-                renderHistory();
-            } catch (e) {
-                history = [];
-            }
-        }
-    }
-
-    function saveHistory() {
-        localStorage.setItem('stockCalculatorHistory', JSON.stringify(history));
-    }
-
-    function renderHistory() {
-        const historyList = document.getElementById('historyList');
-
-        if (history.length === 0) {
-            historyList.innerHTML = '<div class="empty-history">暂无历史记录</div>';
-            return;
-        }
-
-        historyList.innerHTML = history.map((item, index) => `
-                <div class="history-item ${item.isPegHigh ? 'high-peg-item' : ''}">
-                    <div class="history-content" onclick="loadHistoryItem(${index})">
-                        <div class="history-stock-name">
-                            ${item.stockName}
-                            ${item.isPegHigh ? '<span class="high-peg-badge">⚠️ PEG过高</span>' : ''}
-                        </div>
-                        <div class="history-amount ${item.isPegHigh ? 'no-buy' : ''}">
-                            ${item.isPegHigh ? '不建议买入' : item.finalAmount + ' 万元'}
-                        </div>
-                        <div class="history-details">
-                            PE: ${item.pe} | 增长率: ${item.growth}% | PEG: ${item.peg}<br>
-                            市场预期: ${item.expect} | 技术面: ${item.tech} | 巴菲特: ${item.buffettScore}分<br>
-                            ${item.shareCount ? `持股: ${item.shareCount}股 | 股价: ${item.currentPrice}元` : ''}
-                        </div>
-                        <div class="history-time">${item.timestamp}</div>
-                    </div>
-                    <button class="delete-btn" onclick="deleteHistoryItem(${index}, event)" title="删除记录">
-                        🗑️
-                    </button>
-                </div>
-            `).join('');
-    }
-
-    function loadHistoryItem(index) {
-        const item = history[index];
-        document.getElementById('stockName').value = item.stockName;
-        document.getElementById('pe').value = item.pe;
-        document.getElementById('growth').value = item.growth;
-        document.querySelector(`input[name="expect"][value="${item.expect}"]`).checked = true;
-        document.querySelector(`input[name="tech"][value="${item.tech}"]`).checked = true;
-
-        // 恢复当前股票数据（如果存在）
-        if (item.isPegHigh !== undefined) {
-            currentStockData = {
-                buffett_score: {
-                    total_score: parseFloat(item.buffettScore)
-                }
-            };
-        }
-
-        // 只显示结果，不添加到历史记录
-        displayResults(item);
-    }
-
-    function deleteHistoryItem(index, event) {
-        event.stopPropagation(); // 阻止事件冒泡，避免触发loadHistoryItem
-        
-        if (confirm('确定要删除这条历史记录吗？')) {
-            history.splice(index, 1);
-            saveHistory();
-            renderHistory();
-        }
-    }
-
-    function clearAllHistory() {
-        if (history.length === 0) {
-            alert('没有历史记录需要清空');
-            return;
-        }
-        
-        if (confirm(`确定要清空所有 ${history.length} 条历史记录吗？此操作不可恢复！`)) {
-            history = [];
-            saveHistory();
-            renderHistory();
-        }
-    }
-
-    function displayResults(data) {
-        const { pe, growth, peg, expect, tech, buffettScore, finalAmount, shareCount, currentPrice, isPegHigh } = data;
-        
-        // 从后端返回的数据中获取各项得分，如果没有则重新计算
-        let pegScore, expectScore, techScore, buffettScoreNormalized, totalScore;
-        
-        if (data.pegScore !== undefined) {
-            // 使用后端返回的得分
-            pegScore = data.pegScore;
-            expectScore = data.expectScore;
-            techScore = data.techScore;
-            buffettScoreNormalized = data.buffettScoreNormalized;
-            totalScore = data.totalScore;
-        } else {
-            // 前端计算（兼容旧数据）
-            pegScore = Math.max(0, Math.min(1, (0.5 - parseFloat(peg)) / 0.4));
-            expectScore = (parseFloat(expect) - 1) / 4;
-            techScore = (parseFloat(tech) - 1) / 2; // 1->0, 2->0.5, 3->1
-            buffettScoreNormalized = parseFloat(buffettScore) / 100;
-            totalScore = 0.4 * pegScore + 0.2 * expectScore + 0.2 * techScore + 0.2 * buffettScoreNormalized;
-        }
-
-        const resultDiv = document.getElementById('result');
-        const positionValue = document.getElementById('positionValue');
-        
-        if (isPegHigh) {
-            // PEG > 1 时的样式
-            resultDiv.style.background = 'linear-gradient(135deg, #e74c3c 0%, #c0392b 100%)';
-            positionValue.textContent = '0';
-            positionValue.innerHTML = '0<br><small style="font-size: 14px; opacity: 0.9;">不建议买入</small>';
-        } else {
-            // 正常情况
-            resultDiv.style.background = 'linear-gradient(135deg, #1abc9c 0%, #16a085 100%)';
-            positionValue.textContent = finalAmount;
-        }
-        
-        resultDiv.style.display = 'block';
-
-        document.getElementById('peValue').textContent = pe;
-        document.getElementById('growthValue').textContent = growth + '%';
-        document.getElementById('pegValue').textContent = peg;
-        document.getElementById('pegScore').textContent = (pegScore * 100).toFixed(2) + '%';
-        document.getElementById('expectScore').textContent = (expectScore * 100).toFixed(2) + '%';
-        document.getElementById('techScore').textContent = (techScore * 100).toFixed(2) + '%';
-        document.getElementById('buffettScore').textContent = (buffettScoreNormalized * 100).toFixed(2) + '%';
-        document.getElementById('totalScore').textContent = (totalScore * 100).toFixed(2) + '%';
-        document.getElementById('breakdown').style.display = 'block';
-
-        // 显示持股数量信息
-        if (shareCount > 0 && currentPrice > 0) {
-            const shareInfo = document.getElementById('shareInfo') || document.createElement('div');
-            shareInfo.id = 'shareInfo';
-            shareInfo.style.cssText = `
-                margin-top: 15px;
-                padding: 15px;
-                background: rgba(52, 152, 219, 0.1);
-                border-radius: 6px;
-                border-left: 4px solid #3498db;
-                font-size: 14px;
-                line-height: 1.6;
-            `;
-            shareInfo.innerHTML = `
-                <div style="font-weight: 700; color: #3498db; margin-bottom: 8px;">📊 持股建议</div>
-                <div>建议持股数量: <span style="font-weight: 700; color: #2c3e50;">${shareCount} 股</span></div>
-                <div>当前股价: <span style="font-weight: 700; color: #2c3e50;">${currentPrice} 元</span></div>
-                <div>预计投资金额: <span style="font-weight: 700; color: #2c3e50;">${(shareCount * parseFloat(currentPrice) / 10000).toFixed(2)} 万元</span></div>
-            `;
-            
-            const resultDiv = document.getElementById('result');
-            if (!document.getElementById('shareInfo')) {
-                resultDiv.parentNode.insertBefore(shareInfo, resultDiv.nextSibling);
-            }
-        }
-    }
-
-    function calculate() {
-        const stockName = document.getElementById('stockName').value.trim();
-        const pe = parseFloat(document.getElementById('pe').value);
-        const growth = parseFloat(document.getElementById('growth').value);
-        const expectRadio = document.querySelector('input[name="expect"]:checked');
-        const techRadio = document.querySelector('input[name="tech"]:checked');
-
-        if (!stockName) {
-            alert('请输入股票名称！');
-            return;
-        }
-
-        if (isNaN(pe) || isNaN(growth) || !expectRadio || !techRadio) {
-            alert('请填写所有参数！');
-            return;
-        }
-
-        if (growth === 0) {
-            alert('利润增长率不能为0！');
-            return;
-        }
-
-        const expect = parseInt(expectRadio.value);
-        const tech = parseInt(techRadio.value);
-
-        // 调用后端计算接口
-        const requestData = {
-            stock_name: stockName,
-            pe: pe,
-            growth: growth,
-            expect: expect,
-            tech: tech,
-            buffett_score: currentStockData && currentStockData.buffett_score ? 
-                (currentStockData.buffett_score.total_score || 50) : 50,
-            current_price: currentStockData && currentStockData.current_price ? 
-                parseFloat(currentStockData.current_price) : 0
-        };
-
-        fetch('/invest/calculate-position', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(requestData)
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.Error) {
-                alert('计算失败: ' + data.Error);
-                return;
-            }
-
-            if (data.Result) {
-                const result = data.Result;
-
-                const timestamp = new Date().toLocaleString('zh-CN');
-                const historyItem = {
-                    stockName: result.stock_name,
-                    pe: result.pe.toFixed(2),
-                    growth: result.growth.toFixed(2),
-                    peg: result.peg.toFixed(3),
-                    expect: result.expect,
-                    tech: result.tech,
-                    buffettScore: result.buffett_score.toFixed(1),
-                    finalAmount: result.final_amount.toFixed(2),
-                    shareCount: result.share_count,
-                    currentPrice: result.current_price.toFixed(2),
-                    isPegHigh: result.is_peg_high,
-                    timestamp: timestamp,
-                    // 添加后端返回的得分信息
-                    pegScore: result.peg_score,
-                    expectScore: result.expect_score,
-                    techScore: result.tech_score,
-                    buffettScoreNormalized: result.buffett_score / 100,
-                    totalScore: result.total_score
-                };
-
-                // 显示结果
-                displayResults(historyItem);
-
-                // 检查是否与最近一条记录相同（避免重复添加）
-                const isDuplicate = history.length > 0 &&
-                    history[0].stockName === historyItem.stockName &&
-                    history[0].pe === historyItem.pe &&
-                    history[0].growth === historyItem.growth &&
-                    history[0].expect === historyItem.expect &&
-                    history[0].tech === historyItem.tech;
-
-                if (!isDuplicate) {
-                    history.unshift(historyItem);
-                    if (history.length > 50) {
-                        history = history.slice(0, 50);
-                    }
-                    saveHistory();
-                    renderHistory();
-                }
-            } else {
-                alert('未获取到计算结果');
-            }
-        })
-        .catch(error => {
-            console.error('计算错误:', error);
-            alert('计算失败，请稍后重试');
-        });
-    }
-
-    document.querySelectorAll('input[type="number"], input[type="text"]').forEach(input => {
+    document.querySelectorAll('input[type="text"]').forEach(input => {
         input.addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
-                if (input.id === 'stockName') {
-                    queryStockData();
-                } else {
-                    calculate();
-                }
+                queryStockData();
             }
         });
     });
-
-    loadHistory();
 </script>
 </body>
 </html>

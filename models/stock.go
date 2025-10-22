@@ -7,15 +7,18 @@ import (
 	"fmt"
 	"math"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/axiaoxin-com/investool/datacenter"
+	"github.com/axiaoxin-com/investool/datacenter/coze"
 	"github.com/axiaoxin-com/investool/datacenter/eastmoney"
 	"github.com/axiaoxin-com/investool/datacenter/eniu"
 	"github.com/axiaoxin-com/investool/datacenter/zszx"
 	"github.com/axiaoxin-com/logging"
+	"github.com/spf13/viper"
 )
 
 // BuffettScore 巴菲特评分结构体
@@ -32,6 +35,33 @@ type BuffettScore struct {
 	RDScore           float64 `json:"rd_score"`            // 研发投入评分（5分）
 	DividendScore     float64 `json:"dividend_score"`      // 分红评分（5分）
 	RepurchaseScore   float64 `json:"repurchase_score"`    // 回购评分（5分）
+}
+
+// LynchScore 彼得·林奇评分结构体（总分100分）
+type LynchScore struct {
+	PEGScore           float64 `json:"peg_score"`            // PEG评分（25分）
+	EPSGrowthScore     float64 `json:"eps_growth_score"`     // EPS持续增长评分（15分）
+	RevenueGrowthScore float64 `json:"revenue_growth_score"` // 营收增长评分（15分）
+	ProfitGrowthScore  float64 `json:"profit_growth_score"`  // 净利润增速评分（10分）
+	ROEScore           float64 `json:"roe_score"`            // ROE评分（10分）
+	FreeCashFlowScore  float64 `json:"free_cash_flow_score"` // 自由现金流评分（10分）
+	IndustryScore      float64 `json:"industry_score"`       // 行业前景评分（10分）
+	MarketCapScore     float64 `json:"market_cap_score"`     // 市值评分（5分）
+	TotalScore         float64 `json:"total_score"`          // 总分（100分）
+	ScoreDescription   string  `json:"score_description"`    // 评分说明
+}
+
+// ONeilScore 威廉·欧奈尔（CANSLIM）评分结构体（总分100分）
+type ONeilScore struct {
+	CurrentQuarterScore float64 `json:"current_quarter_score"` // C：当前季度利润增长评分（15分）
+	AnnualGrowthScore   float64 `json:"annual_growth_score"`   // A：年利润增长趋势评分（15分）
+	NewConceptScore     float64 `json:"new_concept_score"`     // N：新品新概念评分（10分）
+	SmallFloatScore     float64 `json:"small_float_score"`     // S：股本小易拉升评分（10分）
+	LeaderScore         float64 `json:"leader_score"`          // L：行业龙头评分（10分）
+	InstitutionScore    float64 `json:"institution_score"`     // I：机构增持评分（20分）
+	MarketTrendScore    float64 `json:"market_trend_score"`    // M：技术趋势评分（20分）
+	TotalScore          float64 `json:"total_score"`           // 总分（100分）
+	ScoreDescription    string  `json:"score_description"`     // 评分说明
 }
 
 // Stock 接口返回的股票信息结构
@@ -90,8 +120,18 @@ type Stock struct {
 	FreeHoldersTop10 eastmoney.FreeHolderList `json:"free_holders_top_10"`
 	// 主力资金净流入
 	MainMoneyNetInflows zszx.NetInflowList `json:"main_money_net_inflows"`
+	// 主营业务
+	MainBusiness string `json:"main_business"`
+	// 所属概念
+	Concept string `json:"concept"`
 	// 巴菲特评分
 	BuffettScore BuffettScore `json:"buffett_score"`
+	// 彼得·林奇评分
+	LynchScore LynchScore `json:"lynch_score"`
+	// 威廉·欧奈尔评分
+	ONeilScore ONeilScore `json:"oneil_score"`
+	// Coze AI分析结果
+	CozeAnalysis *coze.IndustryAnalysisResponse `json:"coze_analysis,omitempty"`
 }
 
 // GetPrice 返回股价，没开盘时可能是字符串"-"，此时返回最近历史股价，无历史价则返回 -1
@@ -190,13 +230,33 @@ func NewStock(ctx context.Context, baseInfo eastmoney.StockInfo) (Stock, error) 
 		logging.Info(ctx, fmt.Sprintf("获取到历史财务数据，数据条数: %d, 最新报告期: %s", len(hf), hf[0].ReportDate))
 		s.HistoricalFinaMainData = hf
 
-		// 历史市盈率 && 合理价格
-		peList, err := datacenter.EastMoney.QueryHistoricalPEList(ctx, s.BaseInfo.Secucode)
-		if err != nil {
-			logging.Error(ctx, "NewStock QueryHistoricalPEList err:"+err.Error())
-			return
+		// 历史市盈率 - 使用Coze API获取
+		cozeAPIKey := viper.GetString("coze.api_key")
+		cozeBotID := viper.GetString("coze.bot_id")
+		cozeEnabled := viper.GetBool("coze.enabled")
+		if cozeEnabled && cozeAPIKey != "" && cozeBotID != "" {
+			cozeClient := coze.NewCozeClient(cozeAPIKey, cozeBotID)
+			peReq := coze.HistoricalPERequest{
+				StockName: s.BaseInfo.SecurityNameAbbr,
+				SecuCode:  s.BaseInfo.Secucode,
+				Industry:  s.BaseInfo.Industry,
+				MarketCap: s.BaseInfo.TotalMarketCap / 100000000, // 转换为亿元
+			}
+			peResp, err := cozeClient.GetHistoricalPEAnalysis(ctx, peReq)
+			if err != nil {
+				logging.Warn(ctx, "NewStock GetHistoricalPEAnalysis err:"+err.Error())
+			} else {
+				// 转换Coze返回的数据格式为HistoricalPEList
+				for _, item := range peResp.HistoricalPEList {
+					pe := eastmoney.HistoricalPE{
+						Date:  item.Date,
+						Value: item.Value,
+					}
+					s.HistoricalPEList = append(s.HistoricalPEList, pe)
+				}
+				logging.Info(ctx, fmt.Sprintf("通过Coze获取到历史PE数据，数据条数: %d", len(s.HistoricalPEList)))
+			}
 		}
-		s.HistoricalPEList = peList
 
 		// 合理价格判断
 		// 去年年报
@@ -214,7 +274,7 @@ func NewStock(ctx context.Context, baseInfo eastmoney.StockInfo) (Stock, error) 
 			lastYearAvgRevIncrRatio = s.HistoricalFinaMainData.GetAvgRevenueIncreasingRatioByYear(ctx, thisYear-2)
 		}
 		// pe 中位数
-		peMidVal, err := peList.GetMidValue(ctx)
+		peMidVal, err := s.HistoricalPEList.GetMidValue(ctx)
 		if err != nil {
 			logging.Error(ctx, "NewStock GetMidValue err:"+err.Error())
 			return
@@ -931,4 +991,345 @@ func (s *Stock) String() string {
 	sb.WriteString(fmt.Sprintf("回购(5分): %.1f\n", s.BuffettScore.RepurchaseScore))
 
 	return sb.String()
+}
+
+// GetCozeAnalysis 获取Coze AI分析结果
+func (s Stock) GetCozeAnalysis(ctx context.Context, cozeClient *coze.CozeClient) error {
+	if cozeClient == nil {
+		return fmt.Errorf("coze client is nil")
+	}
+
+	// 构建分析请求
+	req := coze.IndustryAnalysisRequest{
+		StockName:    s.BaseInfo.SecurityNameAbbr,
+		Industry:     s.BaseInfo.Industry,
+		MarketCap:    s.BaseInfo.TotalMarketCap / 100000000, // 转换为亿元
+		MainBusiness: s.MainBusiness,
+		Concept:      s.Concept,
+	}
+
+	// 调用Coze API
+	analysis, err := cozeClient.GetIndustryAnalysis(ctx, req)
+	if err != nil {
+		logging.Warnf(ctx, "Failed to get coze analysis: %v", err)
+		// Coze分析失败不影响主要功能，设置默认值
+		s.CozeAnalysis = &coze.IndustryAnalysisResponse{
+			IndustryProspectScore: 5.0,
+			IndustryLeaderScore:   5.0,
+			NewConceptScore:       5.0,
+			Analysis:              "Coze AI 分析暂时不可用，使用默认评分",
+			DataSource:            "系统默认值",
+		}
+		return nil
+	}
+
+	// 更新分析结果
+	s.CozeAnalysis = analysis
+	return nil
+}
+
+// CalculateLynchScoreWithCoze 计算彼得·林奇评分（包含Coze分析）
+func (s Stock) CalculateLynchScore() LynchScore {
+	score := LynchScore{}
+
+	// 1. PEG评分（25分）
+	peg := s.PEG
+	if peg <= 1.0 {
+		score.PEGScore = 25.0
+	} else if peg <= 1.5 {
+		score.PEGScore = 18.0
+	} else if peg <= 2.0 {
+		score.PEGScore = 10.0
+	} else {
+		score.PEGScore = 0.0
+	}
+
+	// 2. EPS持续增长评分（15分）- 现在有历史数据了！
+	if len(s.HistoricalFinaMainData) >= 5 {
+		// 检查最近5年EPS是否持续增长
+		growthCount := 0
+		for i := 1; i < 5 && i < len(s.HistoricalFinaMainData); i++ {
+			if s.HistoricalFinaMainData[i].Epsjb > s.HistoricalFinaMainData[i-1].Epsjb {
+				growthCount++
+			}
+		}
+		if growthCount >= 4 {
+			score.EPSGrowthScore = 15.0 // 5年持续增长
+		} else if growthCount >= 3 {
+			score.EPSGrowthScore = 12.0 // 4年增长
+		} else if growthCount >= 2 {
+			score.EPSGrowthScore = 8.0 // 3年增长
+		} else {
+			score.EPSGrowthScore = 4.0 // 有波动
+		}
+	} else if len(s.HistoricalFinaMainData) >= 3 {
+		// 至少3年数据
+		growthCount := 0
+		for i := 1; i < 3 && i < len(s.HistoricalFinaMainData); i++ {
+			if s.HistoricalFinaMainData[i].Epsjb > s.HistoricalFinaMainData[i-1].Epsjb {
+				growthCount++
+			}
+		}
+		score.EPSGrowthScore = float64(growthCount) / 2.0 * 15.0
+	} else {
+		score.EPSGrowthScore = 0.0 // 数据不足
+	}
+
+	// 3. 营收增长评分（15分）
+	revenueGrowth := s.BaseInfo.ToiYoyRatio
+	if revenueGrowth >= 30.0 {
+		score.RevenueGrowthScore = 15.0
+	} else if revenueGrowth >= 15.0 {
+		score.RevenueGrowthScore = 10.0
+	} else if revenueGrowth > 0 {
+		score.RevenueGrowthScore = float64(revenueGrowth) / 30.0 * 15.0
+	} else {
+		score.RevenueGrowthScore = 0.0
+	}
+
+	// 4. 净利润增速评分（10分）
+	profitGrowth := s.BaseInfo.NetprofitYoyRatio
+	if profitGrowth >= 20.0 {
+		score.ProfitGrowthScore = 10.0
+	} else if profitGrowth >= 10.0 {
+		score.ProfitGrowthScore = 6.0 + (profitGrowth-10.0)/10.0*4.0
+	} else if profitGrowth > 0 {
+		score.ProfitGrowthScore = 2.0 + (profitGrowth/10.0)*4.0
+	} else {
+		score.ProfitGrowthScore = 0.0
+	}
+
+	// 5. ROE评分（10分）
+	roe := s.BaseInfo.RoeWeight
+	if roe >= 20.0 {
+		score.ROEScore = 10.0
+	} else if roe >= 15.0 {
+		score.ROEScore = 8.0
+	} else if roe > 0 {
+		score.ROEScore = (roe / 20.0) * 10.0
+	} else {
+		score.ROEScore = 0.0
+	}
+
+	// 6. 自由现金流评分（10分）- 现在有历史数据了！
+	if len(s.HistoricalCashflowList) >= 3 {
+		// 检查最近3年经营活动现金流是否为正
+		positiveCount := 0
+		for i := 0; i < 3 && i < len(s.HistoricalCashflowList); i++ {
+			if s.HistoricalCashflowList[i].NetcashOperate > 0 {
+				positiveCount++
+			}
+		}
+		if positiveCount == 3 {
+			score.FreeCashFlowScore = 10.0 // 3年连续为正
+		} else if positiveCount == 2 {
+			score.FreeCashFlowScore = 7.0 // 2年为正
+		} else if positiveCount == 1 {
+			score.FreeCashFlowScore = 4.0 // 1年为正
+		} else {
+			score.FreeCashFlowScore = 0.0 // 都为负
+		}
+	} else if s.NetcashOperate > 0 {
+		score.FreeCashFlowScore = 5.0 // 只有最新一期为正
+	} else {
+		score.FreeCashFlowScore = 0.0
+	}
+
+	// 7. 行业前景评分（10分）- 使用Coze API获取最新分析
+	if s.CozeAnalysis != nil {
+		score.IndustryScore = s.CozeAnalysis.IndustryProspectScore
+	} else {
+		// 如果没有Coze分析结果，使用默认分
+		score.IndustryScore = 5.0 // 默认中等分
+	}
+
+	// 8. 市值评分（5分）
+	marketCap := s.BaseInfo.TotalMarketCap / 100000000 // 转换为亿元
+	if marketCap < 100 {
+		score.MarketCapScore = 5.0
+	} else if marketCap < 300 {
+		score.MarketCapScore = 3.0
+	} else if marketCap < 500 {
+		score.MarketCapScore = 1.0
+	} else {
+		score.MarketCapScore = 0.0
+	}
+
+	// 计算总分
+	score.TotalScore = score.PEGScore + score.EPSGrowthScore + score.RevenueGrowthScore +
+		score.ProfitGrowthScore + score.ROEScore + score.FreeCashFlowScore +
+		score.IndustryScore + score.MarketCapScore
+
+	// 生成评分说明
+	var desc strings.Builder
+	desc.WriteString(fmt.Sprintf("彼得·林奇评分: %.1f/100\n", score.TotalScore))
+	desc.WriteString(fmt.Sprintf("PEG评分(25分): %.1f\n", score.PEGScore))
+	desc.WriteString(fmt.Sprintf("EPS增长评分(15分): %.1f\n", score.EPSGrowthScore))
+	desc.WriteString(fmt.Sprintf("营收增长评分(15分): %.1f\n", score.RevenueGrowthScore))
+	desc.WriteString(fmt.Sprintf("净利润增速评分(10分): %.1f\n", score.ProfitGrowthScore))
+	desc.WriteString(fmt.Sprintf("ROE评分(10分): %.1f\n", score.ROEScore))
+	desc.WriteString(fmt.Sprintf("自由现金流评分(10分): %.1f\n", score.FreeCashFlowScore))
+	desc.WriteString(fmt.Sprintf("行业前景评分(10分): %.1f\n", score.IndustryScore))
+	desc.WriteString(fmt.Sprintf("市值评分(5分): %.1f\n", score.MarketCapScore))
+
+	score.ScoreDescription = desc.String()
+	return score
+}
+
+// CalculateONeilScore 计算威廉·欧奈尔（CANSLIM）评分
+func (s Stock) CalculateONeilScore() ONeilScore {
+	score := ONeilScore{}
+
+	// 1. C：当前季度利润增长评分（15分）
+	profitGrowth := s.BaseInfo.NetprofitYoyRatio
+	if profitGrowth >= 50.0 {
+		score.CurrentQuarterScore = 15.0
+	} else if profitGrowth >= 20.0 {
+		score.CurrentQuarterScore = 10.0 + (profitGrowth-20.0)/30.0*5.0
+	} else if profitGrowth >= 10.0 {
+		score.CurrentQuarterScore = 5.0 + (profitGrowth-10.0)/10.0*5.0
+	} else {
+		score.CurrentQuarterScore = 0.0
+	}
+
+	// 2. A：年利润增长趋势评分（15分）- 需要历史数据，暂时标记为不确定
+	if len(s.HistoricalFinaMainData) >= 3 {
+		// 检查最近3年利润增长趋势
+		avgGrowth := 0.0
+		count := 0
+		for i := 0; i < 3 && i < len(s.HistoricalFinaMainData); i++ {
+			if s.HistoricalFinaMainData[i].Parentnetprofittz > 0 {
+				avgGrowth += s.HistoricalFinaMainData[i].Parentnetprofittz
+				count++
+			}
+		}
+		if count > 0 {
+			avgGrowth /= float64(count)
+			if avgGrowth >= 20.0 {
+				score.AnnualGrowthScore = 15.0
+			} else if avgGrowth >= 10.0 {
+				score.AnnualGrowthScore = 10.0 + (avgGrowth-10.0)/10.0*5.0
+			} else {
+				score.AnnualGrowthScore = avgGrowth / 10.0 * 10.0
+			}
+		} else {
+			score.AnnualGrowthScore = 0.0
+		}
+	} else {
+		score.AnnualGrowthScore = 0.0 // 数据不足
+	}
+
+	// 3. N：新品新概念评分（10分）- 使用Coze API获取最新分析
+	if s.CozeAnalysis != nil {
+		score.NewConceptScore = s.CozeAnalysis.NewConceptScore
+	} else {
+		// 如果没有Coze分析结果，使用默认分
+		score.NewConceptScore = 5.0 // 默认中等分
+	}
+
+	// 4. S：股本小易拉升评分（10分）- 现在有数据了！
+	// 通过总市值和股价计算流通股本（简化计算）
+	currentPrice := s.GetPrice()
+	if currentPrice > 0 {
+		totalShares := s.BaseInfo.TotalMarketCap / (currentPrice * 100000000) // 转换为亿股
+		if totalShares < 2 {
+			score.SmallFloatScore = 10.0 // 小于2亿股
+		} else if totalShares < 5 {
+			score.SmallFloatScore = 7.0 // 2-5亿股
+		} else if totalShares < 10 {
+			score.SmallFloatScore = 4.0 // 5-10亿股
+		} else {
+			score.SmallFloatScore = 0.0 // 大于10亿股
+		}
+	} else {
+		score.SmallFloatScore = 5.0 // 默认中等分
+	}
+
+	// 5. L：行业龙头评分（10分）- 使用Coze API获取最新分析
+	if s.CozeAnalysis != nil {
+		score.LeaderScore = s.CozeAnalysis.IndustryLeaderScore
+	} else {
+		// 如果没有Coze分析结果，使用默认分
+		score.LeaderScore = 5.0 // 默认中等分
+	}
+
+	// 6. I：机构增持评分（20分）- 现在有数据了！
+	if len(s.MainMoneyNetInflows) >= 20 {
+		// 计算最近20日主力资金净流入
+		recent20Days := s.MainMoneyNetInflows[:20]
+		totalNetInflow := 0.0
+		for _, inflow := range recent20Days {
+			if netInflow, err := strconv.ParseFloat(inflow.MainMnyNetIn, 64); err == nil {
+				totalNetInflow += netInflow
+			}
+		}
+
+		if totalNetInflow > 10000 { // 净流入超过1亿元
+			score.InstitutionScore = 20.0
+		} else if totalNetInflow > 5000 { // 净流入超过5000万元
+			score.InstitutionScore = 15.0
+		} else if totalNetInflow > 0 { // 净流入为正
+			score.InstitutionScore = 10.0
+		} else if totalNetInflow > -5000 { // 净流出小于5000万元
+			score.InstitutionScore = 5.0
+		} else {
+			score.InstitutionScore = 0.0 // 大幅净流出
+		}
+	} else {
+		score.InstitutionScore = 10.0 // 默认中等分
+	}
+
+	// 7. M：技术趋势评分（20分）- 现在有数据了！
+	if len(s.HistoricalPrice.Price) >= 20 {
+		// 计算最近20日股价趋势
+		recentPrices := s.HistoricalPrice.Price[len(s.HistoricalPrice.Price)-20:]
+		if len(recentPrices) >= 20 {
+			// 计算20日涨幅
+			priceChange := (recentPrices[19] - recentPrices[0]) / recentPrices[0] * 100
+
+			// 计算是否创新高
+			maxPrice := recentPrices[0]
+			for _, price := range recentPrices {
+				if price > maxPrice {
+					maxPrice = price
+				}
+			}
+			isNewHigh := recentPrices[19] >= maxPrice*0.95 // 接近最高价
+
+			if priceChange > 20 && isNewHigh {
+				score.MarketTrendScore = 20.0 // 大涨且创新高
+			} else if priceChange > 10 && isNewHigh {
+				score.MarketTrendScore = 15.0 // 上涨且创新高
+			} else if priceChange > 5 {
+				score.MarketTrendScore = 10.0 // 温和上涨
+			} else if priceChange > -5 {
+				score.MarketTrendScore = 5.0 // 横盘
+			} else {
+				score.MarketTrendScore = 0.0 // 下跌
+			}
+		} else {
+			score.MarketTrendScore = 10.0 // 默认中等分
+		}
+	} else {
+		score.MarketTrendScore = 10.0 // 默认中等分
+	}
+
+	// 计算总分
+	score.TotalScore = score.CurrentQuarterScore + score.AnnualGrowthScore +
+		score.NewConceptScore + score.SmallFloatScore + score.LeaderScore +
+		score.InstitutionScore + score.MarketTrendScore
+
+	// 生成评分说明
+	var desc strings.Builder
+	desc.WriteString(fmt.Sprintf("威廉·欧奈尔评分: %.1f/100\n", score.TotalScore))
+	desc.WriteString(fmt.Sprintf("当前季度利润增长(15分): %.1f\n", score.CurrentQuarterScore))
+	desc.WriteString(fmt.Sprintf("年利润增长趋势(15分): %.1f\n", score.AnnualGrowthScore))
+	desc.WriteString(fmt.Sprintf("新品新概念(10分): %.1f\n", score.NewConceptScore))
+	desc.WriteString(fmt.Sprintf("股本小易拉升(10分): %.1f\n", score.SmallFloatScore))
+	desc.WriteString(fmt.Sprintf("行业龙头(10分): %.1f\n", score.LeaderScore))
+	desc.WriteString(fmt.Sprintf("机构增持(20分): %.1f\n", score.InstitutionScore))
+	desc.WriteString(fmt.Sprintf("技术趋势(20分): %.1f\n", score.MarketTrendScore))
+
+	score.ScoreDescription = desc.String()
+	return score
 }

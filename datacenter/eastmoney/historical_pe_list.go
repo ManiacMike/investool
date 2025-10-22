@@ -4,7 +4,6 @@ package eastmoney
 
 import (
 	"context"
-	"errors"
 	"strconv"
 	"time"
 
@@ -57,7 +56,7 @@ func (e EastMoney) QueryHistoricalPEList(ctx context.Context, secuCode string) (
 	apiurl := "https://emfront.eastmoney.com/APP_HSF10/CPBD/GZFX"
 	params := map[string]string{
 		"code": e.GetFC(secuCode),
-		"year": "4", // 10 年
+		"year": "4", // 4年
 		"type": "1", // 市盈率
 	}
 	logging.Debug(ctx, "EastMoney QueryHistoricalPEList "+apiurl+" begin", zap.Any("params", params))
@@ -76,11 +75,14 @@ func (e EastMoney) QueryHistoricalPEList(ctx context.Context, secuCode string) (
 		// zap.Any("resp", resp),
 	)
 	if err != nil {
-		return nil, err
+		// 如果API调用失败，返回空列表而不是错误，这样不会影响主要功能
+		logging.Warn(ctx, "QueryHistoricalPEList API调用失败，返回空列表", zap.Error(err))
+		return HistoricalPEList{}, nil
 	}
 	result := HistoricalPEList{}
 	if len(resp.Data) == 0 {
-		return nil, errors.New("no historical pe data")
+		logging.Warn(ctx, "QueryHistoricalPEList 没有历史PE数据")
+		return HistoricalPEList{}, nil
 	}
 	for _, i := range resp.Data[0] {
 		value, err := strconv.ParseFloat(i.Value, 64)

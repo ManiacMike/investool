@@ -1,0 +1,14 @@
+# Coze API 配置示例
+# 在 config.toml 中添加以下配置
+
+[coze]
+# Coze API 密钥 - 从 https://www.coze.cn/ 获取
+api_key = "your_coze_api_key_here"
+# Coze Bot ID - 你创建的股票分析机器人的ID
+bot_id = "your_bot_id_here"
+
+# 可选：API调用超时时间（秒）
+timeout = 30
+
+# 可选：是否启用Coze分析（默认启用）
+enabled = true
