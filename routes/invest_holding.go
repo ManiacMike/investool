@@ -3,11 +3,12 @@
 package routes
 
 import (
+	"encoding/json"
+	"fmt"
 	"math"
 	"net/http"
 
 	"github.com/axiaoxin-com/investool/core"
-	"github.com/axiaoxin-com/investool/datacenter/coze"
 	"github.com/axiaoxin-com/investool/models"
 	"github.com/axiaoxin-com/investool/version"
 	"github.com/gin-gonic/gin"
@@ -40,6 +41,7 @@ func StockAnalyzerHandler(c *gin.Context) {
 }
 
 // QueryStockDataHandler 查询股票数据API
+// 只返回基础财务信息，不计算评分，生成LLM prompt供用户复制
 func QueryStockDataHandler(c *gin.Context) {
 	data := gin.H{
 		"HostURL":   viper.GetString("server.host_url"),
@@ -75,24 +77,140 @@ func QueryStockDataHandler(c *gin.Context) {
 	// 获取第一个匹配的股票数据
 	var stockData gin.H
 	for _, stock := range stocks {
-		// 尝试获取Coze AI分析（如果配置了API密钥）
-		cozeAPIKey := viper.GetString("coze.api_key")
-		cozeBotID := viper.GetString("coze.bot_id")
-		cozeEnabled := viper.GetBool("coze.enabled")
-		if cozeEnabled && cozeAPIKey != "" && cozeBotID != "" {
-			cozeClient := coze.NewCozeClient(cozeAPIKey, cozeBotID)
-			if err := stock.GetCozeAnalysis(c.Request.Context(), cozeClient); err != nil {
-				// Coze分析失败不影响主要功能，只记录错误
-				c.Header("X-Coze-Analysis-Error", err.Error())
-			}
-		}
-
-		// 计算彼得·林奇评分
-		lynchScore := stock.CalculateLynchScore()
-		// 计算威廉·欧奈尔评分
-		oneilScore := stock.CalculateONeilScore()
-
 		stockData = gin.H{
+			"stock":         stock,
+			"name":          stock.BaseInfo.SecurityNameAbbr,
+			"code":          stock.BaseInfo.Secucode,
+			"pe":            stock.BaseInfo.PE,
+			"growth":        stock.BaseInfo.NetprofitYoyRatio,
+			"industry":      stock.BaseInfo.Industry,
+			"market_cap":    stock.BaseInfo.TotalMarketCap,
+			"current_price": stock.GetPrice(),
+			"llm_prompt":    generateLLMPrompt(stock),
+		}
+		break
+	}
+
+	data["StockData"] = stockData
+	c.JSON(http.StatusOK, data)
+}
+
+// generateLLMPrompt 生成LLM查询prompt
+func generateLLMPrompt(stock models.Stock) string {
+	prompt := `请搜索最新的信息分析以下股票信息，并返回JSON格式的分析结果：
+
+股票名称：` + stock.BaseInfo.SecurityNameAbbr + `
+股票代码：` + stock.BaseInfo.Secucode + `
+所属行业：` + stock.BaseInfo.Industry + `
+当前价格：` + fmt.Sprintf("%.2f", stock.BaseInfo.NewPrice) + `
+市盈率(PE)：` + fmt.Sprintf("%.2f", stock.BaseInfo.PE) + `
+净利润增长率：` + fmt.Sprintf("%.2f%%", stock.BaseInfo.NetprofitYoyRatio) + `
+总市值：` + fmt.Sprintf("%.2f亿元", stock.BaseInfo.TotalMarketCap/100000000) + `
+
+请从以下维度进行分析，并严格按照JSON格式返回结果,在json数据的下面并给出分析和数据来源：
+
+1. 行业龙头评分 (industry_leader_score): 0-100分，评估该公司在所属行业中的地位和竞争力
+2. 新概念评分 (new_concept_score): 0-100分，评估该公司是否有新的产品，新兴概念、技术或商业模式，新的领导层
+3. 行业前景评分 (industry_prospect_score): 0-100分，评估该公司所属行业的成长性、政策支持、市场需求等
+4. 护城河评分 (moat_score): 0-100分，评估该公司的竞争优势，包括品牌价值、专利技术、市场壁垒、客户粘性等
+5. 管理层评分 (management_score): 0-100分，评估管理层的诚信度、分红政策、股份回购、历史表现等
+6. 回购评分 (repurchase_score): 0-100分，评估该公司的股份回购历史、回购金额、回购时机等
+7. 机构增持评分 (institution_score): 0-100分，评估机构持仓变化、机构调研频次、机构类型等
+8. 技术趋势评分 (technical_trend_score): 0-100分，评估股价技术面，包括成交量、技术指标、突破情况等
+
+请严格按照以下JSON格式返回：
+{
+  "industry_leader_score": 85,
+  "new_concept_score": 70,
+  "industry_prospect_score": 80,
+  "moat_score": 75,
+  "management_score": 80,
+  "repurchase_score": 60,
+  "institution_score": 70,
+  "technical_trend_score": 65
+}`
+
+	return prompt
+}
+
+// CalculateStockScoreHandler 根据用户提交的LLM结果和财务信息计算股票评分
+func CalculateStockScoreHandler(c *gin.Context) {
+	data := gin.H{
+		"HostURL":   viper.GetString("server.host_url"),
+		"Env":       viper.GetString("env"),
+		"Version":   version.Version,
+		"PageTitle": "InvesTool | 股票评分计算",
+		"Error":     "",
+		"Results":   nil,
+	}
+
+	var req struct {
+		StockName   string `json:"stock_name" binding:"required"`
+		LLMResponse string `json:"llm_response" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		data["Error"] = "参数错误: " + err.Error()
+		c.JSON(http.StatusOK, data)
+		return
+	}
+
+	// 解析LLM返回的JSON
+	var llmAnalysis struct {
+		IndustryLeaderScore   float64 `json:"industry_leader_score"`
+		NewConceptScore       float64 `json:"new_concept_score"`
+		IndustryProspectScore float64 `json:"industry_prospect_score"`
+		MoatScore             float64 `json:"moat_score"`
+		ManagementScore       float64 `json:"management_score"`
+		RepurchaseScore       float64 `json:"repurchase_score"`
+		InstitutionScore      float64 `json:"institution_score"`
+		TechnicalTrendScore   float64 `json:"technical_trend_score"`
+		Analysis              string  `json:"analysis"`
+		DataSource            string  `json:"data_source"`
+	}
+
+	if err := json.Unmarshal([]byte(req.LLMResponse), &llmAnalysis); err != nil {
+		data["Error"] = "LLM返回结果格式错误，请确保返回的是有效的JSON格式: " + err.Error()
+		c.JSON(http.StatusOK, data)
+		return
+	}
+
+	// 查询股票基础信息
+	searcher := core.NewSearcher(c)
+	stocks, err := searcher.SearchStocks(c, []string{req.StockName})
+	if err != nil || len(stocks) == 0 {
+		data["Error"] = "查询股票基础信息失败"
+		c.JSON(http.StatusOK, data)
+		return
+	}
+
+	// 获取第一个股票数据
+	var stock models.Stock
+	for _, s := range stocks {
+		stock = s
+		break
+	}
+
+	// 计算三大评分体系，传入LLM分析结果
+	llmAnalysisModel := models.LLMAnalysis{
+		IndustryLeaderScore:   llmAnalysis.IndustryLeaderScore,
+		NewConceptScore:       llmAnalysis.NewConceptScore,
+		IndustryProspectScore: llmAnalysis.IndustryProspectScore,
+		MoatScore:             llmAnalysis.MoatScore,
+		ManagementScore:       llmAnalysis.ManagementScore,
+		RepurchaseScore:       llmAnalysis.RepurchaseScore,
+		InstitutionScore:      llmAnalysis.InstitutionScore,
+		TechnicalTrendScore:   llmAnalysis.TechnicalTrendScore,
+		Analysis:              llmAnalysis.Analysis,
+		DataSource:            llmAnalysis.DataSource,
+	}
+	buffettScore := stock.CalculateBuffettScoreWithLLM(llmAnalysisModel)
+	lynchScore := stock.CalculateLynchScoreWithLLM(llmAnalysisModel)
+	oneilScore := stock.CalculateONeilScoreWithLLM(llmAnalysisModel)
+
+	// 构建返回结果
+	results := gin.H{
+		"stock_info": gin.H{
 			"name":          stock.BaseInfo.SecurityNameAbbr,
 			"code":          stock.BaseInfo.Secucode,
 			"pe":            stock.BaseInfo.PE,
@@ -100,60 +218,59 @@ func QueryStockDataHandler(c *gin.Context) {
 			"industry":      stock.BaseInfo.Industry,
 			"market_cap":    stock.BaseInfo.TotalMarketCap,
 			"current_price": stock.BaseInfo.NewPrice,
-			"buffett_score": gin.H{
-				"total_score":         stock.BuffettScore.TotalScore,
-				"roe_score":           stock.BuffettScore.ROEScore,
-				"cash_flow_score":     stock.BuffettScore.CashFlowScore,
-				"profit_growth_score": stock.BuffettScore.ProfitGrowthScore,
-				"debt_ratio_score":    stock.BuffettScore.DebtRatioScore,
-				"moat_score":          stock.BuffettScore.MoatScore,
-				"management_score":    stock.BuffettScore.ManagementScore,
-				"valuation_score":     stock.BuffettScore.ValuationScore,
-				"rd_score":            stock.BuffettScore.RDScore,
-				"dividend_score":      stock.BuffettScore.DividendScore,
-				"repurchase_score":    stock.BuffettScore.RepurchaseScore,
-				"score_description":   stock.BuffettScore.ScoreDescription,
-			},
-			"lynch_score": gin.H{
-				"total_score":          lynchScore.TotalScore,
-				"peg_score":            lynchScore.PEGScore,
-				"eps_growth_score":     lynchScore.EPSGrowthScore,
-				"revenue_growth_score": lynchScore.RevenueGrowthScore,
-				"profit_growth_score":  lynchScore.ProfitGrowthScore,
-				"roe_score":            lynchScore.ROEScore,
-				"free_cash_flow_score": lynchScore.FreeCashFlowScore,
-				"industry_score":       lynchScore.IndustryScore,
-				"market_cap_score":     lynchScore.MarketCapScore,
-				"score_description":    lynchScore.ScoreDescription,
-			},
-			"oneil_score": gin.H{
-				"total_score":           oneilScore.TotalScore,
-				"current_quarter_score": oneilScore.CurrentQuarterScore,
-				"annual_growth_score":   oneilScore.AnnualGrowthScore,
-				"new_concept_score":     oneilScore.NewConceptScore,
-				"small_float_score":     oneilScore.SmallFloatScore,
-				"leader_score":          oneilScore.LeaderScore,
-				"institution_score":     oneilScore.InstitutionScore,
-				"market_trend_score":    oneilScore.MarketTrendScore,
-				"score_description":     oneilScore.ScoreDescription,
-			},
-			"coze_analysis": func() gin.H {
-				if stock.CozeAnalysis != nil {
-					return gin.H{
-						"industry_prospect_score": stock.CozeAnalysis.IndustryProspectScore,
-						"industry_leader_score":   stock.CozeAnalysis.IndustryLeaderScore,
-						"new_concept_score":       stock.CozeAnalysis.NewConceptScore,
-						"analysis":                stock.CozeAnalysis.Analysis,
-						"data_source":             stock.CozeAnalysis.DataSource,
-					}
-				}
-				return nil
-			}(),
-		}
-		break
+		},
+		"buffett_score": gin.H{
+			"total_score":         buffettScore.TotalScore,
+			"roe_score":           buffettScore.ROEScore,
+			"cash_flow_score":     buffettScore.CashFlowScore,
+			"profit_growth_score": buffettScore.ProfitGrowthScore,
+			"debt_ratio_score":    buffettScore.DebtRatioScore,
+			"moat_score":          buffettScore.MoatScore,
+			"management_score":    buffettScore.ManagementScore,
+			"valuation_score":     buffettScore.ValuationScore,
+			"rd_score":            buffettScore.RDScore,
+			"dividend_score":      buffettScore.DividendScore,
+			"repurchase_score":    buffettScore.RepurchaseScore,
+			"score_description":   buffettScore.ScoreDescription,
+		},
+		"lynch_score": gin.H{
+			"total_score":          lynchScore.TotalScore,
+			"peg_score":            lynchScore.PEGScore,
+			"eps_growth_score":     lynchScore.EPSGrowthScore,
+			"revenue_growth_score": lynchScore.RevenueGrowthScore,
+			"profit_growth_score":  lynchScore.ProfitGrowthScore,
+			"roe_score":            lynchScore.ROEScore,
+			"free_cash_flow_score": lynchScore.FreeCashFlowScore,
+			"industry_score":       lynchScore.IndustryScore,
+			"market_cap_score":     lynchScore.MarketCapScore,
+			"score_description":    lynchScore.ScoreDescription,
+		},
+		"oneil_score": gin.H{
+			"total_score":           oneilScore.TotalScore,
+			"current_quarter_score": oneilScore.CurrentQuarterScore,
+			"annual_growth_score":   oneilScore.AnnualGrowthScore,
+			"new_concept_score":     oneilScore.NewConceptScore,
+			"small_float_score":     oneilScore.SmallFloatScore,
+			"leader_score":          oneilScore.LeaderScore,
+			"institution_score":     oneilScore.InstitutionScore,
+			"market_trend_score":    oneilScore.MarketTrendScore,
+			"score_description":     oneilScore.ScoreDescription,
+		},
+		"llm_analysis": gin.H{
+			"industry_leader_score":   llmAnalysis.IndustryLeaderScore,
+			"new_concept_score":       llmAnalysis.NewConceptScore,
+			"industry_prospect_score": llmAnalysis.IndustryProspectScore,
+			"moat_score":              llmAnalysis.MoatScore,
+			"management_score":        llmAnalysis.ManagementScore,
+			"repurchase_score":        llmAnalysis.RepurchaseScore,
+			"institution_score":       llmAnalysis.InstitutionScore,
+			"technical_trend_score":   llmAnalysis.TechnicalTrendScore,
+			"analysis":                llmAnalysis.Analysis,
+			"data_source":             llmAnalysis.DataSource,
+		},
 	}
 
-	data["StockData"] = stockData
+	data["Results"] = results
 	c.JSON(http.StatusOK, data)
 }
 

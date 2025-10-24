@@ -18,7 +18,6 @@ import (
 	"github.com/axiaoxin-com/investool/datacenter/eniu"
 	"github.com/axiaoxin-com/investool/datacenter/zszx"
 	"github.com/axiaoxin-com/logging"
-	"github.com/spf13/viper"
 )
 
 // BuffettScore 巴菲特评分结构体
@@ -62,6 +61,20 @@ type ONeilScore struct {
 	MarketTrendScore    float64 `json:"market_trend_score"`    // M：技术趋势评分（20分）
 	TotalScore          float64 `json:"total_score"`           // 总分（100分）
 	ScoreDescription    string  `json:"score_description"`     // 评分说明
+}
+
+// LLMAnalysis LLM分析结果结构体
+type LLMAnalysis struct {
+	IndustryLeaderScore   float64 `json:"industry_leader_score"`   // 行业龙头评分
+	NewConceptScore       float64 `json:"new_concept_score"`       // 新概念评分
+	IndustryProspectScore float64 `json:"industry_prospect_score"` // 行业前景评分
+	MoatScore             float64 `json:"moat_score"`              // 护城河评分
+	ManagementScore       float64 `json:"management_score"`        // 管理层评分
+	RepurchaseScore       float64 `json:"repurchase_score"`        // 回购评分
+	InstitutionScore      float64 `json:"institution_score"`       // 机构增持评分
+	TechnicalTrendScore   float64 `json:"technical_trend_score"`   // 技术趋势评分
+	Analysis              string  `json:"analysis"`                // 分析说明
+	DataSource            string  `json:"data_source"`             // 数据来源
 }
 
 // Stock 接口返回的股票信息结构
@@ -229,34 +242,6 @@ func NewStock(ctx context.Context, baseInfo eastmoney.StockInfo) (Stock, error) 
 		}
 		logging.Info(ctx, fmt.Sprintf("获取到历史财务数据，数据条数: %d, 最新报告期: %s", len(hf), hf[0].ReportDate))
 		s.HistoricalFinaMainData = hf
-
-		// 历史市盈率 - 使用Coze API获取
-		cozeAPIKey := viper.GetString("coze.api_key")
-		cozeBotID := viper.GetString("coze.bot_id")
-		cozeEnabled := viper.GetBool("coze.enabled")
-		if cozeEnabled && cozeAPIKey != "" && cozeBotID != "" {
-			cozeClient := coze.NewCozeClient(cozeAPIKey, cozeBotID)
-			peReq := coze.HistoricalPERequest{
-				StockName: s.BaseInfo.SecurityNameAbbr,
-				SecuCode:  s.BaseInfo.Secucode,
-				Industry:  s.BaseInfo.Industry,
-				MarketCap: s.BaseInfo.TotalMarketCap / 100000000, // 转换为亿元
-			}
-			peResp, err := cozeClient.GetHistoricalPEAnalysis(ctx, peReq)
-			if err != nil {
-				logging.Warn(ctx, "NewStock GetHistoricalPEAnalysis err:"+err.Error())
-			} else {
-				// 转换Coze返回的数据格式为HistoricalPEList
-				for _, item := range peResp.HistoricalPEList {
-					pe := eastmoney.HistoricalPE{
-						Date:  item.Date,
-						Value: item.Value,
-					}
-					s.HistoricalPEList = append(s.HistoricalPEList, pe)
-				}
-				logging.Info(ctx, fmt.Sprintf("通过Coze获取到历史PE数据，数据条数: %d", len(s.HistoricalPEList)))
-			}
-		}
 
 		// 合理价格判断
 		// 去年年报
@@ -1332,4 +1317,576 @@ func (s Stock) CalculateONeilScore() ONeilScore {
 
 	score.ScoreDescription = desc.String()
 	return score
+}
+
+// CalculateBuffettScoreWithLLM 计算巴菲特评分（包含LLM分析）
+func (s Stock) CalculateBuffettScoreWithLLM(llmAnalysis LLMAnalysis) BuffettScore {
+	score := BuffettScore{}
+
+	// 存储原始数据用于生成详细描述
+	var roeData, cashFlowData, profitGrowthData, debtRatioData, valuationData string
+
+	// 1. ROE评分（20分）
+	score.ROEScore = s.calculateROEScoreWithData(context.Background())
+	roeData = s.getROEDataDescription()
+
+	// 2. 现金流评分（15分）
+	score.CashFlowScore = s.calculateCashFlowScoreWithData(context.Background())
+	cashFlowData = s.getCashFlowDataDescription()
+
+	// 3. 利润增长评分（15分）
+	score.ProfitGrowthScore = s.calculateProfitGrowthScoreWithData(context.Background())
+	profitGrowthData = s.getProfitGrowthDataDescription()
+
+	// 4. 负债率评分（10分）
+	score.DebtRatioScore = s.calculateDebtRatioScoreWithData(context.Background())
+	debtRatioData = s.getDebtRatioDataDescription()
+
+	// 5. 护城河评分（10分）- 使用LLM分析结果
+	score.MoatScore = llmAnalysis.MoatScore / 100.0 * 10.0
+
+	// 6. 管理层评分（10分）- 使用LLM分析结果
+	score.ManagementScore = llmAnalysis.ManagementScore / 100.0 * 10.0
+
+	// 7. 估值评分（15分）
+	score.ValuationScore = s.calculateValuationScoreWithData(context.Background())
+	valuationData = s.getValuationDataDescription()
+
+	// 8. 研发投入评分（5分）
+	s.calculateRDScore(context.Background())
+	score.RDScore = s.BuffettScore.RDScore
+
+	// 9. 分红评分（5分）
+	s.calculateDividendScore(context.Background())
+	score.DividendScore = s.BuffettScore.DividendScore
+
+	// 10. 回购评分（5分）- 使用LLM分析结果
+	score.RepurchaseScore = llmAnalysis.RepurchaseScore / 100.0 * 5.0
+
+	// 计算总分
+	rawTotalScore := score.ROEScore +
+		score.CashFlowScore +
+		score.ProfitGrowthScore +
+		score.DebtRatioScore +
+		score.MoatScore +
+		score.ManagementScore +
+		score.ValuationScore +
+		score.RDScore +
+		score.DividendScore +
+		score.RepurchaseScore
+
+	// 将110分制换算成100分制
+	totalScore := rawTotalScore * 100 / 110
+
+	// 生成评分说明
+	var desc strings.Builder
+	desc.WriteString(fmt.Sprintf("总分(100分): %.1f (原始得分: %.1f)\n\n", totalScore, rawTotalScore))
+	desc.WriteString(fmt.Sprintf("ROE(20分): %.1f %s\n", score.ROEScore, roeData))
+	desc.WriteString(fmt.Sprintf("现金流(15分): %.1f %s\n", score.CashFlowScore, cashFlowData))
+	desc.WriteString(fmt.Sprintf("利润增长(15分): %.1f %s\n", score.ProfitGrowthScore, profitGrowthData))
+	desc.WriteString(fmt.Sprintf("负债率(10分): %.1f %s\n", score.DebtRatioScore, debtRatioData))
+	desc.WriteString(fmt.Sprintf("护城河(10分): %.1f (LLM评分: %.1f)\n", score.MoatScore, llmAnalysis.MoatScore))
+	desc.WriteString(fmt.Sprintf("管理层(10分): %.1f (LLM评分: %.1f)\n", score.ManagementScore, llmAnalysis.ManagementScore))
+	desc.WriteString(fmt.Sprintf("估值(15分): %.1f %s\n", score.ValuationScore, valuationData))
+	desc.WriteString(fmt.Sprintf("研发投入(5分): %.1f\n", score.RDScore))
+	desc.WriteString(fmt.Sprintf("分红(5分): %.1f\n", score.DividendScore))
+	desc.WriteString(fmt.Sprintf("回购(5分): %.1f (LLM评分: %.1f)", score.RepurchaseScore, llmAnalysis.RepurchaseScore))
+
+	score.ScoreDescription = desc.String()
+	score.TotalScore = totalScore
+	return score
+}
+
+// CalculateLynchScoreWithLLM 计算彼得·林奇评分（包含LLM分析）
+func (s Stock) CalculateLynchScoreWithLLM(llmAnalysis LLMAnalysis) LynchScore {
+	score := LynchScore{}
+
+	// 1. PEG评分（25分）
+	peg := s.PEG
+	if peg <= 1.0 {
+		score.PEGScore = 25.0
+	} else if peg <= 1.5 {
+		score.PEGScore = 18.0
+	} else if peg <= 2.0 {
+		score.PEGScore = 10.0
+	} else {
+		score.PEGScore = 0.0
+	}
+
+	// 2. EPS持续增长评分（15分）
+	if len(s.HistoricalFinaMainData) >= 5 {
+		growthCount := 0
+		for i := 1; i < 5 && i < len(s.HistoricalFinaMainData); i++ {
+			if s.HistoricalFinaMainData[i].Epsjb > s.HistoricalFinaMainData[i-1].Epsjb {
+				growthCount++
+			}
+		}
+		if growthCount >= 4 {
+			score.EPSGrowthScore = 15.0
+		} else if growthCount >= 3 {
+			score.EPSGrowthScore = 12.0
+		} else if growthCount >= 2 {
+			score.EPSGrowthScore = 8.0
+		} else {
+			score.EPSGrowthScore = 4.0
+		}
+	} else if len(s.HistoricalFinaMainData) >= 3 {
+		growthCount := 0
+		for i := 1; i < 3 && i < len(s.HistoricalFinaMainData); i++ {
+			if s.HistoricalFinaMainData[i].Epsjb > s.HistoricalFinaMainData[i-1].Epsjb {
+				growthCount++
+			}
+		}
+		score.EPSGrowthScore = float64(growthCount) / 2.0 * 15.0
+	} else {
+		score.EPSGrowthScore = 0.0
+	}
+
+	// 3. 营收增长评分（15分）
+	revenueGrowth := s.BaseInfo.ToiYoyRatio
+	if revenueGrowth >= 30.0 {
+		score.RevenueGrowthScore = 15.0
+	} else if revenueGrowth >= 15.0 {
+		score.RevenueGrowthScore = 10.0
+	} else if revenueGrowth > 0 {
+		score.RevenueGrowthScore = float64(revenueGrowth) / 30.0 * 15.0
+	} else {
+		score.RevenueGrowthScore = 0.0
+	}
+
+	// 4. 净利润增速评分（10分）
+	profitGrowth := s.BaseInfo.NetprofitYoyRatio
+	if profitGrowth >= 20.0 {
+		score.ProfitGrowthScore = 10.0
+	} else if profitGrowth >= 10.0 {
+		score.ProfitGrowthScore = 6.0 + (profitGrowth-10.0)/10.0*4.0
+	} else if profitGrowth > 0 {
+		score.ProfitGrowthScore = 2.0 + profitGrowth/10.0*4.0
+	} else {
+		score.ProfitGrowthScore = 0.0
+	}
+
+	// 5. ROE评分（10分）
+	if len(s.HistoricalFinaMainData) > 0 {
+		roe := s.HistoricalFinaMainData[0].Roejq
+		if roe >= 20.0 {
+			score.ROEScore = 10.0
+		} else if roe >= 15.0 {
+			score.ROEScore = 8.0
+		} else if roe > 0 {
+			score.ROEScore = roe / 15.0 * 8.0
+		} else {
+			score.ROEScore = 0.0
+		}
+	} else {
+		score.ROEScore = 0.0
+	}
+
+	// 6. 自由现金流评分（10分）
+	if len(s.HistoricalCashflowList) >= 3 {
+		positiveCount := 0
+		for i := 0; i < 3 && i < len(s.HistoricalCashflowList); i++ {
+			cf := s.HistoricalCashflowList[i]
+			var freeCashFlow float64
+			if cf.NetcashInvest < 0 {
+				freeCashFlow = cf.NetcashOperate + cf.NetcashInvest
+			} else {
+				freeCashFlow = cf.NetcashOperate - cf.NetcashInvest
+			}
+			if freeCashFlow > 0 {
+				positiveCount++
+			}
+		}
+		score.FreeCashFlowScore = float64(positiveCount) / 3.0 * 10.0
+	} else {
+		score.FreeCashFlowScore = 0.0
+	}
+
+	// 7. 行业前景评分（10分）- 使用LLM分析结果
+	score.IndustryScore = llmAnalysis.IndustryProspectScore / 100.0 * 10.0
+
+	// 8. 市值评分（5分）
+	marketCap := s.BaseInfo.TotalMarketCap / 100000000 // 转换为亿元
+	if marketCap < 100 {
+		score.MarketCapScore = 5.0
+	} else if marketCap < 300 {
+		score.MarketCapScore = 3.0
+	} else if marketCap < 500 {
+		score.MarketCapScore = 1.0
+	} else {
+		score.MarketCapScore = 0.0
+	}
+
+	// 计算总分
+	score.TotalScore = score.PEGScore + score.EPSGrowthScore + score.RevenueGrowthScore +
+		score.ProfitGrowthScore + score.ROEScore + score.FreeCashFlowScore +
+		score.IndustryScore + score.MarketCapScore
+
+	// 生成评分说明
+	var desc strings.Builder
+	desc.WriteString(fmt.Sprintf("彼得·林奇评分: %.1f/100\n", score.TotalScore))
+	desc.WriteString(fmt.Sprintf("PEG评分(25分): %.1f (PEG: %.2f)\n", score.PEGScore, s.PEG))
+	desc.WriteString(fmt.Sprintf("EPS增长评分(15分): %.1f\n", score.EPSGrowthScore))
+	desc.WriteString(fmt.Sprintf("营收增长评分(15分): %.1f (增长率: %.1f%%)\n", score.RevenueGrowthScore, revenueGrowth))
+	desc.WriteString(fmt.Sprintf("净利润增速评分(10分): %.1f (增长率: %.1f%%)\n", score.ProfitGrowthScore, profitGrowth))
+	desc.WriteString(fmt.Sprintf("ROE评分(10分): %.1f\n", score.ROEScore))
+	desc.WriteString(fmt.Sprintf("自由现金流评分(10分): %.1f\n", score.FreeCashFlowScore))
+	desc.WriteString(fmt.Sprintf("行业前景评分(10分): %.1f (LLM评分: %.1f)\n", score.IndustryScore, llmAnalysis.IndustryProspectScore))
+	desc.WriteString(fmt.Sprintf("市值评分(5分): %.1f (市值: %.1f亿元)\n", score.MarketCapScore, marketCap))
+
+	score.ScoreDescription = desc.String()
+	return score
+}
+
+// CalculateONeilScoreWithLLM 计算威廉·欧奈尔评分（包含LLM分析）
+func (s Stock) CalculateONeilScoreWithLLM(llmAnalysis LLMAnalysis) ONeilScore {
+	score := ONeilScore{}
+
+	// 1. C：当前季度利润增长评分（15分）
+	profitGrowth := s.BaseInfo.NetprofitYoyRatio
+	if profitGrowth >= 50.0 {
+		score.CurrentQuarterScore = 15.0
+	} else if profitGrowth >= 20.0 {
+		score.CurrentQuarterScore = 10.0 + (profitGrowth-20.0)/30.0*5.0
+	} else if profitGrowth >= 10.0 {
+		score.CurrentQuarterScore = 5.0 + (profitGrowth-10.0)/10.0*5.0
+	} else {
+		score.CurrentQuarterScore = 0.0
+	}
+
+	// 2. A：年利润增长趋势评分（15分）
+	if len(s.HistoricalFinaMainData) >= 3 {
+		avgGrowth := 0.0
+		count := 0
+		for i := 0; i < 3 && i < len(s.HistoricalFinaMainData); i++ {
+			if s.HistoricalFinaMainData[i].Parentnetprofittz > 0 {
+				avgGrowth += s.HistoricalFinaMainData[i].Parentnetprofittz
+				count++
+			}
+		}
+		if count > 0 {
+			avgGrowth /= float64(count)
+			if avgGrowth >= 20.0 {
+				score.AnnualGrowthScore = 15.0
+			} else if avgGrowth >= 10.0 {
+				score.AnnualGrowthScore = 10.0 + (avgGrowth-10.0)/10.0*5.0
+			} else {
+				score.AnnualGrowthScore = avgGrowth / 10.0 * 10.0
+			}
+		} else {
+			score.AnnualGrowthScore = 0.0
+		}
+	} else {
+		score.AnnualGrowthScore = 0.0
+	}
+
+	// 3. N：新品新概念评分（10分）- 使用LLM分析结果
+	score.NewConceptScore = llmAnalysis.NewConceptScore / 100.0 * 10.0
+
+	// 4. S：股本小易拉升评分（10分）
+	currentPrice := s.GetPrice()
+	if currentPrice > 0 {
+		totalShares := s.BaseInfo.TotalMarketCap / (currentPrice * 100000000)
+		if totalShares < 2 {
+			score.SmallFloatScore = 10.0
+		} else if totalShares < 5 {
+			score.SmallFloatScore = 7.0
+		} else if totalShares < 10 {
+			score.SmallFloatScore = 4.0
+		} else {
+			score.SmallFloatScore = 0.0
+		}
+	} else {
+		score.SmallFloatScore = 5.0
+	}
+
+	// 5. L：行业龙头评分（10分）- 使用LLM分析结果
+	score.LeaderScore = llmAnalysis.IndustryLeaderScore / 100.0 * 10.0
+
+	// 6. I：机构增持评分（20分）- 使用LLM分析结果
+	score.InstitutionScore = llmAnalysis.InstitutionScore / 100.0 * 20.0
+
+	// 7. M：技术趋势评分（20分）- 使用LLM分析结果
+	score.MarketTrendScore = llmAnalysis.TechnicalTrendScore / 100.0 * 20.0
+
+	// 计算总分
+	score.TotalScore = score.CurrentQuarterScore + score.AnnualGrowthScore +
+		score.NewConceptScore + score.SmallFloatScore + score.LeaderScore +
+		score.InstitutionScore + score.MarketTrendScore
+
+	// 生成评分说明
+	var desc strings.Builder
+	desc.WriteString(fmt.Sprintf("威廉·欧奈尔评分: %.1f/100\n", score.TotalScore))
+	desc.WriteString(fmt.Sprintf("当前季度利润增长(15分): %.1f (增长率: %.1f%%)\n", score.CurrentQuarterScore, profitGrowth))
+	desc.WriteString(fmt.Sprintf("年利润增长趋势(15分): %.1f\n", score.AnnualGrowthScore))
+	desc.WriteString(fmt.Sprintf("新品新概念(10分): %.1f (LLM评分: %.1f)\n", score.NewConceptScore, llmAnalysis.NewConceptScore))
+	desc.WriteString(fmt.Sprintf("股本小易拉升(10分): %.1f\n", score.SmallFloatScore))
+	desc.WriteString(fmt.Sprintf("行业龙头(10分): %.1f (LLM评分: %.1f)\n", score.LeaderScore, llmAnalysis.IndustryLeaderScore))
+	desc.WriteString(fmt.Sprintf("机构增持(20分): %.1f (LLM评分: %.1f)\n", score.InstitutionScore, llmAnalysis.InstitutionScore))
+	desc.WriteString(fmt.Sprintf("技术趋势(20分): %.1f (LLM评分: %.1f)\n", score.MarketTrendScore, llmAnalysis.TechnicalTrendScore))
+
+	score.ScoreDescription = desc.String()
+	return score
+}
+
+// calculateROEScoreWithData 计算ROE评分并返回分数
+func (s Stock) calculateROEScoreWithData(ctx context.Context) float64 {
+	// 获取近5年ROE数据
+	roeList := s.HistoricalFinaMainData.ValueList(ctx, eastmoney.ValueListTypeROE, 5, eastmoney.FinaReportTypeYear)
+
+	if len(roeList) == 0 || len(roeList) < 5 {
+		return 0
+	}
+
+	// 计算平均ROE和波动率
+	var sumROE float64
+	for _, roe := range roeList {
+		sumROE += roe
+	}
+	avgROE := sumROE / float64(len(roeList))
+
+	// 计算ROE波动率
+	var variance float64
+	for _, roe := range roeList {
+		variance += math.Pow(roe-avgROE, 2)
+	}
+	volatility := math.Sqrt(variance/float64(len(roeList))) / avgROE
+
+	// 根据ROE和波动率评分
+	score := 0.0
+	if avgROE >= 20 {
+		score = 20
+	} else if avgROE >= 15 {
+		score = 15
+	} else {
+		score = (avgROE / 15) * 15
+	}
+
+	// 根据波动率扣分
+	if volatility > 0.3 {
+		score *= 0.8 // 波动大扣20%分数
+	}
+
+	return score
+}
+
+// getROEDataDescription 获取ROE数据描述
+func (s Stock) getROEDataDescription() string {
+	if len(s.HistoricalFinaMainData) < 5 {
+		return "(数据不足)"
+	}
+
+	roeList := s.HistoricalFinaMainData.ValueList(context.Background(), eastmoney.ValueListTypeROE, 5, eastmoney.FinaReportTypeYear)
+	if len(roeList) < 5 {
+		return "(数据不足)"
+	}
+
+	var sumROE float64
+	for _, roe := range roeList {
+		sumROE += roe
+	}
+	avgROE := sumROE / float64(len(roeList))
+
+	var variance float64
+	for _, roe := range roeList {
+		variance += math.Pow(roe-avgROE, 2)
+	}
+	volatility := math.Sqrt(variance/float64(len(roeList))) / avgROE
+
+	return fmt.Sprintf("(平均ROE: %.1f%%, 波动率: %.2f)", avgROE, volatility)
+}
+
+// calculateCashFlowScoreWithData 计算现金流评分并返回分数
+func (s Stock) calculateCashFlowScoreWithData(ctx context.Context) float64 {
+	if len(s.HistoricalCashflowList) < 3 {
+		return 0
+	}
+
+	operatePositiveCount := 0
+	freePositiveCount := 0
+	for i := 0; i < 3 && i < len(s.HistoricalCashflowList); i++ {
+		cf := s.HistoricalCashflowList[i]
+		if cf.NetcashOperate > 0 {
+			operatePositiveCount++
+		}
+		// 计算自由现金流
+		var freeCashFlow float64
+		if cf.NetcashInvest < 0 {
+			freeCashFlow = cf.NetcashOperate + cf.NetcashInvest
+		} else {
+			freeCashFlow = cf.NetcashOperate - cf.NetcashInvest
+		}
+		if freeCashFlow > 0 {
+			freePositiveCount++
+		}
+	}
+
+	// 经营现金流和自由现金流各占一半分数
+	operateScore := 0.0
+	switch operatePositiveCount {
+	case 3:
+		operateScore = 7.5
+	case 2:
+		operateScore = 5.0
+	case 1:
+		operateScore = 2.5
+	}
+
+	freeScore := 0.0
+	switch freePositiveCount {
+	case 3:
+		freeScore = 7.5
+	case 2:
+		freeScore = 5.0
+	case 1:
+		freeScore = 2.5
+	}
+
+	return operateScore + freeScore
+}
+
+// getCashFlowDataDescription 获取现金流数据描述
+func (s Stock) getCashFlowDataDescription() string {
+	if len(s.HistoricalCashflowList) < 3 {
+		return "(数据不足)"
+	}
+
+	operatePositiveCount := 0
+	freePositiveCount := 0
+	for i := 0; i < 3 && i < len(s.HistoricalCashflowList); i++ {
+		cf := s.HistoricalCashflowList[i]
+		if cf.NetcashOperate > 0 {
+			operatePositiveCount++
+		}
+		var freeCashFlow float64
+		if cf.NetcashInvest < 0 {
+			freeCashFlow = cf.NetcashOperate + cf.NetcashInvest
+		} else {
+			freeCashFlow = cf.NetcashOperate - cf.NetcashInvest
+		}
+		if freeCashFlow > 0 {
+			freePositiveCount++
+		}
+	}
+
+	return fmt.Sprintf("(经营现金流正数年数: %d, 自由现金流正数年数: %d)", operatePositiveCount, freePositiveCount)
+}
+
+// calculateProfitGrowthScoreWithData 计算利润增长评分并返回分数
+func (s Stock) calculateProfitGrowthScoreWithData(ctx context.Context) float64 {
+	if len(s.HistoricalFinaMainData) < 5 {
+		return 0
+	}
+
+	// 获取近5年净利润数据
+	profitList := s.HistoricalFinaMainData.ValueList(ctx, eastmoney.ValueListTypeNetProfit, 5, eastmoney.FinaReportTypeYear)
+	if len(profitList) < 5 {
+		return 0
+	}
+
+	// 计算逐年增长率
+	growthCount := 0
+	volatilitySum := 0.0
+	for i := 0; i < len(profitList)-1; i++ {
+		if profitList[i] > profitList[i+1] {
+			growthCount++
+		}
+		if i > 0 {
+			// 计算增长率波动
+			growth1 := (profitList[i] - profitList[i+1]) / math.Abs(profitList[i+1])
+			growth2 := (profitList[i-1] - profitList[i]) / math.Abs(profitList[i])
+			volatilitySum += math.Abs(growth1 - growth2)
+		}
+	}
+
+	// 根据增长次数和波动性评分
+	score := float64(growthCount) * 3
+	if volatilitySum > 0.5 {
+		score *= 0.8 // 波动大扣20%分数
+	}
+
+	return score
+}
+
+// getProfitGrowthDataDescription 获取利润增长数据描述
+func (s Stock) getProfitGrowthDataDescription() string {
+	if len(s.HistoricalFinaMainData) < 5 {
+		return "(数据不足)"
+	}
+
+	profitList := s.HistoricalFinaMainData.ValueList(context.Background(), eastmoney.ValueListTypeNetProfit, 5, eastmoney.FinaReportTypeYear)
+	if len(profitList) < 5 {
+		return "(数据不足)"
+	}
+
+	growthCount := 0
+	for i := 0; i < len(profitList)-1; i++ {
+		if profitList[i] > profitList[i+1] {
+			growthCount++
+		}
+	}
+
+	return fmt.Sprintf("(增长年数: %d/4)", growthCount)
+}
+
+// calculateDebtRatioScoreWithData 计算负债率评分并返回分数
+func (s Stock) calculateDebtRatioScoreWithData(ctx context.Context) float64 {
+	if len(s.HistoricalFinaMainData) == 0 {
+		return 0
+	}
+
+	// 获取最新负债率
+	debtRatio := s.HistoricalFinaMainData[0].Zcfzl
+
+	switch {
+	case debtRatio < 30:
+		return 10
+	case debtRatio < 50:
+		return 8
+	case debtRatio < 70:
+		return 5
+	default:
+		return 0
+	}
+}
+
+// getDebtRatioDataDescription 获取负债率数据描述
+func (s Stock) getDebtRatioDataDescription() string {
+	if len(s.HistoricalFinaMainData) == 0 {
+		return "(数据不足)"
+	}
+
+	debtRatio := s.HistoricalFinaMainData[0].Zcfzl
+	return fmt.Sprintf("(负债率: %.1f%%)", debtRatio)
+}
+
+// calculateValuationScoreWithData 计算估值评分并返回分数
+func (s Stock) calculateValuationScoreWithData(ctx context.Context) float64 {
+	score := 0.0
+
+	// PE估值评分
+	switch {
+	case s.BaseInfo.PE < 10:
+		score = 15
+	case s.BaseInfo.PE < 15:
+		score = 12
+	case s.BaseInfo.PE < 20:
+		score = 8
+	case s.BaseInfo.PE < 30:
+		score = 5
+	default:
+		score = 0
+	}
+
+	// PEG估值加分
+	if s.PEG > 0 && s.PEG < 1 {
+		score = math.Max(score, 15) // PEG<1时至少得15分
+	}
+
+	return score
+}
+
+// getValuationDataDescription 获取估值数据描述
+func (s Stock) getValuationDataDescription() string {
+	return fmt.Sprintf("(PE: %.1f, PEG: %.1f)", s.BaseInfo.PE, s.PEG)
 }

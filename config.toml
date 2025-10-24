@@ -147,7 +147,7 @@ env = "localhost"
 ########## Coze API 相关配置
 [coze]
     # Coze PAT (Personal Access Token) - 从 https://www.coze.com/ 获取
-    api_key = ""
+    api_key = "pat_YOhpGuSHWMwtCPTusP99rpGjN92bxshHcdh9dv0C7LA8lZsLu8SulyA7IlUeDeNe"
     # Coze Bot ID - 你创建的股票分析机器人的ID
     bot_id = "7563990779418066951"
     # API调用超时时间（秒）
