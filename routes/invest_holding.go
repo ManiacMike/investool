@@ -8,7 +8,10 @@ import (
 	"math"
 	"net/http"
 
+	"github.com/axiaoxin-com/goutils"
 	"github.com/axiaoxin-com/investool/core"
+	"github.com/axiaoxin-com/investool/datacenter"
+	"github.com/axiaoxin-com/investool/datacenter/eastmoney"
 	"github.com/axiaoxin-com/investool/models"
 	"github.com/axiaoxin-com/investool/version"
 	"github.com/gin-gonic/gin"
@@ -473,4 +476,170 @@ func calculateTargetPosition(stock models.Stock, expect, tech int) float64 {
 	}
 
 	return finalAmount
+}
+
+// ZenStockHoldingHandler 股票仓位看板
+func ZenStockHoldingHandler(c *gin.Context) {
+	data := gin.H{
+		"Env":       viper.GetString("env"),
+		"HostURL":   viper.GetString("server.host_url"),
+		"Version":   version.Version,
+		"PageTitle": "仓位管理",
+		"Error":     "",
+	}
+	c.HTML(http.StatusOK, "zen_stock_holding.html", data)
+}
+
+// QueryStockInfoHandler 查询股票基础信息API（用于自动补全）
+// 使用新浪接口快速查询，然后从东方财富获取价格
+func QueryStockInfoHandler(c *gin.Context) {
+	keyword := c.Query("keyword")
+	marketParam := c.Query("market") // "a" = A股, "hk" = 港股, "" = 全部
+
+	if keyword == "" {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"error":   "请输入股票名称或代码",
+		})
+		return
+	}
+
+	// 使用新浪接口快速搜索股票
+	sinaResults, err := datacenter.Sina.KeywordSearch(c, keyword)
+	if err != nil || len(sinaResults) == 0 {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"error":   "未找到相关股票数据",
+		})
+		return
+	}
+
+	// 根据市场参数筛选结果
+	var targetMarkets []int
+	if marketParam == "a" {
+		targetMarkets = []int{11} // 只查A股
+	} else if marketParam == "hk" {
+		targetMarkets = []int{31} // 只查港股
+	} else {
+		targetMarkets = []int{11, 31} // 查全部
+	}
+
+	// 获取第一个匹配的结果（Market=11 A股, Market=31 港股）
+	var result *struct {
+		Name     string
+		Code     string
+		Secucode string
+		Market   int
+	}
+	for _, r := range sinaResults {
+		// 检查是否在目标市场中
+		isTargetMarket := false
+		for _, tm := range targetMarkets {
+			if r.Market == tm {
+				isTargetMarket = true
+				break
+			}
+		}
+
+		if isTargetMarket {
+			result = &struct {
+				Name     string
+				Code     string
+				Secucode string
+				Market   int
+			}{
+				Name:     r.Name,
+				Code:     r.SecurityCode,
+				Secucode: r.Secucode,
+				Market:   r.Market,
+			}
+			break
+		}
+	}
+
+	if result == nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"error":   "未找到A股或港股数据",
+		})
+		return
+	}
+
+	// 快速获取当前价格
+	price := 0.0
+	if result.Market == 11 {
+		// A股：使用东方财富选股接口
+		filter := eastmoney.Filter{
+			SpecialSecurityCodeList: []string{result.Code},
+		}
+		stocks, err := datacenter.EastMoney.QuerySelectedStocksWithFilter(c, filter)
+		if err == nil && len(stocks) > 0 {
+			if p, ok := stocks[0].NewPrice.(float64); ok {
+				price = p
+			}
+		}
+	} else if result.Market == 31 {
+		// 港股：使用东方财富行情接口（传入纯数字代码）
+		price = getHKStockPrice(c, result.Code)
+	}
+
+	// 返回基础信息
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data": gin.H{
+			"name":   result.Name,
+			"code":   result.Secucode,
+			"price":  price,
+			"market": result.Market,       // 11=A股, 31=港股
+			"isHK":   result.Market == 31, // 是否为港股
+		},
+	})
+}
+
+// getHKStockPrice 获取港股价格（使用东方财富行情接口）
+// 参数 code 是纯数字代码，如 "00700"
+func getHKStockPrice(c *gin.Context, code string) float64 {
+	// 东方财富港股行情接口
+	// 参考：https://push2.eastmoney.com/api/qt/ulist/get
+	// secids 格式：116.00700（116是港股市场代码）
+	// 注意：fields 中的逗号需要转义为 %2C
+	apiURL := fmt.Sprintf(
+		"https://push2.eastmoney.com/api/qt/ulist/get?fields=f2%%2Cf12%%2Cf13%%2Cf14&secids=116.%s&pn=1&np=1&pz=20",
+		code,
+	)
+
+	// 打印调试信息
+	fmt.Printf("🔍 [港股价格查询] Code: %s\n", code)
+	fmt.Printf("🌐 [API URL] %s\n", apiURL)
+
+	type HKPriceResp struct {
+		RC   int `json:"rc"`
+		Data struct {
+			Diff []struct {
+				F2  float64 `json:"f2"`  // 最新价（单位：分，需要除以1000）
+				F12 string  `json:"f12"` // 股票代码
+				F13 int     `json:"f13"` // 市场代码
+				F14 string  `json:"f14"` // 股票名称
+			} `json:"diff"`
+		} `json:"data"`
+	}
+
+	resp := HKPriceResp{}
+	err := goutils.HTTPGET(c, datacenter.EastMoney.HTTPClient, apiURL, nil, &resp)
+
+	// 打印返回结果
+	fmt.Printf("📥 [API Response] RC: %d, Error: %v\n", resp.RC, err)
+	if len(resp.Data.Diff) > 0 {
+		fmt.Printf("📊 [Price Data] F2: %.0f, F12: %s, F13: %d, F14: %s\n",
+			resp.Data.Diff[0].F2,
+			resp.Data.Diff[0].F12,
+			resp.Data.Diff[0].F13,
+			resp.Data.Diff[0].F14)
+		price := resp.Data.Diff[0].F2 / 1000.0
+		fmt.Printf("💰 [Final Price] %.2f 港元\n", price)
+		return price
+	}
+	fmt.Printf("❌ [Error] No data returned or diff is empty\n")
+
+	return 0.0
 }

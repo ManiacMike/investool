@@ -351,6 +351,9 @@ func (e EastMoney) GetFC(secuCode string) string {
 		fc = strings.Replace(secuCode, ".SH", "01", -1)
 	} else if strings.HasSuffix(secuCode, ".SZ") {
 		fc = strings.Replace(secuCode, ".SZ", "02", -1)
+	} else if strings.HasSuffix(secuCode, ".HK") {
+		// 港股市场代码
+		fc = strings.Replace(secuCode, ".HK", "116", -1)
 	}
 	return fc
 }

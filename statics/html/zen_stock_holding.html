@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zen Portfolio - 禅意持仓管理</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        
+        /* 简单的淡入动画 */
+        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* 模态框动画 */
+        .modal-enter { animation: modalIn 0.2s ease-out forwards; }
+        @keyframes modalIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        /* 隐藏滚动条但保留功能 */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-[#f9fafb] text-[#111827] min-h-screen selection:bg-[#6366f1]/20 selection:text-[#3730a3]">
+
+    <div class="max-w-6xl mx-auto p-4 md:p-8">
+        
+        <!-- Header -->
+        <header class="mb-8 flex flex-col items-center">
+            <div class="flex items-center gap-3 mb-2">
+                <div class="bg-gradient-to-br from-[#6366f1] to-[#4f46e5] p-2.5 rounded-xl shadow-lg shadow-[#6366f1]/30">
+                    <i data-lucide="activity" class="w-6 h-6 text-white"></i>
+                </div>
+                <h1 class="text-3xl font-extrabold text-[#111827] tracking-tight">Zen Portfolio</h1>
+            </div>
+            <p class="text-[#6b7280] font-medium text-sm mb-6">专业 · 稳健 · 复利</p>
+
+            <!-- 随机格言 -->
+            <div class="max-w-2xl mx-auto bg-white border border-[#e5e7eb] rounded-full px-6 py-2.5 flex items-center justify-center gap-3 shadow-sm hover:shadow-md transition-shadow">
+                <i data-lucide="quote" class="w-4 h-4 text-[#6366f1] fill-current opacity-70"></i>
+                <p class="text-sm text-[#4b5563] italic" id="quote-text">
+                    <!-- 格言将通过JS插入 -->
+                </p>
+            </div>
+        </header>
+
+        <!-- 策略仪表盘 -->
+        <div id="strategy-dashboard" class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <!-- 仪表盘卡片将通过JS插入 -->
+        </div>
+
+        <!-- 总资产条 -->
+        <div class="bg-gradient-to-r from-[#1f2937] to-[#111827] text-white rounded-2xl p-8 mb-8 flex flex-col md:flex-row justify-between items-center shadow-xl shadow-[#111827]/20 relative overflow-hidden">
+            <div class="absolute top-0 right-0 w-80 h-80 bg-[#6366f1]/10 rounded-full -translate-y-1/2 translate-x-1/3 blur-3xl"></div>
+            
+            <div class="flex items-center gap-6 relative z-10 mb-6 md:mb-0 w-full md:w-auto">
+                <div class="p-4 bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 ring-1 ring-white/5">
+                    <i data-lucide="pie-chart" class="w-8 h-8 text-[#818cf8]"></i>
+                </div>
+                <div>
+                    <p class="text-[#9ca3af] text-xs font-bold uppercase tracking-widest mb-1">Total Portfolio Value</p>
+                    <div class="flex items-baseline gap-2">
+                        <p class="text-4xl font-bold tracking-tight text-white" id="total-asset-display">¥0.00</p>
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-[#10b981]/20 text-[#34d399]">+0.00%</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex gap-12 text-center relative z-10 w-full md:w-auto justify-around md:justify-end border-t border-white/10 md:border-0 pt-6 md:pt-0">
+                <div>
+                    <p class="text-[#9ca3af] text-xs uppercase tracking-wider mb-2 font-bold">持仓数量</p>
+                    <p class="text-2xl font-bold text-white" id="total-count-display">0</p>
+                </div>
+                <div>
+                    <p class="text-[#9ca3af] text-xs uppercase tracking-wider mb-2 font-bold">当前视图</p>
+                    <p class="text-2xl font-bold text-[#818cf8]" id="view-count-display">0</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 表格区域 -->
+        <div class="space-y-6">
+            <div class="bg-white rounded-2xl shadow-sm border border-[#e5e7eb] overflow-hidden">
+                <div class="p-6 border-b border-[#e5e7eb] flex flex-col md:flex-row justify-between items-center gap-4 bg-[#ffffff]">
+                    <div class="flex items-center gap-4">
+                        <h3 class="text-lg font-bold text-[#111827] flex items-center gap-2">
+                            <span class="w-1 h-6 bg-[#6366f1] rounded-full"></span>
+                            持仓明细
+                        </h3>
+                        <div class="flex bg-[#f3f4f6] p-1 rounded-lg" id="filter-container">
+                            <!-- 筛选按钮 -->
+                            <button onclick="setFilter('all')" class="filter-btn px-3 py-1.5 text-xs font-semibold rounded-md transition-all duration-200 bg-white text-[#6366f1] shadow-sm" data-filter="all">全部</button>
+                            <button onclick="setFilter('trend')" class="filter-btn px-3 py-1.5 text-xs font-semibold rounded-md transition-all duration-200 text-[#6b7280] hover:text-[#111827]" data-filter="trend">进攻</button>
+                            <button onclick="setFilter('core')" class="filter-btn px-3 py-1.5 text-xs font-semibold rounded-md transition-all duration-200 text-[#6b7280] hover:text-[#111827]" data-filter="core">核心</button>
+                            <button onclick="setFilter('reverse')" class="filter-btn px-3 py-1.5 text-xs font-semibold rounded-md transition-all duration-200 text-[#6b7280] hover:text-[#111827]" data-filter="reverse">逆向</button>
+                        </div>
+                    </div>
+
+                    <button onclick="toggleModal(true)" class="flex items-center gap-2 bg-[#6366f1] hover:bg-[#4f46e5] text-white px-5 py-2.5 rounded-lg font-medium transition-all shadow-lg shadow-[#6366f1]/20 hover:shadow-[#6366f1]/40 active:translate-y-0.5">
+                        <i data-lucide="plus" class="w-4 h-4"></i>
+                        <span>录入新持仓</span>
+                    </button>
+                </div>
+                
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead>
+                            <tr class="bg-[#f9fafb] text-left text-xs font-semibold text-[#6b7280] uppercase tracking-wider select-none border-b border-[#e5e7eb]">
+                                <th class="px-6 py-4 pl-8 cursor-pointer hover:bg-[#f3f4f6] transition-colors group" onclick="handleSort('strategy')">
+                                    <div class="flex items-center gap-1.5">
+                                        策略类别
+                                        <i data-lucide="arrow-up-down" class="w-3.5 h-3.5 text-[#9ca3af] opacity-40 group-hover:opacity-100" id="sort-icon-strategy"></i>
+                                    </div>
+                                </th>
+                                <th class="px-6 py-4">股票名称 / 代码</th>
+                                <th class="px-6 py-4 cursor-pointer hover:bg-[#f3f4f6] transition-colors group text-right" onclick="handleSort('marketValue')">
+                                    <div class="flex items-center justify-end gap-1.5">
+                                        <i data-lucide="arrow-up-down" class="w-3.5 h-3.5 text-[#9ca3af] opacity-40 group-hover:opacity-100" id="sort-icon-marketValue"></i>
+                                        持仓市值
+                                    </div>
+                                </th>
+                                <th class="px-6 py-4 text-right">单价 / 股数</th>
+                                <th class="px-6 py-4 cursor-pointer hover:bg-[#f3f4f6] transition-colors group text-right" onclick="handleSort('percentage')">
+                                    <div class="flex items-center justify-end gap-1.5">
+                                        <i data-lucide="arrow-up-down" class="w-3.5 h-3.5 text-[#9ca3af] opacity-40 group-hover:opacity-100" id="sort-icon-percentage"></i>
+                                        仓位占比
+                                    </div>
+                                </th>
+                                <th class="px-6 py-4 text-center w-24">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="stock-table-body" class="divide-y divide-[#e5e7eb]">
+                            <!-- 表格内容将通过JS插入 -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- <div class="text-center text-xs text-[#9ca3af] pb-8 flex items-center justify-center gap-2">
+                <i data-lucide="shield-alert" class="w-3 h-3 text-[#f59e0b]"></i>
+                <span>风险提示：投资有风险，入市需谨慎</span>
+            </div> -->
+        </div>
+    </div>
+
+    <!-- Modal 弹窗 -->
+    <div id="add-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-[#1f2937]/70 backdrop-blur-sm transition-opacity" onclick="toggleModal(false)"></div>
+        
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg relative z-10 overflow-hidden modal-enter border border-[#e5e7eb]">
+            <div class="p-6 border-b border-[#e5e7eb] flex justify-between items-center bg-[#f9fafb]">
+                <h3 id="modal-title" class="text-lg font-bold text-[#111827] flex items-center gap-2">
+                    <div class="bg-[#eef2ff] p-2 rounded-lg text-[#6366f1]">
+                        <i data-lucide="plus" class="w-4 h-4"></i>
+                    </div>
+                    录入新持仓
+                </h3>
+                <button onclick="toggleModal(false)" class="text-[#9ca3af] hover:text-[#4b5563] hover:bg-[#e5e7eb] p-2 rounded-full transition-colors">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            
+            <div class="p-8">
+                <form id="add-stock-form" onsubmit="handleAddStock(event)" class="space-y-6">
+                    <input type="hidden" id="edit-stock-id" value="">
+                    <input type="hidden" id="form-isHK" value="false">
+                    <div>
+                        <label class="block text-sm font-semibold text-[#374151] mb-3">选择策略归属</label>
+                        <div class="grid grid-cols-3 gap-3" id="strategy-selector">
+                            <!-- 策略按钮通过JS动态增强 -->
+                            <button type="button" onclick="selectStrategy('trend')" class="strategy-btn relative flex flex-col items-center gap-2 py-4 px-2 rounded-xl border transition-all text-sm bg-white border-[#e5e7eb] text-[#6b7280] hover:bg-[#f9fafb]" data-value="trend">
+                                <span class="font-bold">趋势</span>
+                                <span class="text-[10px] opacity-70">进攻</span>
+                            </button>
+                            <button type="button" onclick="selectStrategy('core')" class="strategy-btn relative flex flex-col items-center gap-2 py-4 px-2 rounded-xl border transition-all text-sm bg-white border-[#e5e7eb] text-[#6b7280] hover:bg-[#f9fafb]" data-value="core">
+                                <span class="font-bold">核心</span>
+                                <span class="text-[10px] opacity-70">压舱</span>
+                            </button>
+                            <button type="button" onclick="selectStrategy('reverse')" class="strategy-btn relative flex flex-col items-center gap-2 py-4 px-2 rounded-xl border transition-all text-sm bg-white border-[#e5e7eb] text-[#6b7280] hover:bg-[#f9fafb]" data-value="reverse">
+                                <span class="font-bold">逆向</span>
+                                <span class="text-[10px] opacity-70">反转</span>
+                            </button>
+                        </div>
+                        <input type="hidden" id="form-strategy" value="trend">
+                    </div>
+
+                    <div class="space-y-3">
+                        <div class="bg-[#eff6ff] border border-[#bfdbfe] rounded-lg p-3 flex items-start gap-2">
+                            <i data-lucide="info" class="w-4 h-4 text-[#3b82f6] mt-0.5 flex-shrink-0"></i>
+                            <p class="text-xs text-[#1e40af] leading-relaxed">
+                                <strong>智能填充：</strong>输入股票名称或代码后，点击下方按钮自动查询完整信息（支持A股和港股）。提交时如价格未填写，系统会自动获取最新价格。
+                            </p>
+                        </div>
+                        
+                        <!-- 市场选择（隐藏，默认查询全部市场） -->
+                        <input type="hidden" id="form-market" value="">
+                        
+                        <div class="grid grid-cols-2 gap-5">
+                            <div class="space-y-1.5">
+                                <label class="block text-xs font-bold text-[#6b7280] uppercase tracking-wider">股票名称 <span class="text-[#ef4444]">*</span></label>
+                                <input type="text" id="form-name" placeholder="如：中际旭创" class="w-full px-4 py-3 bg-white border border-[#d1d5db] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6366f1] transition-all font-medium text-[#111827]">
+                            </div>
+                            <div class="space-y-1.5">
+                                <label class="block text-xs font-bold text-[#6b7280] uppercase tracking-wider">代码 <span class="text-[#9ca3af] font-normal">(或名称)</span></label>
+                                <input type="text" id="form-code" placeholder="300308 或 00700" class="w-full px-4 py-3 bg-white border border-[#d1d5db] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6366f1] transition-all font-mono font-medium text-[#111827]">
+                            </div>
+                        </div>
+                        <button type="button" onclick="handleAutoQuery(event)" class="w-full text-xs text-[#6366f1] hover:text-[#4f46e5] font-medium flex items-center justify-center gap-1.5 py-2 hover:bg-[#eef2ff] rounded-lg transition-all">
+                            <i data-lucide="search" class="w-3.5 h-3.5"></i>
+                            自动查询并填充信息
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-5">
+                        <div class="space-y-1.5">
+                            <label class="block text-xs font-bold text-[#6b7280] uppercase tracking-wider">持仓股数</label>
+                            <input type="number" id="form-count" required min="1" class="w-full px-4 py-3 bg-white border border-[#d1d5db] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6366f1] transition-all font-mono font-medium text-[#111827]">
+                        </div>
+                        <div class="space-y-1.5">
+                            <label class="block text-xs font-bold text-[#6b7280] uppercase tracking-wider">当前现价 <span class="text-[#9ca3af] font-normal">(选填)</span></label>
+                            <div class="relative">
+                                <span class="absolute left-4 top-3.5 text-[#9ca3af]">¥</span>
+                                <input type="number" id="form-price" min="0" step="0.01" placeholder="留空自动查询" class="w-full pl-8 pr-4 py-3 bg-white border border-[#d1d5db] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6366f1] transition-all font-mono font-medium text-[#111827]">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="pt-4">
+                        <button type="submit" class="w-full bg-[#6366f1] hover:bg-[#4f46e5] text-white font-bold py-3.5 px-6 rounded-lg transition-all duration-200 flex items-center justify-center gap-2 shadow-lg shadow-[#6366f1]/20 active:translate-y-0.5">
+                            <i data-lucide="plus" class="w-5 h-5"></i>
+                            <span id="submit-btn-text">确认添加</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Logic -->
+    <script>
+        // --- 1. 数据与配置 ---
+        const ZEN_QUOTES = [
+            { text: "股市是财富从急躁的人手中转移到耐心的人手中的工具。", author: "沃伦·巴菲特" },
+            { text: "别人贪婪时我恐惧，别人恐惧时我贪婪。", author: "沃伦·巴菲特" },
+            { text: "短期而言，市场是投票机；长期而言，市场是称重机。", author: "本杰明·格雷厄姆" },
+            { text: "不仅要买得好，还要拿得住。", author: "菲利普·费雪" },
+            { text: "投资的本质是认知的变现。", author: "匿名" },
+            { text: "慢即是快，复利是世界第八大奇迹。", author: "爱因斯坦" },
+            { text: "不要寻找那根针，买下整个干草堆。", author: "约翰·博格" },
+            { text: "在绝望中播种，在犹豫中生长，在乐观中成熟，在疯狂中收获。", author: "约翰·坦普顿" }
+        ];
+
+        const STRATEGIES = {
+            trend: {
+                id: 'trend',
+                name: '趋势投资仓 (进攻)',
+                gradient: 'from-[#ec4899] to-[#be185d]', 
+                bgLight: 'bg-[#fce7f3]',
+                text: 'text-[#be185d]',
+                border: 'border-[#ec4899]/20',
+                icon: 'zap',
+                desc: '焦点 · 动量 · 止损'
+            },
+            core: {
+                id: 'core',
+                name: '核心投资仓 (压舱)',
+                gradient: 'from-[#6366f1] to-[#4338ca]', 
+                bgLight: 'bg-[#eef2ff]',
+                text: 'text-[#3730a3]',
+                border: 'border-[#6366f1]/20',
+                icon: 'anchor',
+                desc: '成长 · 护城河 · 双击'
+            },
+            reverse: {
+                id: 'reverse',
+                name: '逆向投资仓 (反转)',
+                gradient: 'from-[#a855f7] to-[#7e22ce]', 
+                bgLight: 'bg-[#f3e8ff]',
+                text: 'text-[#6b21a8]',
+                border: 'border-[#a855f7]/20',
+                icon: 'diamond',
+                desc: '潜伏 · 回归 · 赔率'
+            }
+        };
+
+        // 汇率配置（港币兑人民币）
+        const HKD_TO_CNY_RATE = 0.92; // 1港币 ≈ 0.92人民币
+
+        let state = {
+            stocks: [],
+            filter: 'all',
+            sortConfig: { key: 'strategy', direction: 'asc' }
+        };
+
+        // --- LocalStorage 管理 ---
+        const STORAGE_KEY = 'zen_stock_holdings';
+
+        function loadFromStorage() {
+            try {
+                const data = localStorage.getItem(STORAGE_KEY);
+                if (data) {
+                    const parsed = JSON.parse(data);
+                    state.stocks = parsed.stocks || [];
+                }
+            } catch (e) {
+                console.error('加载数据失败:', e);
+            }
+        }
+
+        function saveToStorage() {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify({
+                    stocks: state.stocks,
+                    lastUpdate: new Date().toISOString()
+                }));
+            } catch (e) {
+                console.error('保存数据失败:', e);
+            }
+        }
+
+        // --- 2. 工具函数 ---
+        const formatMoney = (num) => new Intl.NumberFormat('zh-CN', { style: 'currency', currency: 'CNY', maximumFractionDigits: 0 }).format(num);
+        const formatPercent = (val, total) => total === 0 ? '0.0%' : ((val / total) * 100).toFixed(1) + '%';
+
+        // --- 3. 渲染逻辑 ---
+        
+        function init() {
+            loadFromStorage(); // 加载本地数据
+            renderQuote();
+            render();
+            // 初始选择默认策略
+            updateStrategyButtonStyles('trend');
+        }
+
+        function renderQuote() {
+            const quote = ZEN_QUOTES[Math.floor(Math.random() * ZEN_QUOTES.length)];
+            const quoteEl = document.getElementById('quote-text');
+            quoteEl.innerHTML = `${quote.text} <span class="ml-2 text-xs text-[#9ca3af] not-italic font-semibold uppercase tracking-wider">— ${quote.author}</span>`;
+        }
+
+        function calculateStats() {
+            // 计算总资产时，港股价格需要换算成人民币
+            const totalAsset = state.stocks.reduce((acc, stock) => {
+                const priceInCNY = stock.isHK ? stock.price * HKD_TO_CNY_RATE : stock.price;
+                return acc + (stock.count * priceInCNY);
+            }, 0);
+            
+            const strategyStats = {
+                trend: { total: 0, count: 0 },
+                core: { total: 0, count: 0 },
+                reverse: { total: 0, count: 0 }
+            };
+
+            state.stocks.forEach(stock => {
+                const priceInCNY = stock.isHK ? stock.price * HKD_TO_CNY_RATE : stock.price;
+                const value = stock.count * priceInCNY;
+                if (strategyStats[stock.strategy]) {
+                    strategyStats[stock.strategy].total += value;
+                    strategyStats[stock.strategy].count += 1;
+                }
+            });
+
+            return { totalAsset, strategyStats };
+        }
+
+        function render() {
+            const { totalAsset, strategyStats } = calculateStats();
+
+            // 1. 更新总资产条
+            document.getElementById('total-asset-display').textContent = formatMoney(totalAsset);
+            document.getElementById('total-count-display').textContent = state.stocks.length;
+
+            // 2. 渲染策略仪表盘
+            const dashboard = document.getElementById('strategy-dashboard');
+            dashboard.innerHTML = Object.values(STRATEGIES).map(strat => {
+                const stratTotal = strategyStats[strat.id].total;
+                const percentage = totalAsset > 0 ? (stratTotal / totalAsset) * 100 : 0;
+                
+                return `
+                <div class="bg-white rounded-2xl p-6 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.05)] border border-[#e5e7eb] hover:shadow-[0_10px_15px_-3px_rgba(0,0,0,0.1)] hover:-translate-y-1 transition-all duration-300 group relative overflow-hidden">
+                    <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r ${strat.gradient}"></div>
+                    <div class="flex justify-between items-start mb-5">
+                        <div class="p-3 rounded-xl ${strat.bgLight} ${strat.text} ring-1 ring-inset ring-black/5">
+                            <i data-lucide="${strat.icon}" class="w-6 h-6"></i>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-3xl font-bold ${strat.text}">${percentage.toFixed(0)}</span>
+                            <span class="text-sm text-[#9ca3af] font-medium ml-0.5">%</span>
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        <h3 class="font-bold text-[#111827] text-lg mb-1">${strat.name.split(' ')[0]}</h3>
+                        <p class="text-xs text-[#6b7280] font-medium bg-[#f3f4f6] inline-block px-2 py-0.5 rounded-full">${strat.desc}</p>
+                    </div>
+                    <div class="flex items-baseline gap-1 pt-4 border-t border-[#f3f4f6]">
+                        <span class="text-xs text-[#9ca3af] uppercase tracking-wider mr-auto">资产规模</span>
+                        <span class="text-xl font-bold text-[#111827] tracking-tight">${formatMoney(stratTotal)}</span>
+                    </div>
+                </div>
+                `;
+            }).join('');
+
+            // 3. 处理表格数据 (筛选 + 排序)
+            let processed = state.stocks.filter(s => state.filter === 'all' || s.strategy === state.filter);
+            
+            processed.sort((a, b) => {
+                let comparison = 0;
+                if (state.sortConfig.key === 'strategy') {
+                    const order = { trend: 1, core: 2, reverse: 3 };
+                    comparison = order[a.strategy] - order[b.strategy];
+                } else if (state.sortConfig.key === 'marketValue' || state.sortConfig.key === 'percentage') {
+                    // 排序时使用换算后的价格
+                    const aPriceInCNY = a.isHK ? a.price * HKD_TO_CNY_RATE : a.price;
+                    const bPriceInCNY = b.isHK ? b.price * HKD_TO_CNY_RATE : b.price;
+                    comparison = (aPriceInCNY * a.count) - (bPriceInCNY * b.count);
+                }
+                return state.sortConfig.direction === 'asc' ? comparison : -comparison;
+            });
+
+            document.getElementById('view-count-display').textContent = processed.length;
+
+            // 4. 渲染表格
+            const tbody = document.getElementById('stock-table-body');
+            if (processed.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="px-6 py-20 text-center">
+                            <div class="flex flex-col items-center justify-center text-[#9ca3af]">
+                                <div class="bg-[#f3f4f6] p-4 rounded-full mb-3">
+                                    <i data-lucide="sparkles" class="w-8 h-8 text-[#d1d5db]"></i>
+                                </div>
+                                <p class="font-medium">暂无数据，请点击右上角添加</p>
+                            </div>
+                        </td>
+                    </tr>`;
+            } else {
+                tbody.innerHTML = processed.map(stock => {
+                    const strat = STRATEGIES[stock.strategy];
+                    // 港股价格换算成人民币计算市值
+                    const priceInCNY = stock.isHK ? stock.price * HKD_TO_CNY_RATE : stock.price;
+                    const assetVal = priceInCNY * stock.count;
+                    const percent = formatPercent(assetVal, totalAsset);
+                    const widthPercent = totalAsset === 0 ? '0%' : ((assetVal / totalAsset) * 100).toFixed(1) + '%';
+                    
+                    // 货币符号和标识
+                    const currencySymbol = stock.isHK ? 'HK$' : '¥';
+                    const currencyTag = stock.isHK ? '<span class="text-[10px] text-[#92400e] ml-0.5">HKD</span>' : '';
+                    
+                    return `
+                    <tr class="hover:bg-[#f9fafb] transition-colors duration-150 group fade-in">
+                        <td class="px-6 py-4 whitespace-nowrap pl-8">
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border ${strat.bgLight} ${strat.text} ${strat.border}">
+                                ${strat.name.split(' ')[0]}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="flex flex-col">
+                                <div class="flex items-center gap-2">
+                                    <span class="font-bold text-[#111827] text-sm">${stock.name}</span>
+                                    ${stock.isHK ? '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-[#fef3c7] text-[#92400e] border border-[#fcd34d]">HK</span>' : ''}
+                                </div>
+                                <span class="text-xs text-[#9ca3af] font-mono mt-0.5">${stock.code}</span>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 text-right">
+                            <div class="flex flex-col items-end">
+                                <span class="font-bold text-[#111827] font-mono tracking-tight">${formatMoney(assetVal)}</span>
+                                ${stock.isHK ? '<span class="text-[10px] text-[#92400e] mt-0.5">≈ ¥' + priceInCNY.toFixed(2) + ' × ' + stock.count + '</span>' : ''}
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 text-right">
+                            <div class="flex flex-col items-end">
+                                <div class="flex items-center gap-0.5">
+                                    <span class="text-sm text-[#4b5563] font-mono">${currencySymbol}${stock.price}</span>
+                                    ${currencyTag}
+                                </div>
+                                <span class="text-xs text-[#9ca3af] mt-0.5">${stock.count} 股</span>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 text-right">
+                            <div class="flex items-center justify-end gap-3">
+                                <div class="w-20 h-1.5 bg-[#f3f4f6] rounded-full overflow-hidden">
+                                    <div class="h-full bg-gradient-to-r ${strat.gradient}" style="width: ${widthPercent}"></div>
+                                </div>
+                                <span class="text-xs font-bold text-[#6b7280] w-10 text-right font-mono">${percent}</span>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 text-center">
+                            <div class="flex items-center justify-center gap-1">
+                                <button onclick="handleEdit(${stock.id})" class="text-[#d1d5db] hover:text-[#6366f1] transition-colors p-2 rounded-lg hover:bg-[#eef2ff]" title="编辑持仓">
+                                    <i data-lucide="edit-2" class="w-4 h-4"></i>
+                                </button>
+                                <button onclick="handleDelete(${stock.id})" class="text-[#d1d5db] hover:text-[#ef4444] transition-colors p-2 rounded-lg hover:bg-[#fee2e2]" title="删除持仓">
+                                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>`;
+                }).join('');
+            }
+
+            // 更新排序图标状态
+            updateSortIcons();
+            // 更新筛选按钮状态
+            updateFilterButtons();
+            
+            // 重新初始化图标
+            lucide.createIcons();
+        }
+
+        // --- 4. 交互处理 ---
+
+        function handleSort(key) {
+            if (state.sortConfig.key === key) {
+                state.sortConfig.direction = state.sortConfig.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                state.sortConfig = { key, direction: 'asc' };
+            }
+            render();
+        }
+
+        function setFilter(filterType) {
+            state.filter = filterType;
+            render();
+        }
+
+        function handleDelete(id) {
+            if(confirm('确定要删除这只股票吗？')) {
+                state.stocks = state.stocks.filter(s => s.id !== id);
+                saveToStorage();
+                render();
+            }
+        }
+
+        // 编辑股票
+        function handleEdit(id) {
+            const stock = state.stocks.find(s => s.id === id);
+            if (!stock) return;
+
+            // 填充表单
+            document.getElementById('form-name').value = stock.name;
+            document.getElementById('form-code').value = stock.code;
+            document.getElementById('form-count').value = stock.count;
+            document.getElementById('form-price').value = stock.price;
+            document.getElementById('form-strategy').value = stock.strategy;
+            document.getElementById('edit-stock-id').value = id;
+            document.getElementById('form-isHK').value = stock.isHK ? 'true' : 'false';
+            
+            // 更新策略按钮样式
+            updateStrategyButtonStyles(stock.strategy);
+            
+            // 更新模态框标题
+            document.getElementById('modal-title').textContent = '编辑持仓';
+            document.getElementById('submit-btn-text').textContent = '确认修改';
+            
+            toggleModal(true);
+        }
+
+        function toggleModal(show) {
+            const modal = document.getElementById('add-modal');
+            if (show) {
+                modal.classList.remove('hidden');
+            } else {
+                modal.classList.add('hidden');
+                // 关闭时重置表单和状态
+                document.getElementById('add-stock-form').reset();
+                document.getElementById('edit-stock-id').value = '';
+                document.getElementById('form-isHK').value = 'false';
+                document.getElementById('modal-title').textContent = '录入新持仓';
+                document.getElementById('submit-btn-text').textContent = '确认添加';
+                selectStrategy('trend');
+            }
+        }
+
+        function selectStrategy(stratId) {
+            document.getElementById('form-strategy').value = stratId;
+            updateStrategyButtonStyles(stratId);
+        }
+
+        function updateStrategyButtonStyles(selectedId) {
+            const buttons = document.querySelectorAll('.strategy-btn');
+            buttons.forEach(btn => {
+                const val = btn.dataset.value;
+                const s = STRATEGIES[val];
+                
+                // 重置样式
+                btn.className = `strategy-btn relative flex flex-col items-center gap-2 py-4 px-2 rounded-xl border transition-all text-sm relative overflow-hidden`;
+                
+                if (val === selectedId) {
+                    // 选中状态
+                    btn.classList.add(...s.bgLight.split(' '), ...s.text.split(' '), 'ring-2', 'ring-offset-2', 'ring-transparent', 'shadow-sm', s.border);
+                    // 添加选中标记
+                    const indicator = document.createElement('div');
+                    indicator.className = 'absolute top-0 right-0 w-3 h-3 rounded-bl-lg bg-current opacity-20';
+                    btn.appendChild(indicator);
+                } else {
+                    // 未选中状态
+                    btn.classList.add('bg-white', 'border-[#e5e7eb]', 'text-[#6b7280]', 'hover:border-[#d1d5db]', 'hover:bg-[#f9fafb]');
+                    // 移除旧标记
+                    const oldInd = btn.querySelector('div');
+                    if(oldInd) oldInd.remove();
+                }
+            });
+        }
+
+        async function handleAddStock(e) {
+            e.preventDefault();
+            const editId = document.getElementById('edit-stock-id').value;
+            
+            let name = document.getElementById('form-name').value.trim();
+            let code = document.getElementById('form-code').value.trim();
+            let count = Number(document.getElementById('form-count').value);
+            let price = Number(document.getElementById('form-price').value) || 0;
+            const strategy = document.getElementById('form-strategy').value;
+            const market = document.getElementById('form-market').value;
+
+            // 基本验证：必须有名称或代码
+            if (!name && !code) {
+                alert('请至少输入股票名称或代码');
+                return;
+            }
+
+            if (count <= 0) {
+                alert('请输入有效的持仓股数');
+                return;
+            }
+
+            // 如果名称、代码或价格缺失，尝试自动查询
+            let isHK = false; // 是否为港股
+            let queriedFromAPI = false; // 标记是否从API查询过
+            
+            if (!name || !code || price === 0) {
+                const keyword = name || code;
+                showLoading(true);
+                try {
+                    const stockInfo = await queryStockInfo(keyword, market);
+                    if (stockInfo) {
+                        if (!name) name = stockInfo.name;
+                        if (!code) code = stockInfo.code;
+                        if (price === 0) price = stockInfo.price;
+                        isHK = stockInfo.isHK || false; // 使用API返回的isHK字段
+                        queriedFromAPI = true; // 标记已从API查询
+                        
+                        // 更新表单显示和隐藏字段
+                        document.getElementById('form-name').value = name;
+                        document.getElementById('form-code').value = code;
+                        document.getElementById('form-price').value = price;
+                        document.getElementById('form-isHK').value = isHK ? 'true' : 'false';
+                    }
+                } catch (err) {
+                    alert('查询股票信息失败: ' + err.message);
+                    showLoading(false);
+                    return;
+                }
+                showLoading(false);
+            }
+            
+            // 如果没有从API查询过，优先使用隐藏字段的值（可能是之前手动查询时保存的）
+            if (!queriedFromAPI) {
+                const savedIsHK = document.getElementById('form-isHK').value;
+                if (savedIsHK === 'true') {
+                    isHK = true;
+                } else if (savedIsHK === 'false') {
+                    isHK = false;
+                } else {
+                    // 如果隐藏字段也没有值，通过代码后缀判断
+                    isHK = code.toUpperCase().includes('.HK');
+                }
+            }
+
+            // 最终验证
+            if (!name || !code || price <= 0) {
+                alert('无法获取完整的股票信息，请检查输入');
+                return;
+            }
+            
+            if (editId) {
+                // 编辑模式
+                const index = state.stocks.findIndex(s => s.id === Number(editId));
+                if (index !== -1) {
+                    state.stocks[index] = {
+                        id: Number(editId),
+                        name,
+                        code: code || 'N/A',
+                        count,
+                        price,
+                        strategy,
+                        isHK: isHK
+                    };
+                }
+            } else {
+                // 新增模式
+                state.stocks.push({
+                    id: Date.now(),
+                    name,
+                    code: code || 'N/A',
+                    count,
+                    price,
+                    strategy,
+                    isHK: isHK
+                });
+            }
+
+            saveToStorage();
+            
+            // 重置表单
+            e.target.reset();
+            document.getElementById('edit-stock-id').value = '';
+            document.getElementById('form-isHK').value = 'false';
+            // 恢复默认策略选择
+            selectStrategy('trend');
+            // 恢复模态框标题
+            document.getElementById('modal-title').textContent = '录入新持仓';
+            document.getElementById('submit-btn-text').textContent = '确认添加';
+            
+            toggleModal(false);
+            render();
+        }
+
+        // 查询股票信息
+        async function queryStockInfo(keyword, market) {
+            try {
+                let url = `/api/stock/query?keyword=${encodeURIComponent(keyword)}`;
+                if (market) {
+                    url += `&market=${market}`;
+                }
+                const response = await fetch(url);
+                const result = await response.json();
+                
+                if (result.success) {
+                    return result.data;
+                } else {
+                    throw new Error(result.error || '查询失败');
+                }
+            } catch (err) {
+                console.error('查询股票信息失败:', err);
+                throw err;
+            }
+        }
+
+        // 显示/隐藏加载状态
+        function showLoading(show) {
+            const submitBtn = document.querySelector('#add-stock-form button[type="submit"]');
+            if (show) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i data-lucide="loader" class="w-5 h-5 animate-spin"></i> 查询中...';
+                lucide.createIcons();
+            } else {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i data-lucide="plus" class="w-5 h-5"></i> <span id="submit-btn-text">确认添加</span>';
+                lucide.createIcons();
+            }
+        }
+
+        // 手动触发自动查询
+        async function handleAutoQuery(event) {
+            const name = document.getElementById('form-name').value.trim();
+            const code = document.getElementById('form-code').value.trim();
+            const market = document.getElementById('form-market').value;
+            
+            if (!name && !code) {
+                alert('请先输入股票名称或代码');
+                return;
+            }
+
+            const keyword = name || code;
+            const btn = event.target.closest('button');
+            const originalHTML = btn.innerHTML;
+            
+            // 显示加载状态
+            btn.disabled = true;
+            btn.innerHTML = '<i data-lucide="loader" class="w-3.5 h-3.5 animate-spin"></i> 查询中...';
+            lucide.createIcons();
+            
+            try {
+                const stockInfo = await queryStockInfo(keyword, market);
+                if (stockInfo) {
+                    document.getElementById('form-name').value = stockInfo.name;
+                    document.getElementById('form-code').value = stockInfo.code;
+                    // 只有当价格大于0时才填充
+                    if (stockInfo.price > 0) {
+                        document.getElementById('form-price').value = stockInfo.price;
+                    }
+                    // 保存isHK信息到隐藏字段
+                    document.getElementById('form-isHK').value = stockInfo.isHK ? 'true' : 'false';
+                    
+                    // 显示成功提示
+                    btn.innerHTML = '<i data-lucide="check" class="w-3.5 h-3.5"></i> 查询成功';
+                    btn.classList.add('text-[#10b981]');
+                    lucide.createIcons();
+                    
+                    setTimeout(() => {
+                        btn.innerHTML = originalHTML;
+                        btn.classList.remove('text-[#10b981]');
+                        btn.disabled = false;
+                        lucide.createIcons();
+                    }, 2000);
+                }
+            } catch (err) {
+                alert('查询失败: ' + err.message);
+                btn.innerHTML = originalHTML;
+                btn.disabled = false;
+                lucide.createIcons();
+            }
+        }
+
+        // --- 5. 辅助 UI 更新 ---
+        function updateSortIcons() {
+            ['strategy', 'marketValue', 'percentage'].forEach(key => {
+                const icon = document.getElementById(`sort-icon-${key}`);
+                if (!icon) return;
+                
+                // 重置
+                icon.className = "w-3.5 h-3.5 text-[#9ca3af] opacity-40 group-hover:opacity-100 transition-opacity";
+                icon.setAttribute('data-lucide', 'arrow-up-down');
+
+                if (state.sortConfig.key === key) {
+                    icon.className = "w-3.5 h-3.5 text-[#6366f1]";
+                    icon.setAttribute('data-lucide', state.sortConfig.direction === 'asc' ? 'arrow-up' : 'arrow-down');
+                }
+            });
+        }
+
+        function updateFilterButtons() {
+            const buttons = document.querySelectorAll('.filter-btn');
+            buttons.forEach(btn => {
+                const type = btn.dataset.filter;
+                if (type === state.filter) {
+                    btn.className = "filter-btn px-3 py-1.5 text-xs font-semibold rounded-md transition-all duration-200 bg-white text-[#6366f1] shadow-sm ring-1 ring-[#e5e7eb]";
+                } else {
+                    btn.className = "filter-btn px-3 py-1.5 text-xs font-semibold rounded-md transition-all duration-200 text-[#6b7280] hover:text-[#111827] hover:bg-[#e5e7eb]/50";
+                }
+            });
+        }
+
+        // --- 启动 ---
+        init();
+    </script>
+</body>
+</html>

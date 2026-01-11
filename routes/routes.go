@@ -24,4 +24,6 @@ func Routes(app *gin.Engine) {
 	app.GET("/invest/query-stock", QueryStockDataHandler)
 	app.POST("/invest/calculate-stock-score", CalculateStockScoreHandler)
 	app.POST("/invest/position-deviation", PositionDeviationHandler)
+	app.GET("/invest/zen-holding", ZenStockHoldingHandler)
+	app.GET("/api/stock/query", QueryStockInfoHandler)
 }
