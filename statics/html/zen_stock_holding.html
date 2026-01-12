@@ -167,6 +167,10 @@
                                         <i data-lucide="refresh-cw" class="w-4 h-4"></i>
                                         <span>刷新</span>
                                     </button>
+                                    <button onclick="exportToJSON()" class="flex items-center gap-2 bg-white hover:bg-[#f9fafb] text-[#6b7280] hover:text-[#6366f1] px-4 py-2.5 rounded-lg font-medium transition-all border border-[#e5e7eb] hover:border-[#6366f1]" title="导出数据为JSON">
+                                        <i data-lucide="download" class="w-4 h-4"></i>
+                                        <span>导出</span>
+                                    </button>
                                     <button onclick="toggleModal(true)" class="flex items-center gap-2 bg-[#6366f1] hover:bg-[#4f46e5] text-white px-5 py-2.5 rounded-lg font-medium transition-all shadow-lg shadow-[#6366f1]/20 hover:shadow-[#6366f1]/40 active:translate-y-0.5">
                                         <i data-lucide="plus" class="w-4 h-4"></i>
                                         <span>录入新持仓</span>
@@ -243,6 +247,21 @@
                 <!-- 策略仪表盘 -->
                 <div id="strategy-dashboard" class="space-y-4">
                     <!-- 仪表盘卡片将通过JS插入 -->
+                </div>
+
+                <!-- 标签统计 -->
+                <div id="tags-statistics" class="bg-white rounded-2xl shadow-sm border border-[#e5e7eb] overflow-hidden">
+                    <div class="p-5 border-b border-[#e5e7eb] bg-[#f9fafb]">
+                        <div class="flex items-center gap-2">
+                            <div class="p-2 rounded-lg bg-[#eef2ff] text-[#6366f1]">
+                                <i data-lucide="tags" class="w-4 h-4"></i>
+                            </div>
+                            <h3 class="font-bold text-[#111827] text-sm">标签统计</h3>
+                        </div>
+                    </div>
+                    <div id="tags-statistics-content" class="p-5">
+                        <!-- 标签统计内容将通过JS插入 -->
+                    </div>
                 </div>
 
             </div>
@@ -360,6 +379,33 @@
                                 <span class="absolute left-4 top-3.5 text-[#9ca3af]">¥</span>
                                 <input type="number" id="form-price" min="0" step="0.01" placeholder="留空自动查询" class="w-full pl-8 pr-4 py-3 bg-white border border-[#d1d5db] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6366f1] transition-all font-mono font-medium text-[#111827]">
                             </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 标签输入区域 -->
+                    <div class="space-y-2">
+                        <label class="block text-xs font-bold text-[#6b7280] uppercase tracking-wider">
+                            股票标签 <span class="text-[#9ca3af] font-normal normal-case">(最多3个)</span>
+                        </label>
+                        <div id="tags-container" class="flex flex-wrap gap-2 min-h-[2.5rem] p-2 border border-[#d1d5db] rounded-lg bg-[#f9fafb]">
+                            <!-- 标签将通过JS动态添加 -->
+                        </div>
+                        <div class="flex gap-2">
+                            <input 
+                                type="text" 
+                                id="tag-input" 
+                                placeholder="输入标签后按回车添加" 
+                                maxlength="10"
+                                class="flex-1 px-3 py-2 text-sm border border-[#d1d5db] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6366f1] transition-all"
+                                onkeydown="handleTagInputKeydown(event)"
+                            >
+                            <button 
+                                type="button" 
+                                onclick="addTag()" 
+                                class="px-4 py-2 text-sm bg-[#6366f1] hover:bg-[#4f46e5] text-white rounded-lg transition-all font-medium"
+                            >
+                                添加
+                            </button>
                         </div>
                     </div>
                     
@@ -552,6 +598,46 @@
             }
         }
 
+        // 导出数据为JSON文件
+        function exportToJSON() {
+            try {
+                // 准备导出数据
+                const exportData = {
+                    stocks: state.stocks,
+                    exportTime: new Date().toISOString(),
+                    version: '1.0'
+                };
+
+                // 转换为JSON字符串，格式化输出
+                const jsonString = JSON.stringify(exportData, null, 2);
+                
+                // 创建Blob对象
+                const blob = new Blob([jsonString], { type: 'application/json' });
+                
+                // 创建下载链接
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                
+                // 生成文件名（包含时间戳）
+                const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+                link.download = `stock_holdings_${timestamp}.json`;
+                
+                // 触发下载
+                document.body.appendChild(link);
+                link.click();
+                
+                // 清理
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+                
+                console.log('✅ 数据导出成功');
+            } catch (e) {
+                console.error('导出数据失败:', e);
+                alert('导出数据失败: ' + e.message);
+            }
+        }
+
         function saveAutoRefreshPreference() {
             try {
                 localStorage.setItem(AUTO_REFRESH_KEY, state.autoRefreshEnabled.toString());
@@ -573,6 +659,8 @@
             render();
             // 初始选择默认策略
             updateStrategyButtonStyles('trend');
+            // 初始化标签容器
+            clearTags();
             
             // 初始化自动刷新开关
             const toggle = document.getElementById('auto-refresh-toggle');
@@ -882,6 +970,75 @@
             return { totalAsset, strategyStats };
         }
 
+        // 渲染标签统计
+        function renderTagsStatistics(totalAsset) {
+            const container = document.getElementById('tags-statistics-content');
+            if (!container) return;
+
+            // 统计每个标签的持仓总价值
+            const tagStats = {};
+            
+            state.stocks.forEach(stock => {
+                if (stock.tags && stock.tags.length > 0) {
+                    const priceInCNY = stock.isHK ? stock.price * HKD_TO_CNY_RATE : stock.price;
+                    const assetVal = priceInCNY * stock.count;
+                    
+                    stock.tags.forEach(tag => {
+                        if (!tagStats[tag]) {
+                            tagStats[tag] = {
+                                name: tag,
+                                totalValue: 0,
+                                count: 0
+                            };
+                        }
+                        tagStats[tag].totalValue += assetVal;
+                        tagStats[tag].count += 1;
+                    });
+                }
+            });
+
+            // 转换为数组并按价值排序
+            const tagList = Object.values(tagStats).sort((a, b) => b.totalValue - a.totalValue);
+
+            if (tagList.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-8 text-[#9ca3af]">
+                        <i data-lucide="tags" class="w-8 h-8 mx-auto mb-2 opacity-30"></i>
+                        <p class="text-xs">暂无标签数据</p>
+                    </div>
+                `;
+                lucide.createIcons();
+                return;
+            }
+
+            container.innerHTML = `
+                <div class="space-y-3">
+                    ${tagList.map(tag => {
+                        const percentage = totalAsset > 0 ? (tag.totalValue / totalAsset * 100).toFixed(1) : '0.0';
+                        return `
+                            <div class="bg-[#f9fafb] rounded-lg p-3 border border-[#e5e7eb] hover:border-[#6366f1]/30 transition-colors">
+                                <div class="flex items-center justify-between mb-2">
+                                    <div class="flex items-center gap-2">
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-[#f0f9ff] text-[#0369a1] border border-[#bae6fd]">
+                                            ${tag.name}
+                                        </span>
+                                        <span class="text-xs text-[#9ca3af]">${tag.count}只</span>
+                                    </div>
+                                    <span class="text-xs font-bold text-[#6366f1]">${percentage}%</span>
+                                </div>
+                                <div class="flex items-baseline justify-between">
+                                    <span class="text-xs text-[#9ca3af] uppercase tracking-wider">持仓价值</span>
+                                    <span class="text-sm font-bold text-[#111827] font-mono">${formatMoney(tag.totalValue)}</span>
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            `;
+            
+            lucide.createIcons();
+        }
+
         function render() {
             const { totalAsset, strategyStats } = calculateStats();
 
@@ -923,7 +1080,10 @@
                 `;
             }).join('');
 
-            // 3. 处理表格数据 (筛选 + 排序)
+            // 3. 渲染标签统计
+            renderTagsStatistics(totalAsset);
+
+            // 4. 处理表格数据 (筛选 + 排序)
             let processed = state.stocks.filter(s => state.filter === 'all' || s.strategy === state.filter);
             
             processed.sort((a, b) => {
@@ -976,9 +1136,14 @@
                         </td>
                         <td class="px-4 py-3">
                             <div class="flex flex-col">
-                                <div class="flex items-center gap-1.5">
+                                <div class="flex items-center gap-1.5 flex-wrap">
                                     <span class="font-bold text-[#111827] text-sm">${stock.name}</span>
                                     ${stock.isHK ? '<span class="inline-flex items-center px-1 py-0.5 rounded text-[9px] font-bold bg-[#fef3c7] text-[#92400e]">HK</span>' : ''}
+                                    ${stock.tags && stock.tags.length > 0 ? stock.tags.map(tag => `
+                                        <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-[#f0f9ff] text-[#0369a1] border border-[#bae6fd]">
+                                            ${tag}
+                                        </span>
+                                    `).join('') : ''}
                                 </div>
                                 <span class="text-xs text-[#9ca3af] font-mono mt-0.5">${stock.code}</span>
                             </div>
@@ -1064,6 +1229,10 @@
             document.getElementById('edit-stock-id').value = id;
             document.getElementById('form-isHK').value = stock.isHK ? 'true' : 'false';
             
+            // 填充标签
+            currentTags = stock.tags ? [...stock.tags] : [];
+            renderTags();
+            
             // 设置市场选择
             const marketValue = stock.isHK ? 'hk' : 'a';
             document.getElementById('form-market').value = marketValue;
@@ -1095,6 +1264,8 @@
                 document.getElementById('form-market').value = 'a';
                 document.getElementById('market-a').checked = true;
                 selectStrategy('trend');
+                // 清空标签
+                clearTags();
             }
         }
 
@@ -1127,6 +1298,78 @@
                     if(oldInd) oldInd.remove();
                 }
             });
+        }
+
+        // --- 标签管理函数 ---
+        let currentTags = []; // 当前表单中的标签列表
+
+        function renderTags() {
+            const container = document.getElementById('tags-container');
+            if (!container) return;
+            
+            container.innerHTML = '';
+            
+            if (currentTags.length === 0) {
+                container.innerHTML = '<span class="text-xs text-[#9ca3af] self-center">暂无标签</span>';
+                return;
+            }
+            
+            currentTags.forEach((tag, index) => {
+                const tagEl = document.createElement('div');
+                tagEl.className = 'inline-flex items-center gap-1.5 px-2.5 py-1 bg-[#eef2ff] text-[#6366f1] rounded-md text-xs font-medium border border-[#6366f1]/20';
+                tagEl.innerHTML = `
+                    <span>${tag}</span>
+                    <button type="button" onclick="removeTag(${index})" class="text-[#6366f1] hover:text-[#4f46e5] transition-colors">
+                        <i data-lucide="x" class="w-3 h-3"></i>
+                    </button>
+                `;
+                container.appendChild(tagEl);
+            });
+            
+            lucide.createIcons();
+        }
+
+        function addTag() {
+            const input = document.getElementById('tag-input');
+            const tag = input.value.trim();
+            
+            if (!tag) return;
+            
+            if (currentTags.length >= 3) {
+                alert('最多只能添加3个标签');
+                return;
+            }
+            
+            if (currentTags.includes(tag)) {
+                alert('标签已存在');
+                return;
+            }
+            
+            if (tag.length > 10) {
+                alert('标签长度不能超过10个字符');
+                return;
+            }
+            
+            currentTags.push(tag);
+            input.value = '';
+            renderTags();
+        }
+
+        function removeTag(index) {
+            currentTags.splice(index, 1);
+            renderTags();
+        }
+
+        function handleTagInputKeydown(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                addTag();
+            }
+        }
+
+        function clearTags() {
+            currentTags = [];
+            renderTags();
         }
 
         async function handleAddStock(e) {
@@ -1200,6 +1443,9 @@
                 return;
             }
             
+            // 获取标签（最多3个）
+            const tags = currentTags.slice(0, 3);
+            
             if (editId) {
                 // 编辑模式
                 const index = state.stocks.findIndex(s => s.id === Number(editId));
@@ -1211,7 +1457,8 @@
                         count,
                         price,
                         strategy,
-                        isHK: isHK
+                        isHK: isHK,
+                        tags: tags
                     };
                 }
             } else {
@@ -1223,7 +1470,8 @@
                     count,
                     price,
                     strategy,
-                    isHK: isHK
+                    isHK: isHK,
+                    tags: tags
                 });
             }
 
@@ -1233,6 +1481,7 @@
             e.target.reset();
             document.getElementById('edit-stock-id').value = '';
             document.getElementById('form-isHK').value = 'false';
+            clearTags(); // 清空标签
             // 恢复默认策略选择
             selectStrategy('trend');
             // 恢复模态框标题
@@ -1535,6 +1784,9 @@
                         }).join('');
                         
                         lucide.createIcons();
+                        
+                        // 更新标签统计
+                        renderTagsStatistics(newTotalAsset);
                         
                         console.log('✅ 股价已更新:', new Date().toLocaleTimeString());
                         

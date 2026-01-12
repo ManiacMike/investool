@@ -25,6 +25,6 @@ app
 *.tar.gz
 
 statics/js/app.min.*.js
-*.json
+# *.json
 cron/*.json
 .idea/
