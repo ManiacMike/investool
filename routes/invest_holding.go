@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math"
 	"net/http"
+	"strings"
 
 	"github.com/axiaoxin-com/goutils"
 	"github.com/axiaoxin-com/investool/core"
@@ -593,6 +594,141 @@ func QueryStockInfoHandler(c *gin.Context) {
 			"market": result.Market,       // 11=A股, 31=港股
 			"isHK":   result.Market == 31, // 是否为港股
 		},
+	})
+}
+
+// BatchQueryStockPricesHandler 批量查询股票价格API
+func BatchQueryStockPricesHandler(c *gin.Context) {
+	var req struct {
+		Stocks []struct {
+			Code string `json:"code" binding:"required"` // Secucode格式，如 "300308.SZ" 或 "00700.HK"
+			IsHK bool   `json:"isHK"`                    // 是否为港股
+		} `json:"stocks" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"error":   "参数错误: " + err.Error(),
+		})
+		return
+	}
+
+	if len(req.Stocks) == 0 {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"error":   "股票列表不能为空",
+		})
+		return
+	}
+
+	// 分离A股和港股
+	var aStockCodes []string
+	var hkStockMap = make(map[string]string) // 纯数字代码 -> 完整代码的映射
+	var codeMap = make(map[string]string)    // 大写代码 -> 原始代码的映射（用于匹配）
+
+	fmt.Printf("🔍 [批量查询] 收到 %d 只股票\n", len(req.Stocks))
+
+	for _, stock := range req.Stocks {
+		// 统一转换为大写用于匹配
+		upperCode := strings.ToUpper(stock.Code)
+		codeMap[upperCode] = stock.Code
+
+		if stock.IsHK {
+			// 港股代码，提取纯数字部分
+			code := stock.Code
+			pureCode := code
+			if len(code) > 5 {
+				pureCode = code[:5] // 提取前5位，如 "00700"
+			}
+			hkStockMap[pureCode] = upperCode // 使用大写代码
+			fmt.Printf("📊 [港股] 完整代码: %s, 大写: %s, 纯数字: %s\n", stock.Code, upperCode, pureCode)
+		} else {
+			// A股代码，提取纯数字部分
+			code := upperCode
+			if len(code) > 6 {
+				code = code[:6] // 提取前6位，如 "300308"
+			}
+			aStockCodes = append(aStockCodes, code)
+			fmt.Printf("📊 [A股] 完整代码: %s, 大写: %s, 纯数字: %s\n", stock.Code, upperCode, code)
+		}
+	}
+
+	prices := make(map[string]float64)
+
+	// 批量查询A股价格
+	if len(aStockCodes) > 0 {
+		fmt.Printf("🔍 [A股批量查询] 查询 %d 只股票: %v\n", len(aStockCodes), aStockCodes)
+		filter := eastmoney.Filter{
+			SpecialSecurityCodeList: aStockCodes,
+		}
+		stocks, err := datacenter.EastMoney.QuerySelectedStocksWithFilter(c, filter)
+		if err != nil {
+			fmt.Printf("❌ [A股查询失败] %v\n", err)
+		} else {
+			fmt.Printf("✅ [A股查询成功] 返回 %d 只股票\n", len(stocks))
+			for _, stock := range stocks {
+				fmt.Printf("📊 [股票信息] Secucode: %s, SecurityCode: %s, Name: %s, NewPrice: %v (type: %T)\n",
+					stock.Secucode, stock.SecurityCode, stock.SecurityNameAbbr, stock.NewPrice, stock.NewPrice)
+
+				// 处理 NewPrice，可能是 float64 或 string
+				var price float64
+				switch v := stock.NewPrice.(type) {
+				case float64:
+					price = v
+				case string:
+					// 如果是字符串 "-" 或其他，跳过
+					if v != "-" {
+						fmt.Printf("⚠️ [价格是字符串] %s: %s\n", stock.Secucode, v)
+					}
+					continue
+				default:
+					fmt.Printf("⚠️ [未知价格类型] %s: %v (type: %T)\n", stock.Secucode, stock.NewPrice, stock.NewPrice)
+					continue
+				}
+
+				if price > 0 {
+					prices[stock.Secucode] = price
+					fmt.Printf("💰 [A股价格] %s: %.2f\n", stock.Secucode, price)
+				}
+			}
+		}
+	}
+
+	// 批量查询港股价格（港股需要逐个查询，因为东方财富接口限制）
+	if len(hkStockMap) > 0 {
+		fmt.Printf("🔍 [港股查询] 查询 %d 只港股\n", len(hkStockMap))
+		for pureCode, upperCode := range hkStockMap {
+			price := getHKStockPrice(c, pureCode)
+			prices[upperCode] = price
+			fmt.Printf("💰 [港股价格] %s (%s): %.2f\n", upperCode, pureCode, price)
+		}
+	}
+
+	// 构建返回结果，保持原始顺序
+	results := make([]gin.H, len(req.Stocks))
+	for i, stock := range req.Stocks {
+		// 使用大写代码匹配价格
+		upperCode := strings.ToUpper(stock.Code)
+		price, exists := prices[upperCode]
+		if !exists {
+			price = 0.0
+			fmt.Printf("⚠️ [未找到价格] 原始: %s, 大写: %s\n", stock.Code, upperCode)
+		} else {
+			fmt.Printf("✅ [找到价格] 原始: %s, 大写: %s, 价格: %.2f\n", stock.Code, upperCode, price)
+		}
+		results[i] = gin.H{
+			"code":  stock.Code, // 返回原始代码（保持前端格式）
+			"price": price,
+			"isHK":  stock.IsHK,
+		}
+	}
+
+	fmt.Printf("✅ [批量查询完成] 返回 %d 条结果\n", len(results))
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data":    results,
 	})
 }
 
