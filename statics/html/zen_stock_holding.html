@@ -249,6 +249,29 @@
                     <!-- 仪表盘卡片将通过JS插入 -->
                 </div>
 
+                <!-- 汇率信息卡片 -->
+                <div class="bg-white rounded-xl p-5 shadow-sm border border-[#e5e7eb]">
+                    <div class="flex items-center gap-2 mb-3">
+                        <div class="p-2 rounded-lg bg-[#fef3c7] text-[#92400e]">
+                            <i data-lucide="dollar-sign" class="w-4 h-4"></i>
+                        </div>
+                        <h4 class="font-bold text-[#111827] text-sm">汇率信息</h4>
+                    </div>
+                    <div class="space-y-2 text-xs">
+                        <div class="flex items-center justify-between">
+                            <span class="text-[#6b7280]">人民币 → 港币</span>
+                            <span class="font-bold text-[#111827] font-mono">1 : <span id="cny-to-hkd-rate">1.1179</span></span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-[#6b7280]">港币 → 人民币</span>
+                            <span class="font-bold text-[#111827] font-mono">1 : <span id="hkd-to-cny-rate">0.8946</span></span>
+                        </div>
+                        <div class="pt-2 border-t border-[#f3f4f6] text-[#9ca3af] text-[10px]">
+                            当前使用汇率
+                        </div>
+                    </div>
+                </div>
+
                 <!-- 标签统计 -->
                 <div id="tags-statistics" class="bg-white rounded-2xl shadow-sm border border-[#e5e7eb] overflow-hidden">
                     <div class="p-5 border-b border-[#e5e7eb] bg-[#f9fafb]">
@@ -549,7 +572,9 @@
         };
 
         // 汇率配置（港币兑人民币）
-        const HKD_TO_CNY_RATE = 0.92; // 1港币 ≈ 0.92人民币
+        // 当前人民币和港币汇率是 1：1.1179，即 1港币 = 1/1.1179 ≈ 0.8946人民币
+        const HKD_TO_CNY_RATE = 1 / 1.1179; // 1港币 ≈ 0.8946人民币
+        const CNY_TO_HKD_RATE = 1.1179; // 1人民币 ≈ 1.1179港币（用于显示）
 
         let state = {
             stocks: [],
@@ -686,9 +711,24 @@
                 });
             }
             
+            // 更新汇率显示
+            updateExchangeRateDisplay();
+            
             // 如果有持仓数据且自动刷新开启，启动定时刷新
             if (state.stocks.length > 0 && state.autoRefreshEnabled) {
                 startAutoRefresh();
+            }
+        }
+
+        // 更新汇率显示
+        function updateExchangeRateDisplay() {
+            const cnyToHkdEl = document.getElementById('cny-to-hkd-rate');
+            const hkdToCnyEl = document.getElementById('hkd-to-cny-rate');
+            if (cnyToHkdEl) {
+                cnyToHkdEl.textContent = CNY_TO_HKD_RATE.toFixed(4);
+            }
+            if (hkdToCnyEl) {
+                hkdToCnyEl.textContent = HKD_TO_CNY_RATE.toFixed(4);
             }
         }
 
