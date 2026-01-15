@@ -196,6 +196,7 @@
                                                 </div>
                                             </th>
                                             <th class="px-4 py-4 text-right">价格/股数</th>
+                                            <th class="px-4 py-4 text-center" style="min-width: 250px;">目标水位 (买入 VS 卖出)</th>
                                             <th class="px-4 py-4 text-center w-20">操作</th>
                                         </tr>
                                     </thead>
@@ -401,6 +402,24 @@
                             <div class="relative">
                                 <span class="absolute left-4 top-3.5 text-[#9ca3af]">¥</span>
                                 <input type="number" id="form-price" min="0" step="0.01" placeholder="留空自动查询" class="w-full pl-8 pr-4 py-3 bg-white border border-[#d1d5db] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6366f1] transition-all font-mono font-medium text-[#111827]">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 买入和卖出目标价格（编辑时显示） -->
+                    <div id="target-prices-section" class="hidden grid grid-cols-2 gap-5">
+                        <div class="space-y-1.5">
+                            <label class="block text-xs font-bold text-[#6b7280] uppercase tracking-wider">买入目标价 <span class="text-[#9ca3af] font-normal">(选填)</span></label>
+                            <div class="relative">
+                                <span class="absolute left-4 top-3.5 text-[#9ca3af]">¥</span>
+                                <input type="number" id="form-buy-target" min="0" step="0.01" placeholder="买入目标价" class="w-full pl-8 pr-4 py-3 bg-white border border-[#d1d5db] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#10b981] transition-all font-mono font-medium text-[#111827]">
+                            </div>
+                        </div>
+                        <div class="space-y-1.5">
+                            <label class="block text-xs font-bold text-[#6b7280] uppercase tracking-wider">卖出目标价 <span class="text-[#9ca3af] font-normal">(选填)</span></label>
+                            <div class="relative">
+                                <span class="absolute left-4 top-3.5 text-[#9ca3af]">¥</span>
+                                <input type="number" id="form-sell-target" min="0" step="0.01" placeholder="卖出目标价" class="w-full pl-8 pr-4 py-3 bg-white border border-[#d1d5db] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#ef4444] transition-all font-mono font-medium text-[#111827]">
                             </div>
                         </div>
                     </div>
@@ -674,6 +693,96 @@
         // --- 2. 工具函数 ---
         const formatMoney = (num) => new Intl.NumberFormat('zh-CN', { style: 'currency', currency: 'CNY', maximumFractionDigits: 0 }).format(num);
         const formatPercent = (val, total) => total === 0 ? '0.0%' : ((val / total) * 100).toFixed(1) + '%';
+        
+        // 渲染价格滑块（水平布局：买-持有-卖）
+        function renderPriceSlider(stock) {
+            const currentPrice = stock.price || 0;
+            const buyTarget = stock.buyTargetPrice || 0;
+            const sellTarget = stock.sellTargetPrice || 0;
+            const currencySymbol = stock.isHK ? 'HK$' : '¥';
+            
+            if (!buyTarget && !sellTarget) {
+                return '<span class="text-xs text-[#9ca3af]">未设置</span>';
+            }
+            
+            // 计算价格范围（用于滑块显示）
+            const prices = [currentPrice, buyTarget, sellTarget].filter(p => p > 0);
+            if (prices.length === 0) {
+                return '<span class="text-xs text-[#9ca3af]">未设置</span>';
+            }
+            
+            const minPrice = Math.min(...prices);
+            const maxPrice = Math.max(...prices);
+            // 如果所有价格相同，添加一些范围以便显示
+            const range = maxPrice - minPrice || Math.max(minPrice * 0.1, 1);
+            
+            // 计算当前位置百分比（限制在0-100%之间）
+            const currentPercent = Math.max(0, Math.min(100, ((currentPrice - minPrice) / range) * 100));
+            const buyPercent = buyTarget > 0 ? Math.max(0, Math.min(100, ((buyTarget - minPrice) / range) * 100)) : -1;
+            const sellPercent = sellTarget > 0 ? Math.max(0, Math.min(100, ((sellTarget - minPrice) / range) * 100)) : -1;
+            
+            // 水平滑块布局（买-持有-卖）
+            let sliderHTML = '<div class="flex items-center gap-2 w-full px-1">';
+            
+            // 左侧：买入目标价
+            if (buyTarget > 0) {
+                sliderHTML += `
+                    <div class="flex items-center gap-1 min-w-[45px]">
+                        <span class="text-[11px] text-[#10b981] font-semibold">买:</span>
+                        <span class="text-xs text-[#10b981] font-bold">${buyTarget.toFixed(0)}</span>
+                    </div>
+                `;
+            } else {
+                sliderHTML += '<div class="min-w-[45px]"></div>';
+            }
+            
+            // 中间：滑块条和当前价格
+            sliderHTML += `
+                <div class="flex-1 relative h-7 flex items-center">
+                    <!-- 背景滑块条 -->
+                    <div class="absolute left-0 right-0 h-1.5 bg-[#e5e7eb] rounded-full"></div>
+                    
+                    <!-- 买入到当前价格的渐变条（绿色到蓝色） -->
+                    ${buyTarget > 0 && currentPrice >= buyTarget ? `
+                        <div class="absolute h-1.5 bg-gradient-to-r from-[#10b981] to-[#6366f1] rounded-full" 
+                             style="left: ${buyPercent}%; width: ${Math.max(0, currentPercent - buyPercent)}%;"></div>
+                    ` : buyTarget > 0 && currentPrice < buyTarget ? `
+                        <div class="absolute h-1.5 bg-[#10b981] rounded-full" 
+                             style="left: ${buyPercent}%; width: ${Math.max(0, currentPercent - buyPercent)}%;"></div>
+                    ` : ''}
+                    
+                    <!-- 当前到卖出价格的渐变条（蓝色到红色） -->
+                    ${sellTarget > 0 && currentPrice <= sellTarget ? `
+                        <div class="absolute h-1.5 bg-gradient-to-r from-[#6366f1] to-[#ef4444] rounded-full" 
+                             style="left: ${currentPercent}%; width: ${Math.max(0, sellPercent - currentPercent)}%;"></div>
+                    ` : sellTarget > 0 && currentPrice > sellTarget ? `
+                        <div class="absolute h-1.5 bg-[#ef4444] rounded-full" 
+                             style="left: ${sellPercent}%; width: ${Math.max(0, currentPercent - sellPercent)}%;"></div>
+                    ` : ''}
+                    
+                    <!-- 当前价格滑块（蓝色圆形） -->
+                    <div class="absolute z-10 flex flex-col items-center" style="left: ${currentPercent}%; transform: translateX(-50%);">
+                        <div class="w-3.5 h-3.5 rounded-full bg-[#6366f1] border-2 border-white shadow-sm"></div>
+                        <span class="text-[10px] text-[#6366f1] font-medium mt-0.5 whitespace-nowrap">持有</span>
+                    </div>
+                </div>
+            `;
+            
+            // 右侧：卖出目标价
+            if (sellTarget > 0) {
+                sliderHTML += `
+                    <div class="flex items-center gap-1 min-w-[45px]">
+                        <span class="text-[11px] text-[#ef4444] font-semibold">卖:</span>
+                        <span class="text-xs text-[#ef4444] font-bold">${sellTarget.toFixed(0)}</span>
+                    </div>
+                `;
+            } else {
+                sliderHTML += '<div class="min-w-[45px]"></div>';
+            }
+            
+            sliderHTML += '</div>';
+            return sliderHTML;
+        }
 
         // --- 3. 渲染逻辑 ---
         
@@ -1147,7 +1256,7 @@
             if (processed.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="6" class="px-6 py-20 text-center">
+                        <td colspan="7" class="px-6 py-20 text-center">
                             <div class="flex flex-col items-center justify-center text-[#9ca3af]">
                                 <div class="bg-[#f3f4f6] p-4 rounded-full mb-3">
                                     <i data-lucide="sparkles" class="w-8 h-8 text-[#d1d5db]"></i>
@@ -1199,6 +1308,9 @@
                                 <span class="text-sm text-[#4b5563] font-mono" data-price="${stock.price}">${currencySymbol}${stock.price}</span>
                                 <span class="text-xs text-[#9ca3af] mt-0.5">${stock.count}股</span>
                             </div>
+                        </td>
+                        <td class="px-4 py-3 text-center" data-stock-id="${stock.id}" data-cell-type="price-targets">
+                            ${renderPriceSlider(stock)}
                         </td>
                         <td class="px-4 py-3 text-center">
                             <div class="flex items-center justify-center gap-1">
@@ -1269,6 +1381,11 @@
             document.getElementById('edit-stock-id').value = id;
             document.getElementById('form-isHK').value = stock.isHK ? 'true' : 'false';
             
+            // 填充目标价格（编辑时显示）
+            document.getElementById('form-buy-target').value = stock.buyTargetPrice || '';
+            document.getElementById('form-sell-target').value = stock.sellTargetPrice || '';
+            document.getElementById('target-prices-section').classList.remove('hidden');
+            
             // 填充标签
             currentTags = stock.tags ? [...stock.tags] : [];
             renderTags();
@@ -1300,6 +1417,8 @@
                 document.getElementById('form-isHK').value = 'false';
                 document.getElementById('modal-title').textContent = '录入新持仓';
                 document.getElementById('submit-btn-text').textContent = '确认添加';
+                // 隐藏目标价格字段（录入时不显示）
+                document.getElementById('target-prices-section').classList.add('hidden');
                 // 重置市场选择为A股
                 document.getElementById('form-market').value = 'a';
                 document.getElementById('market-a').checked = true;
@@ -1486,6 +1605,10 @@
             // 获取标签（最多3个）
             const tags = currentTags.slice(0, 3);
             
+            // 获取目标价格（编辑时才有）
+            const buyTargetPrice = editId ? (Number(document.getElementById('form-buy-target').value) || 0) : 0;
+            const sellTargetPrice = editId ? (Number(document.getElementById('form-sell-target').value) || 0) : 0;
+            
             if (editId) {
                 // 编辑模式
                 const index = state.stocks.findIndex(s => s.id === Number(editId));
@@ -1498,7 +1621,9 @@
                         price,
                         strategy,
                         isHK: isHK,
-                        tags: tags
+                        tags: tags,
+                        buyTargetPrice: buyTargetPrice > 0 ? buyTargetPrice : undefined,
+                        sellTargetPrice: sellTargetPrice > 0 ? sellTargetPrice : undefined
                     };
                 }
             } else {
@@ -1774,6 +1899,12 @@
                                     setTimeout(() => {
                                         marketValueCell.classList.remove('price-up', 'price-down');
                                     }, 1200);
+                                }
+                                
+                                // 更新DOM - 价格滑块单元格
+                                const priceTargetCell = document.querySelector(`td[data-stock-id="${stock.id}"][data-cell-type="price-targets"]`);
+                                if (priceTargetCell) {
+                                    priceTargetCell.innerHTML = renderPriceSlider(stock);
                                 }
                                 
                                 console.log(`💹 [价格变动] ${stock.name}: ${oldPrice} → ${newPrice} (${newPrice > oldPrice ? '↑' : '↓'})`);

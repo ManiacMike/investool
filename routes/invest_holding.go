@@ -635,12 +635,65 @@ func BatchQueryStockPricesHandler(c *gin.Context) {
 		codeMap[upperCode] = stock.Code
 
 		if stock.IsHK {
-			// 港股代码，提取纯数字部分
-			code := stock.Code
-			pureCode := code
-			if len(code) > 5 {
-				pureCode = code[:5] // 提取前5位，如 "00700"
+			// 港股代码处理：按小数点分割，把后面的部分移到前面
+			// 例如：700.00 -> 00700, 367.02 -> 02367
+			code := strings.ToUpper(stock.Code)
+			// 去掉 .HK 后缀
+			code = strings.TrimSuffix(code, ".HK")
+
+			var pureCode string
+			if strings.Contains(code, ".") {
+				// 如果有小数点，按小数点分割
+				parts := strings.Split(code, ".")
+				frontPart := parts[0] // 前面的部分，如 "700" 或 "367"
+				backPart := ""
+				if len(parts) > 1 {
+					backPart = parts[1] // 后面的部分，如 "00" 或 "02"
+				}
+
+				// 提取数字部分（去掉非数字字符）
+				frontDigits := ""
+				for _, r := range frontPart {
+					if r >= '0' && r <= '9' {
+						frontDigits += string(r)
+					}
+				}
+				backDigits := ""
+				for _, r := range backPart {
+					if r >= '0' && r <= '9' {
+						backDigits += string(r)
+					}
+				}
+
+				// 前面部分补0到3位，后面部分补0到2位
+				if len(frontDigits) < 3 {
+					frontDigits = strings.Repeat("0", 3-len(frontDigits)) + frontDigits
+				} else if len(frontDigits) > 3 {
+					frontDigits = frontDigits[:3] // 只取前3位
+				}
+				if len(backDigits) < 2 {
+					backDigits = backDigits + strings.Repeat("0", 2-len(backDigits))
+				} else if len(backDigits) > 2 {
+					backDigits = backDigits[:2] // 只取前2位
+				}
+
+				// 把后面的部分放到前面：后面2位 + 前面3位 = 5位
+				pureCode = backDigits + frontDigits
+			} else {
+				// 如果没有小数点，提取纯数字部分，前面补0到5位
+				pureCode = ""
+				for _, r := range code {
+					if r >= '0' && r <= '9' {
+						pureCode += string(r)
+					}
+				}
+				if len(pureCode) < 5 {
+					pureCode = strings.Repeat("0", 5-len(pureCode)) + pureCode
+				} else if len(pureCode) > 5 {
+					pureCode = pureCode[:5]
+				}
 			}
+
 			hkStockMap[pureCode] = upperCode // 使用大写代码
 			fmt.Printf("📊 [港股] 完整代码: %s, 大写: %s, 纯数字: %s\n", stock.Code, upperCode, pureCode)
 		} else {
