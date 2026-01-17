@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>大A超市持仓管理</title>
+    <title>持仓管理</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -167,10 +167,6 @@
                                         <i data-lucide="refresh-cw" class="w-4 h-4"></i>
                                         <span>刷新</span>
                                     </button>
-                                    <button onclick="exportToJSON()" class="flex items-center gap-2 bg-white hover:bg-[#f9fafb] text-[#6b7280] hover:text-[#6366f1] px-4 py-2.5 rounded-lg font-medium transition-all border border-[#e5e7eb] hover:border-[#6366f1]" title="导出数据为JSON">
-                                        <i data-lucide="download" class="w-4 h-4"></i>
-                                        <span>导出</span>
-                                    </button>
                                     <button onclick="toggleModal(true)" class="flex items-center gap-2 bg-[#6366f1] hover:bg-[#4f46e5] text-white px-5 py-2.5 rounded-lg font-medium transition-all shadow-lg shadow-[#6366f1]/20 hover:shadow-[#6366f1]/40 active:translate-y-0.5">
                                         <i data-lucide="plus" class="w-4 h-4"></i>
                                         <span>录入新持仓</span>
@@ -229,7 +225,7 @@
                         
                         <div class="mb-6">
                             <p class="text-3xl font-bold tracking-tight text-white mb-1" id="total-asset-display">¥0.00</p>
-                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-[#10b981]/20 text-[#34d399]">+0.00%</span>
+                            <span id="asset-diff-display" class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium">+0.0万</span>
                         </div>
                         
                         <div class="grid grid-cols-2 gap-4 pt-4 border-t border-white/10">
@@ -270,6 +266,27 @@
                         <div class="pt-2 border-t border-[#f3f4f6] text-[#9ca3af] text-[10px]">
                             当前使用汇率
                         </div>
+                    </div>
+                </div>
+
+                <!-- 数据管理卡片 -->
+                <div class="bg-white rounded-xl p-5 shadow-sm border border-[#e5e7eb]">
+                    <div class="flex items-center gap-2 mb-4">
+                        <div class="p-2 rounded-lg bg-[#eef2ff] text-[#6366f1]">
+                            <i data-lucide="database" class="w-4 h-4"></i>
+                        </div>
+                        <h4 class="font-bold text-[#111827] text-sm">数据管理</h4>
+                    </div>
+                    <div class="space-y-2">
+                        <button onclick="exportToJSON()" class="w-full flex items-center justify-center gap-2 bg-white hover:bg-[#f9fafb] text-[#6b7280] hover:text-[#6366f1] px-4 py-2.5 rounded-lg font-medium transition-all border border-[#e5e7eb] hover:border-[#6366f1]" title="导出数据为JSON">
+                            <i data-lucide="download" class="w-4 h-4"></i>
+                            <span>导出数据</span>
+                        </button>
+                        <button onclick="document.getElementById('import-file-input').click()" class="w-full flex items-center justify-center gap-2 bg-white hover:bg-[#f9fafb] text-[#6b7280] hover:text-[#6366f1] px-4 py-2.5 rounded-lg font-medium transition-all border border-[#e5e7eb] hover:border-[#6366f1]" title="导入JSON文件">
+                            <i data-lucide="upload" class="w-4 h-4"></i>
+                            <span>导入数据</span>
+                        </button>
+                        <input type="file" id="import-file-input" accept=".json" style="display: none;" onchange="importFromJSON(event)">
                     </div>
                 </div>
 
@@ -682,6 +699,116 @@
             }
         }
 
+        // 导入数据从JSON文件
+        function importFromJSON(event) {
+            const file = event.target.files[0];
+            if (!file) {
+                return;
+            }
+
+            // 检查文件类型
+            if (!file.name.endsWith('.json')) {
+                alert('请选择JSON格式的文件');
+                event.target.value = ''; // 清空文件选择
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const jsonString = e.target.result;
+                    const importData = JSON.parse(jsonString);
+
+                    // 验证数据结构
+                    if (!importData.stocks || !Array.isArray(importData.stocks)) {
+                        throw new Error('JSON文件格式不正确：缺少stocks数组');
+                    }
+
+                    // 确认是否要导入（如果已有数据，询问是否替换）
+                    if (state.stocks.length > 0) {
+                        const action = confirm(
+                            `当前已有 ${state.stocks.length} 条持仓记录，导入文件包含 ${importData.stocks.length} 条记录。\n\n` +
+                            `点击"确定"替换现有数据，点击"取消"取消导入。\n\n` +
+                            `（提示：如需合并数据，请先导出当前数据，手动合并后再导入）`
+                        );
+                        if (!action) {
+                            event.target.value = ''; // 清空文件选择
+                            return;
+                        }
+                    }
+
+                    // 验证并处理导入的股票数据
+                    const importedStocks = [];
+                    for (let i = 0; i < importData.stocks.length; i++) {
+                        const stock = importData.stocks[i];
+                        
+                        // 验证必需字段
+                        if (!stock.name || !stock.code) {
+                            console.warn(`跳过第 ${i + 1} 条记录：缺少name或code字段`, stock);
+                            continue;
+                        }
+
+                        // 确保有id（如果没有则生成新的）
+                        if (!stock.id) {
+                            stock.id = Date.now() + i; // 使用时间戳+索引生成唯一ID
+                        }
+
+                        // 确保有默认值
+                        stock.count = stock.count || 0;
+                        stock.price = stock.price || 0;
+                        stock.strategy = stock.strategy || 'core';
+                        stock.isHK = stock.isHK || false;
+                        stock.tags = stock.tags || [];
+                        stock.buyPrice = stock.buyPrice || stock.price || 0;
+                        stock.sellPrice = stock.sellPrice || stock.price || 0;
+
+                        importedStocks.push(stock);
+                    }
+
+                    if (importedStocks.length === 0) {
+                        alert('导入的文件中没有有效的股票数据');
+                        event.target.value = ''; // 清空文件选择
+                        return;
+                    }
+
+                    // 替换现有数据
+                    state.stocks = importedStocks;
+                    
+                    // 保存到localStorage
+                    saveToStorage();
+                    
+                    // 重新渲染
+                    render();
+                    
+                    // 如果导入了数据，自动刷新价格
+                    if (state.stocks.length > 0) {
+                        refreshStockPrices();
+                        // 如果自动刷新已开启，启动定时刷新
+                        if (state.autoRefreshEnabled) {
+                            startAutoRefresh();
+                        }
+                    }
+
+                    alert(`✅ 成功导入 ${importedStocks.length} 条持仓记录`);
+                    console.log('✅ 数据导入成功', importedStocks);
+
+                } catch (e) {
+                    console.error('导入数据失败:', e);
+                    alert('导入数据失败: ' + e.message + '\n\n请确保文件格式正确，且包含stocks数组。');
+                } finally {
+                    // 清空文件选择，允许重复选择同一文件
+                    event.target.value = '';
+                }
+            };
+
+            reader.onerror = function() {
+                alert('读取文件失败，请重试');
+                event.target.value = ''; // 清空文件选择
+            };
+
+            reader.readAsText(file);
+        }
+
         function saveAutoRefreshPreference() {
             try {
                 localStorage.setItem(AUTO_REFRESH_KEY, state.autoRefreshEnabled.toString());
@@ -694,94 +821,79 @@
         const formatMoney = (num) => new Intl.NumberFormat('zh-CN', { style: 'currency', currency: 'CNY', maximumFractionDigits: 0 }).format(num);
         const formatPercent = (val, total) => total === 0 ? '0.0%' : ((val / total) * 100).toFixed(1) + '%';
         
-        // 渲染价格滑块（水平布局：买-持有-卖）
+        // 格式化资产差值（总资产 - 150万）
+        const formatAssetDiff = (totalAsset) => {
+            const BASE_AMOUNT = 1500000; // 150万
+            const diff = totalAsset - BASE_AMOUNT;
+            const diffInWan = diff / 10000; // 转换为万元
+            const rounded = Math.round(diffInWan * 10) / 10; // 四舍五入到小数点后1位
+            
+            const sign = rounded >= 0 ? '+' : '';
+            const absValue = Math.abs(rounded);
+            const text = `${sign}${absValue.toFixed(1)}万`;
+            
+            // 根据正负值设置样式
+            const isPositive = rounded >= 0;
+            const bgColor = isPositive ? 'bg-[#10b981]/20' : 'bg-[#ef4444]/20';
+            const textColor = isPositive ? 'text-[#34d399]' : 'text-[#f87171]';
+            
+            return { text, bgColor, textColor };
+        };
+        
+        // 渲染价格滑块（参考静态页面样式）
         function renderPriceSlider(stock) {
             const currentPrice = stock.price || 0;
             const buyTarget = stock.buyTargetPrice || 0;
             const sellTarget = stock.sellTargetPrice || 0;
-            const currencySymbol = stock.isHK ? 'HK$' : '¥';
             
-            if (!buyTarget && !sellTarget) {
-                return '<span class="text-xs text-[#9ca3af]">未设置</span>';
+            if (!buyTarget || !sellTarget || sellTarget <= buyTarget) {
+                return '<span class="text-xs text-[#9ca3af] block text-center">未设置</span>';
             }
             
-            // 计算价格范围（用于滑块显示）
-            const prices = [currentPrice, buyTarget, sellTarget].filter(p => p > 0);
-            if (prices.length === 0) {
-                return '<span class="text-xs text-[#9ca3af]">未设置</span>';
+            // 计算当前位置（相对于买入价和卖出价的范围）
+            const range = sellTarget - buyTarget;
+            const currentDist = currentPrice - buyTarget;
+            let pos = (currentDist / range) * 100;
+            
+            // 限制在 0 - 100 之间显示，但可以变色
+            let clampedPos = Math.max(0, Math.min(100, pos));
+            
+            // 颜色逻辑
+            let markerColor = 'bg-[#6366f1]'; // 默认蓝色
+            let label = '持有';
+            let labelColor = 'text-[#6366f1]';
+
+            if (pos <= 20) {
+                markerColor = 'bg-[#10b981]'; // 绿色 (接近买入)
+                label = '低吸区';
+                labelColor = 'text-[#10b981]';
+            } else if (pos >= 80) {
+                markerColor = 'bg-[#ef4444]'; // 红色 (接近卖出)
+                label = '止盈区';
+                labelColor = 'text-[#ef4444]';
             }
+
+            // 格式化价格：如果是整数显示整数，否则显示最多2位小数
+            const formatPrice = (price) => {
+                if (price % 1 === 0) {
+                    return price.toString();
+                }
+                // 显示2位小数，移除末尾的0
+                return parseFloat(price.toFixed(2)).toString();
+            };
             
-            const minPrice = Math.min(...prices);
-            const maxPrice = Math.max(...prices);
-            // 如果所有价格相同，添加一些范围以便显示
-            const range = maxPrice - minPrice || Math.max(minPrice * 0.1, 1);
-            
-            // 计算当前位置百分比（限制在0-100%之间）
-            const currentPercent = Math.max(0, Math.min(100, ((currentPrice - minPrice) / range) * 100));
-            const buyPercent = buyTarget > 0 ? Math.max(0, Math.min(100, ((buyTarget - minPrice) / range) * 100)) : -1;
-            const sellPercent = sellTarget > 0 ? Math.max(0, Math.min(100, ((sellTarget - minPrice) / range) * 100)) : -1;
-            
-            // 水平滑块布局（买-持有-卖）
-            let sliderHTML = '<div class="flex items-center gap-2 w-full px-1">';
-            
-            // 左侧：买入目标价
-            if (buyTarget > 0) {
-                sliderHTML += `
-                    <div class="flex items-center gap-1 min-w-[45px]">
-                        <span class="text-[11px] text-[#10b981] font-semibold">买:</span>
-                        <span class="text-xs text-[#10b981] font-bold">${buyTarget.toFixed(0)}</span>
+            return `
+                <div class="w-40 mx-auto flex flex-col gap-1.5">
+                    <div class="flex justify-between text-[10px] text-[#9ca3af] font-mono">
+                        <span class="text-[#10b981]">买:${formatPrice(buyTarget)}</span>
+                        <span class="${labelColor} font-bold scale-90 origin-center">${label}</span>
+                        <span class="text-[#ef4444]">卖:${formatPrice(sellTarget)}</span>
                     </div>
-                `;
-            } else {
-                sliderHTML += '<div class="min-w-[45px]"></div>';
-            }
-            
-            // 中间：滑块条和当前价格
-            sliderHTML += `
-                <div class="flex-1 relative h-7 flex items-center">
-                    <!-- 背景滑块条 -->
-                    <div class="absolute left-0 right-0 h-1.5 bg-[#e5e7eb] rounded-full"></div>
-                    
-                    <!-- 买入到当前价格的渐变条（绿色到蓝色） -->
-                    ${buyTarget > 0 && currentPrice >= buyTarget ? `
-                        <div class="absolute h-1.5 bg-gradient-to-r from-[#10b981] to-[#6366f1] rounded-full" 
-                             style="left: ${buyPercent}%; width: ${Math.max(0, currentPercent - buyPercent)}%;"></div>
-                    ` : buyTarget > 0 && currentPrice < buyTarget ? `
-                        <div class="absolute h-1.5 bg-[#10b981] rounded-full" 
-                             style="left: ${buyPercent}%; width: ${Math.max(0, currentPercent - buyPercent)}%;"></div>
-                    ` : ''}
-                    
-                    <!-- 当前到卖出价格的渐变条（蓝色到红色） -->
-                    ${sellTarget > 0 && currentPrice <= sellTarget ? `
-                        <div class="absolute h-1.5 bg-gradient-to-r from-[#6366f1] to-[#ef4444] rounded-full" 
-                             style="left: ${currentPercent}%; width: ${Math.max(0, sellPercent - currentPercent)}%;"></div>
-                    ` : sellTarget > 0 && currentPrice > sellTarget ? `
-                        <div class="absolute h-1.5 bg-[#ef4444] rounded-full" 
-                             style="left: ${sellPercent}%; width: ${Math.max(0, currentPercent - sellPercent)}%;"></div>
-                    ` : ''}
-                    
-                    <!-- 当前价格滑块（蓝色圆形） -->
-                    <div class="absolute z-10 flex flex-col items-center" style="left: ${currentPercent}%; transform: translateX(-50%);">
-                        <div class="w-3.5 h-3.5 rounded-full bg-[#6366f1] border-2 border-white shadow-sm"></div>
-                        <span class="text-[10px] text-[#6366f1] font-medium mt-0.5 whitespace-nowrap">持有</span>
+                    <div class="relative h-1.5 bg-[#e5e7eb] rounded-full w-full">
+                        <div class="absolute top-1/2 -translate-y-1/2 w-3 h-3 ${markerColor} rounded-full border-2 border-white shadow-sm transition-all duration-500" style="left: calc(${clampedPos}% - 6px);"></div>
                     </div>
                 </div>
             `;
-            
-            // 右侧：卖出目标价
-            if (sellTarget > 0) {
-                sliderHTML += `
-                    <div class="flex items-center gap-1 min-w-[45px]">
-                        <span class="text-[11px] text-[#ef4444] font-semibold">卖:</span>
-                        <span class="text-xs text-[#ef4444] font-bold">${sellTarget.toFixed(0)}</span>
-                    </div>
-                `;
-            } else {
-                sliderHTML += '<div class="min-w-[45px]"></div>';
-            }
-            
-            sliderHTML += '</div>';
-            return sliderHTML;
         }
 
         // --- 3. 渲染逻辑 ---
@@ -826,6 +938,29 @@
             // 如果有持仓数据且自动刷新开启，启动定时刷新
             if (state.stocks.length > 0 && state.autoRefreshEnabled) {
                 startAutoRefresh();
+            }
+            
+            // 检查URL参数，如果有q参数，填充到股票名称字段
+            handleURLQueryParam();
+        }
+        
+        // 处理URL查询参数
+        function handleURLQueryParam() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const queryParam = urlParams.get('q');
+            
+            if (queryParam) {
+                // 解码URL参数（处理中文等特殊字符）
+                const decodedQuery = decodeURIComponent(queryParam);
+                
+                // 填充到股票名称字段
+                const nameInput = document.getElementById('form-name');
+                if (nameInput) {
+                    nameInput.value = decodedQuery;
+                }
+                
+                // 自动打开模态框，方便用户直接使用
+                toggleModal(true);
             }
         }
 
@@ -1194,6 +1329,14 @@
             // 1. 更新总资产条
             document.getElementById('total-asset-display').textContent = formatMoney(totalAsset);
             document.getElementById('total-count-display').textContent = state.stocks.length;
+            
+            // 更新资产差值显示
+            const diffDisplay = document.getElementById('asset-diff-display');
+            if (diffDisplay) {
+                const diff = formatAssetDiff(totalAsset);
+                diffDisplay.textContent = diff.text;
+                diffDisplay.className = `inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${diff.bgColor} ${diff.textColor}`;
+            }
 
             // 2. 渲染策略仪表盘（右侧垂直布局）
             const dashboard = document.getElementById('strategy-dashboard');
@@ -1286,7 +1429,7 @@
                         <td class="px-4 py-3">
                             <div class="flex flex-col">
                                 <div class="flex items-center gap-1.5 flex-wrap">
-                                    <span class="font-bold text-[#111827] text-sm">${stock.name}</span>
+                                    <a href="/invest/stock-analyzer?q=${encodeURIComponent(stock.name)}" target="_blank" class="font-bold text-[#111827] text-sm hover:text-[#6366f1] transition-colors duration-200 cursor-pointer" title="点击查看AI分析提示词">${stock.name}</a>
                                     ${stock.isHK ? '<span class="inline-flex items-center px-1 py-0.5 rounded text-[9px] font-bold bg-[#fef3c7] text-[#92400e]">HK</span>' : ''}
                                     ${stock.tags && stock.tags.length > 0 ? stock.tags.map(tag => `
                                         <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-[#f0f9ff] text-[#0369a1] border border-[#bae6fd]">
@@ -1919,6 +2062,14 @@
                         // 只更新总资产和统计信息，不重新渲染表格
                         const { totalAsset: newTotalAsset, strategyStats } = calculateStats();
                         document.getElementById('total-asset-display').textContent = formatMoney(newTotalAsset);
+                        
+                        // 更新资产差值显示
+                        const diffDisplay = document.getElementById('asset-diff-display');
+                        if (diffDisplay) {
+                            const diff = formatAssetDiff(newTotalAsset);
+                            diffDisplay.textContent = diff.text;
+                            diffDisplay.className = `inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${diff.bgColor} ${diff.textColor}`;
+                        }
                         
                         // 更新策略仪表盘
                         const dashboard = document.getElementById('strategy-dashboard');

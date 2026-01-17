@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>买入金额计算器</title>
+    <title>股票AI分析提示词生成器</title>
     <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
     <style>
         * {
@@ -20,153 +20,9 @@
         }
 
         .app-container {
-            max-width: 1200px;
+            max-width: 1000px;
             margin: 0 auto;
-            display: grid;
-            grid-template-columns: 300px 1fr;
-            gap: 20px;
         }
-
-        .sidebar {
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
-            padding: 20px;
-            height: fit-content;
-            max-height: calc(100vh - 40px);
-            overflow-y: auto;
-        }
-
-        .sidebar-title {
-            color: #34495e;
-            font-size: 18px;
-            font-weight: 700;
-            margin-bottom: 20px;
-            text-align: center;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #ecf0f1;
-        }
-
-        .history-list {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-        }
-
-        .history-item {
-            background: #f8f9fa;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 10px;
-            border-left: 4px solid #3498db;
-            transition: all 0.3s ease;
-            position: relative;
-        }
-
-        .history-item:hover {
-            background: #e9ecef;
-            transform: translateX(5px);
-        }
-
-        .history-item.excellent {
-            border-left-color: #27ae60;
-        }
-
-        .history-item.good {
-            border-left-color: #f39c12;
-        }
-
-        .history-item.average {
-            border-left-color: #e67e22;
-        }
-
-        .history-item.poor {
-            border-left-color: #e74c3c;
-        }
-
-        .history-stock-name {
-            font-weight: 700;
-            color: #34495e;
-            font-size: 14px;
-            margin-bottom: 5px;
-        }
-
-        .history-time {
-            font-size: 12px;
-            color: #7f8c8d;
-            margin-bottom: 8px;
-        }
-
-        .history-score {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .history-score-value {
-            font-weight: 700;
-            font-size: 16px;
-        }
-
-        .history-score-level {
-            font-size: 12px;
-            padding: 2px 6px;
-            border-radius: 4px;
-            color: white;
-            font-weight: 700;
-        }
-
-        .history-score-level.excellent {
-            background: #27ae60;
-        }
-
-        .history-score-level.good {
-            background: #f39c12;
-        }
-
-        .history-score-level.average {
-            background: #e67e22;
-        }
-
-        .history-score-level.poor {
-            background: #e74c3c;
-        }
-
-        .history-delete {
-            position: absolute;
-            top: 8px;
-            right: 8px;
-            background: #e74c3c;
-            color: white;
-            border: none;
-            border-radius: 50%;
-            width: 20px;
-            height: 20px;
-            font-size: 12px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            opacity: 0;
-            transition: all 0.3s ease;
-        }
-
-        .history-item:hover .history-delete {
-            opacity: 1;
-        }
-
-        .history-delete:hover {
-            background: #c0392b;
-            transform: scale(1.1);
-        }
-
-        .empty-history {
-            text-align: center;
-            color: #95a5a6;
-            font-size: 14px;
-            padding: 20px;
-        }
-
 
         .container {
             background: white;
@@ -341,167 +197,50 @@
             box-shadow: 0 5px 20px rgba(231, 76, 60, 0.4) !important;
         }
 
-        .result {
-            margin-top: 30px;
-            padding: 25px;
-            background: linear-gradient(135deg, #1abc9c 0%, #16a085 100%);
-            border-radius: 6px;
-            text-align: center;
-            color: white;
-            display: none;
-            animation: slideIn 0.5s ease;
-        }
 
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateY(-20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .result-label {
-            font-size: 14px;
-            opacity: 0.9;
-            margin-bottom: 10px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .result-value {
-            font-size: 48px;
-            font-weight: 700;
-            margin-bottom: 5px;
-        }
-
-        .result-unit {
-            font-size: 18px;
-            opacity: 0.9;
-        }
-
-        .breakdown {
-            margin-top: 20px;
-            padding: 20px;
-            background: #ecf0f1;
-            border-radius: 6px;
-            display: none;
-        }
-
-        .breakdown-title {
-            color: #34495e;
-            font-weight: 700;
-            margin-bottom: 15px;
-            font-size: 14px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .breakdown-item {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 10px;
-            color: #7f8c8d;
-            font-size: 14px;
-        }
-
-        .breakdown-value {
-            color: #34495e;
-            font-weight: 700;
-        }
-
-        .score-section {
-            margin-bottom: 20px;
-            padding: 15px;
-            background: #f8f9fa;
-            border-radius: 8px;
-            border-left: 4px solid #3498db;
-        }
-
-        .score-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 8px;
-        }
-
-        .score-name {
-            font-weight: 700;
-            color: #34495e;
-            font-size: 16px;
-        }
-
-        .score-value {
-            font-weight: 700;
-            color: #27ae60;
-            font-size: 18px;
-        }
-
-        .score-level {
-            background: #3498db;
-            color: white;
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-size: 12px;
-            font-weight: 700;
-        }
-
-        .score-level.excellent {
-            background: #27ae60;
-        }
-
-        .score-level.good {
-            background: #f39c12;
-        }
-
-        .score-level.average {
-            background: #e67e22;
-        }
-
-        .score-level.poor {
-            background: #e74c3c;
-        }
-
-        .score-description {
-            font-size: 12px;
-            color: #7f8c8d;
-            line-height: 1.4;
-            white-space: pre-line;
-        }
-
-        @media (max-width: 1024px) {
-            .app-container {
-                grid-template-columns: 1fr;
-                max-width: 1000px;
-            }
-            
-            .sidebar {
-                display: none;
-            }
-            
+        @media (max-width: 768px) {
             .container {
+                padding: 20px;
                 max-height: none;
             }
+            
+            h1 {
+                font-size: 24px;
+            }
+        }
+        
+        /* Prompt显示区域样式 */
+        #llmPrompt {
+            scrollbar-width: thin;
+            scrollbar-color: #bdc3c7 #ecf0f1;
+        }
+        
+        #llmPrompt::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        #llmPrompt::-webkit-scrollbar-track {
+            background: #ecf0f1;
+            border-radius: 4px;
+        }
+        
+        #llmPrompt::-webkit-scrollbar-thumb {
+            background: #bdc3c7;
+            border-radius: 4px;
+        }
+        
+        #llmPrompt::-webkit-scrollbar-thumb:hover {
+            background: #95a5a6;
         }
 
     </style>
 </head>
 <body>
 <div class="app-container">
-    <!-- 左侧边栏 -->
-    <div class="sidebar">
-        <div class="sidebar-title">📊 计算历史</div>
-        <ul id="historyList" class="history-list">
-            <li class="empty-history">暂无计算历史</li>
-        </ul>
-    </div>
-
     <!-- 股票分析器 -->
     <div class="container">
-        <h1>📊 股票分析评分系统</h1>
-        <p class="subtitle">基于巴菲特、彼得·林奇、威廉·欧奈尔三大投资大师评分体系</p>
+        <h1>🤖 股票AI分析提示词生成器</h1>
+        <p class="subtitle">输入股票名称或代码，自动生成包含详细财务数据的AI分析提示词</p>
 
         <div class="input-group">
             <label for="stockName">股票名称</label>
@@ -511,7 +250,7 @@
                     🔍 查询
                 </button>
             </div>
-            <div class="hint">输入股票名称或代码，点击查询按钮获取最新数据</div>
+            <div class="hint">输入股票名称或代码，系统将自动查询并生成包含完整财务数据的AI分析提示词</div>
         </div>
 
         <!-- 股票基础信息展示区域 -->
@@ -522,40 +261,19 @@
             <div style="background: white; border-radius: 12px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15); padding: 25px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                     <h3 style="margin: 0; color: #34495e; font-size: 20px; font-weight: 700;">🤖 AI分析提示词</h3>
-   
+                    <button type="button" id="copyBtn" onclick="copyPrompt()" style="width: 200px;background: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 700; transition: all 0.3s ease;" onmouseover="this.style.background='#27ae60'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(40,167,69,0.4)'" onmouseout="this.style.background='#28a745'; this.style.transform=''; this.style.boxShadow=''">
+                        📋 一键复制
+                    </button>
                 </div>
-                <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #e9ecef; margin-bottom: 20px;">
-                    <div style="font-size: 12px; color: #6c757d; margin-bottom: 10px;">
-                        📋 请复制以下提示词到ChatGPT、Claude等AI工具中进行分析：
+                <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #e9ecef; position: relative;">
+                    <div style="font-size: 12px; color: #6c757d; margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
+                        <span>💡</span>
+                        <span>请复制以下提示词到ChatGPT、Claude、Kimi等AI工具中进行多维度分析</span>
                     </div>
-                    <textarea id="llmPrompt" readonly style="width: 100%; height: 300px; border: none; background: transparent; resize: none; font-family: 'Courier New', monospace; font-size: 12px; line-height: 1.4;"></textarea>
+                    <pre id="llmPrompt" style="margin: 0; padding: 0; background: transparent; border: none; font-family: 'Consolas', 'Monaco', 'Courier New', monospace; font-size: 13px; line-height: 1.8; color: #2c3e50; white-space: pre-wrap; word-wrap: break-word; overflow-x: auto; max-height: 600px; overflow-y: auto;"></pre>
                 </div>
-                <button type="button" onclick="copyPrompt()" style="background: #28a745; color: white; border: none; padding: 12px 20px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 700;">
-                    📋 复制提示词
-                </button>
             </div>
         </div>
-
-        <!-- AI结果输入区域 -->
-        <div id="resultContainer" style="margin-top: 30px; display: none;">
-            <div style="background: white; border-radius: 12px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15); padding: 25px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                    <h3 style="margin: 0; color: #34495e; font-size: 20px; font-weight: 700;">📝 AI分析结果</h3>
-                </div>
-                <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #e9ecef; margin-bottom: 20px;">
-                    <div style="font-size: 12px; color: #6c757d; margin-bottom: 10px;">
-                        📋 请将从AI工具获得的分析结果（JSON格式）粘贴到下方：
-                    </div>
-                    <textarea id="llmResult" placeholder="请粘贴AI返回的JSON格式分析结果..." style="width: 100%; height: 200px; border: 1px solid #ced4da; border-radius: 4px; padding: 10px; font-family: 'Courier New', monospace; font-size: 12px; line-height: 1.4;"></textarea>
-                </div>
-                <button type="button" id="calculateBtn" onclick="calculateStockScore()" style="background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); color: white; border: none; padding: 12px 20px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 700;">
-                    🧮 计算评分
-                </button>
-            </div>
-        </div>
-
-        <!-- 评分结果展示区域 -->
-        <div id="scoreResultContainer" style="margin-top: 30px;"></div>
     </div>
 </div>
 
@@ -563,119 +281,18 @@
 <script>
     let currentStockData = null;
 
-    // 历史记录管理
-    function loadHistory() {
-        const history = JSON.parse(localStorage.getItem('stockAnalysisHistory') || '[]');
-        displayHistory(history);
-    }
-
-    function saveToHistory(stockName, results) {
-        const history = JSON.parse(localStorage.getItem('stockAnalysisHistory') || '[]');
-        
-        // 计算三个独立分数
-        const buffettScore = results.buffett_score?.total_score || 0;
-        const lynchScore = results.lynch_score?.total_score || 0;
-        const oneilScore = results.oneil_score?.total_score || 0;
-        const avgScore = (buffettScore + lynchScore + oneilScore) / 3;
-        
-        const newItem = {
-            id: Date.now(),
-            stockName: stockName,
-            avgScore: avgScore,
-            buffettScore: buffettScore,
-            lynchScore: lynchScore,
-            oneilScore: oneilScore,
-            scoreLevel: getScoreLevel(avgScore),
-            timestamp: new Date().toLocaleString('zh-CN')
-        };
-        
-        // 添加到历史记录开头
-        history.unshift(newItem);
-        
-        // 限制历史记录数量为50条
-        if (history.length > 50) {
-            history.splice(50);
-        }
-        
-        localStorage.setItem('stockAnalysisHistory', JSON.stringify(history));
-        displayHistory(history);
-    }
-
-    function displayHistory(history) {
-        const historyList = document.getElementById('historyList');
-        
-        if (history.length === 0) {
-            historyList.innerHTML = '<li class="empty-history">暂无计算历史</li>';
-            return;
-        }
-        
-        historyList.innerHTML = history.map(item => {
-            const avgScoreColor = getScoreColor(item.avgScore);
-            return `
-                <li class="history-item ${item.scoreLevel}" data-id="${item.id}">
-                    <button class="history-delete" onclick="deleteHistoryItem(${item.id})" title="删除">×</button>
-                    <div class="history-stock-name">${item.stockName}</div>
-                    <div class="history-time">${item.timestamp}</div>
-                    <div class="history-score">
-                        <span class="history-score-value" style="color: ${avgScoreColor};">${item.avgScore.toFixed(1)}分</span>
-                        <span class="history-score-level ${item.scoreLevel}">${item.scoreLevel}</span>
-                    </div>
-                    <div class="history-details" style="margin-top: 8px; font-size: 11px; color: #7f8c8d;">
-                        <div style="display: flex; justify-content: space-between;">
-                            <span>巴菲特: <strong style="color: #3498db;">${item.buffettScore.toFixed(1)}</strong></span>
-                            <span>林奇: <strong style="color: #27ae60;">${item.lynchScore.toFixed(1)}</strong></span>
-                            <span>欧奈尔: <strong style="color: #e67e22;">${item.oneilScore.toFixed(1)}</strong></span>
-                        </div>
-                    </div>
-                </li>
-            `;
-        }).join('');
-    }
-
-    function deleteHistoryItem(id) {
-        const history = JSON.parse(localStorage.getItem('stockAnalysisHistory') || '[]');
-        const filteredHistory = history.filter(item => item.id !== id);
-        localStorage.setItem('stockAnalysisHistory', JSON.stringify(filteredHistory));
-        displayHistory(filteredHistory);
-    }
-
-    function getScoreColor(score) {
-        if (score >= 80) return '#27ae60';
-        if (score >= 60) return '#f39c12';
-        if (score >= 40) return '#e67e22';
-        return '#e74c3c';
-    }
-
-    function getScoreLevel(score) {
-        if (score >= 80) return 'excellent';
-        if (score >= 60) return 'good';
-        if (score >= 40) return 'average';
-        return 'poor';
-    }
-
     // 清空之前的结果
     function clearPreviousResults() {
         // 清空股票基础信息
         document.getElementById('stockInfoContainer').innerHTML = '';
         
-        // 清空AI分析结果输入框
-        document.getElementById('llmResult').value = '';
-        
-        // 清空评分结果
-        document.getElementById('scoreResultContainer').innerHTML = '';
-        
-        // 隐藏AI提示词和结果输入区域
+        // 隐藏AI提示词区域
         document.getElementById('promptContainer').style.display = 'none';
-        document.getElementById('resultContainer').style.display = 'none';
         
         // 清空当前股票数据
         currentStockData = null;
     }
 
-    // 页面加载时初始化历史记录
-    document.addEventListener('DOMContentLoaded', function() {
-        loadHistory();
-    });
 
     function queryStockData() {
         const stockName = document.getElementById('stockName').value.trim();
@@ -714,9 +331,8 @@
                     // 显示LLM prompt
                     showLLMPrompt(stock.llm_prompt);
                     
-                    // 显示AI提示词和结果输入区域
+                    // 显示AI提示词区域
                     document.getElementById('promptContainer').style.display = 'block';
-                    document.getElementById('resultContainer').style.display = 'block';
                     
                 } else {
                     alert('未找到相关股票数据');
@@ -758,19 +374,52 @@
     }
 
     function showLLMPrompt(prompt) {
-        document.getElementById('llmPrompt').value = prompt;
+        const promptElement = document.getElementById('llmPrompt');
+        promptElement.textContent = prompt;
     }
 
     function copyPrompt() {
-        const promptTextarea = document.getElementById('llmPrompt');
-        promptTextarea.select();
-        document.execCommand('copy');
+        const promptElement = document.getElementById('llmPrompt');
+        const text = promptElement.textContent || promptElement.innerText;
         
-        // 显示复制成功提示
-        const button = event.target;
+        // 使用现代 Clipboard API
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(() => {
+                showCopySuccess();
+            }).catch(() => {
+                // 降级到传统方法
+                fallbackCopy(text);
+            });
+        } else {
+            fallbackCopy(text);
+        }
+    }
+
+    function fallbackCopy(text) {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        try {
+            document.execCommand('copy');
+            showCopySuccess();
+        } catch (err) {
+            alert('复制失败，请手动选择文本复制');
+        }
+        document.body.removeChild(textarea);
+    }
+
+    function showCopySuccess() {
+        const button = document.getElementById('copyBtn');
+        if (!button) return;
+        
         const originalText = button.innerHTML;
         button.innerHTML = '✅ 已复制';
-        button.style.background = '#28a745';
+        button.style.background = '#27ae60';
+        button.style.transform = '';
+        button.style.boxShadow = '';
         
         setTimeout(() => {
             button.innerHTML = originalText;
@@ -778,174 +427,6 @@
         }, 2000);
     }
 
-    function calculateStockScore() {
-        const llmResult = document.getElementById('llmResult').value.trim();
-        if (!llmResult) {
-            alert('请先粘贴AI分析结果！');
-            return;
-        }
-
-        if (!currentStockData) {
-            alert('请先查询股票信息！');
-            return;
-        }
-
-        const calculateBtn = document.getElementById('calculateBtn');
-        const originalText = calculateBtn.innerHTML;
-        calculateBtn.innerHTML = '⏳ 计算中...';
-        calculateBtn.disabled = true;
-
-        fetch('/invest/calculate-stock-score', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                stock_name: currentStockData.name,
-                llm_response: llmResult
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.Error) {
-                alert('计算失败: ' + data.Error);
-                return;
-            }
-
-            if (data.Results) {
-                showScoreResults(data.Results);
-                // 隐藏AI提示词和结果输入区域
-                document.getElementById('promptContainer').style.display = 'none';
-                document.getElementById('resultContainer').style.display = 'none';
-            } else {
-                alert('未获取到计算结果');
-            }
-        })
-        .catch(error => {
-            console.error('计算错误:', error);
-            alert('计算失败，请稍后重试');
-        })
-        .finally(() => {
-            calculateBtn.innerHTML = originalText;
-            calculateBtn.disabled = false;
-        });
-    }
-
-    function showScoreResults(results) {
-        const container = document.getElementById('scoreResultContainer');
-        
-        // 计算综合评分
-        const avgScore = ((results.buffett_score?.total_score || 0) + 
-                         (results.lynch_score?.total_score || 0) + 
-                         (results.oneil_score?.total_score || 0)) / 3;
-        
-        // 根据综合评分设置颜色
-        let scoreColor = '#e74c3c'; // 较差
-        let scoreLevel = '较差';
-        let scoreLevelClass = 'poor';
-        if (avgScore >= 80) {
-            scoreColor = '#27ae60';
-            scoreLevel = '优秀';
-            scoreLevelClass = 'excellent';
-        } else if (avgScore >= 60) {
-            scoreColor = '#f39c12';
-            scoreLevel = '良好';
-            scoreLevelClass = 'good';
-        } else if (avgScore >= 40) {
-            scoreColor = '#e67e22';
-            scoreLevel = '一般';
-            scoreLevelClass = 'average';
-        }
-
-        // 保存到历史记录
-        if (currentStockData) {
-            saveToHistory(currentStockData.name, results);
-        }
-
-        container.innerHTML = `
-            <div style="background: white; border-radius: 12px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15); overflow: hidden;">
-                <!-- 综合评分 -->
-                <div style="padding: 25px; text-align: center; border-bottom: 1px solid #ecf0f1;">
-                    <div style="font-size: 16px; color: #7f8c8d; margin-bottom: 10px;">综合评分</div>
-                    <div style="font-size: 48px; font-weight: 700; color: ${scoreColor}; margin-bottom: 5px;">${avgScore.toFixed(1)}</div>
-                    <div style="font-size: 18px; color: ${scoreColor}; font-weight: 700;">${scoreLevel}</div>
-                </div>
-
-                <!-- 三大评分体系 -->
-                <div style="padding: 25px;">
-                    <h3 style="margin: 0 0 20px 0; color: #34495e; font-size: 18px; font-weight: 700;">📊 三大投资大师评分体系</h3>
-                    
-                    <div style="display: grid; grid-template-columns: 1fr; gap: 20px;">
-                        ${createScoreCard('巴菲特', results.buffett_score, '#3498db', '🏆')}
-                        ${createScoreCard('彼得·林奇', results.lynch_score, '#27ae60', '📈')}
-                        ${createScoreCard('威廉·欧奈尔', results.oneil_score, '#e67e22', '🚀')}
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-
-    function createScoreCard(name, score, color, icon) {
-        const totalScore = score.total_score || 0;
-        const scoreLevel = totalScore >= 80 ? '优秀' : totalScore >= 60 ? '良好' : totalScore >= 40 ? '一般' : '较差';
-        
-        return `
-            <div style="border: 2px solid ${color}; border-radius: 12px; padding: 20px; background: linear-gradient(135deg, ${color}15 0%, ${color}05 100%);">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                    <div style="display: flex; align-items: center; gap: 10px;">
-                        <span style="font-size: 24px;">${icon}</span>
-                        <h4 style="margin: 0; color: #34495e; font-size: 16px; font-weight: 700;">${name}评分</h4>
-                    </div>
-                    <div style="text-align: right;">
-                        <div style="font-size: 24px; font-weight: 700; color: ${color};">${totalScore.toFixed(1)}分</div>
-                        <div style="font-size: 12px; color: ${color}; font-weight: 700;">${scoreLevel}</div>
-                    </div>
-                </div>
-                
-                ${score.score_description ? `
-                    <div style="font-size: 12px; color: #7f8c8d; line-height: 1.6; white-space: pre-line;">
-                        ${score.score_description}
-                    </div>
-                ` : ''}
-            </div>
-        `;
-    }
-
-    function createLLMAnalysisCard(analysis) {
-        return `
-            <div style="padding: 25px; border-top: 1px solid #ecf0f1;">
-                <h3 style="margin: 0 0 20px 0; color: #34495e; font-size: 18px; font-weight: 700;">🤖 AI智能分析</h3>
-                
-                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 20px;">
-                    <div style="text-align: center; padding: 15px; background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%); color: white; border-radius: 8px;">
-                        <div style="font-weight: 700; margin-bottom: 8px;">👑 行业龙头</div>
-                        <div style="font-size: 20px; font-weight: 700;">${analysis.industry_leader_score.toFixed(1)}分</div>
-                    </div>
-                    <div style="text-align: center; padding: 15px; background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); color: white; border-radius: 8px;">
-                        <div style="font-weight: 700; margin-bottom: 8px;">💡 新概念</div>
-                        <div style="font-size: 20px; font-weight: 700;">${analysis.new_concept_score.toFixed(1)}分</div>
-                    </div>
-                    <div style="text-align: center; padding: 15px; background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%); color: white; border-radius: 8px;">
-                        <div style="font-weight: 700; margin-bottom: 8px;">🏭 行业前景</div>
-                        <div style="font-size: 20px; font-weight: 700;">${analysis.industry_prospect_score.toFixed(1)}分</div>
-                    </div>
-                </div>
-                
-                ${analysis.analysis ? `
-                    <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
-                        <div style="font-weight: 700; color: #34495e; margin-bottom: 8px;">📝 分析说明</div>
-                        <div style="font-size: 14px; color: #7f8c8d; line-height: 1.6;">${analysis.analysis}</div>
-                    </div>
-                ` : ''}
-                
-                ${analysis.data_source ? `
-                    <div style="font-size: 12px; color: #95a5a6; text-align: right;">
-                        📊 数据来源: ${analysis.data_source}
-                    </div>
-                ` : ''}
-            </div>
-        `;
-    }
 
 
     document.querySelectorAll('input[type="text"]').forEach(input => {
@@ -954,6 +435,31 @@
                 queryStockData();
             }
         });
+    });
+
+    // 页面加载时检查URL参数
+    function init() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const queryParam = urlParams.get('q');
+        
+        if (queryParam) {
+            // 解码URL参数（处理中文等特殊字符）
+            const decodedQuery = decodeURIComponent(queryParam);
+            
+            // 填充到股票名称输入框
+            const nameInput = document.getElementById('stockName');
+            if (nameInput) {
+                nameInput.value = decodedQuery;
+            }
+            
+            // 自动触发查询
+            queryStockData();
+        }
+    }
+
+    // 页面加载完成后执行初始化
+    document.addEventListener('DOMContentLoaded', function() {
+        init();
     });
 </script>
 </body>
