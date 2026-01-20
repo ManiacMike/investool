@@ -104,7 +104,7 @@ func QueryStockDataHandler(c *gin.Context) {
 func generateLLMPrompt(stock models.Stock) string {
 	// 构建详细的股票信息
 	var infoParts []string
-	
+
 	// ========== 基本信息 ==========
 	infoParts = append(infoParts, "【基本信息】")
 	infoParts = append(infoParts, fmt.Sprintf("股票名称：%s", stock.BaseInfo.SecurityNameAbbr))
@@ -119,7 +119,7 @@ func generateLLMPrompt(stock models.Stock) string {
 	if stock.BaseInfo.ListingVolatilityYear > 0 {
 		infoParts = append(infoParts, fmt.Sprintf("上市以来年化波动率：%.2f%%", stock.BaseInfo.ListingVolatilityYear))
 	}
-	
+
 	// ========== 价格和市值 ==========
 	infoParts = append(infoParts, "\n【价格与市值】")
 	if price := stock.GetPrice(); price > 0 {
@@ -134,7 +134,7 @@ func generateLLMPrompt(stock models.Stock) string {
 			infoParts = append(infoParts, fmt.Sprintf("合理价差：%.2f%%", stock.PriceSpace))
 		}
 	}
-	
+
 	// ========== 估值指标 ==========
 	infoParts = append(infoParts, "\n【估值指标】")
 	if stock.BaseInfo.PE > 0 {
@@ -163,7 +163,7 @@ func generateLLMPrompt(stock models.Stock) string {
 		}
 		infoParts = append(infoParts, peInfo)
 	}
-	
+
 	// ========== 盈利能力指标 ==========
 	infoParts = append(infoParts, "\n【盈利能力】")
 	if stock.BaseInfo.RoeWeight > 0 {
@@ -175,7 +175,7 @@ func generateLLMPrompt(stock models.Stock) string {
 	if stock.BaseInfo.Zxgxl > 0 {
 		infoParts = append(infoParts, fmt.Sprintf("股息率：%.2f%%", stock.BaseInfo.Zxgxl))
 	}
-	
+
 	// 价值评估
 	if stock.JZPG.Valueranking != "" {
 		infoParts = append(infoParts, fmt.Sprintf("价值评估排名：%s/%s", stock.JZPG.GetValueRanking(), stock.JZPG.Total))
@@ -186,7 +186,7 @@ func generateLLMPrompt(stock models.Stock) string {
 		infoParts = append(infoParts, fmt.Sprintf("现金流评分：%s", stock.JZPG.GetCashFlowScore()))
 		infoParts = append(infoParts, fmt.Sprintf("估值评分：%s", stock.JZPG.GetValuationScore()))
 	}
-	
+
 	// ========== 成长能力指标 ==========
 	infoParts = append(infoParts, "\n【成长能力】")
 	if stock.BaseInfo.NetprofitYoyRatio != 0 {
@@ -207,7 +207,7 @@ func generateLLMPrompt(stock models.Stock) string {
 	if stock.BaseInfo.PredictIncomeRatio != 0 {
 		infoParts = append(infoParts, fmt.Sprintf("预测营收同比增长：%.2f%%", stock.BaseInfo.PredictIncomeRatio))
 	}
-	
+
 	// ========== 历史财报数据 ==========
 	if len(stock.HistoricalFinaMainData) > 0 {
 		infoParts = append(infoParts, "\n【历史财报数据（最近3期）】")
@@ -216,7 +216,7 @@ func generateLLMPrompt(stock models.Stock) string {
 				break
 			}
 			infoParts = append(infoParts, fmt.Sprintf("\n--- %s (%s) ---", fina.ReportDateName, fina.ReportDate))
-			
+
 			// 每股指标
 			if fina.Epsjb > 0 {
 				infoParts = append(infoParts, fmt.Sprintf("  基本每股收益：%.2f元 (同比%.2f%%)", fina.Epsjb, fina.Epsjbtz))
@@ -230,7 +230,7 @@ func generateLLMPrompt(stock models.Stock) string {
 			if fina.Mgjyxjje != 0 {
 				infoParts = append(infoParts, fmt.Sprintf("  每股经营现金流：%.2f元 (同比%.2f%%)", fina.Mgjyxjje, fina.Mgjyxjjetz))
 			}
-			
+
 			// 成长能力
 			if fina.Totaloperatereve > 0 {
 				infoParts = append(infoParts, fmt.Sprintf("  营业总收入：%.2f亿元 (同比%.2f%%)", fina.Totaloperatereve/100000000, fina.Totaloperaterevetz))
@@ -244,7 +244,7 @@ func generateLLMPrompt(stock models.Stock) string {
 			if fina.Mlr > 0 {
 				infoParts = append(infoParts, fmt.Sprintf("  毛利润：%.2f亿元", fina.Mlr/100000000))
 			}
-			
+
 			// 盈利能力
 			if fina.Roejq > 0 {
 				infoParts = append(infoParts, fmt.Sprintf("  净资产收益率(加权)：%.2f%% (同比%.2f%%)", fina.Roejq, fina.Roejqtz))
@@ -264,7 +264,7 @@ func generateLLMPrompt(stock models.Stock) string {
 			if fina.Xsjll > 0 {
 				infoParts = append(infoParts, fmt.Sprintf("  净利率：%.2f%%", fina.Xsjll))
 			}
-			
+
 			// 收益质量
 			if fina.Xsjxlyysr > 0 {
 				infoParts = append(infoParts, fmt.Sprintf("  销售净现金流/营业收入：%.2f", fina.Xsjxlyysr))
@@ -272,7 +272,7 @@ func generateLLMPrompt(stock models.Stock) string {
 			if fina.Jyxjlyysr > 0 {
 				infoParts = append(infoParts, fmt.Sprintf("  经营净现金流/营业收入：%.2f", fina.Jyxjlyysr))
 			}
-			
+
 			// 偿债能力
 			if fina.Zcfzl > 0 {
 				infoParts = append(infoParts, fmt.Sprintf("  资产负债率：%.2f%% (同比%.2f%%)", fina.Zcfzl, fina.Zcfzltz))
@@ -283,7 +283,7 @@ func generateLLMPrompt(stock models.Stock) string {
 			if fina.Sd > 0 {
 				infoParts = append(infoParts, fmt.Sprintf("  速动比率：%.2f", fina.Sd))
 			}
-			
+
 			// 营运能力
 			if fina.Toazzl > 0 {
 				infoParts = append(infoParts, fmt.Sprintf("  总资产周转率：%.2f次", fina.Toazzl))
@@ -296,7 +296,7 @@ func generateLLMPrompt(stock models.Stock) string {
 			}
 		}
 	}
-	
+
 	// ========== 现金流量 ==========
 	infoParts = append(infoParts, "\n【现金流量】")
 	if stock.NetcashOperate != 0 {
@@ -311,7 +311,7 @@ func generateLLMPrompt(stock models.Stock) string {
 	if stock.NetcashFree != 0 {
 		infoParts = append(infoParts, fmt.Sprintf("自由现金流：%.2f万元", stock.NetcashFree/10000))
 	}
-	
+
 	// 历史现金流量表数据
 	if len(stock.HistoricalCashflowList) > 0 {
 		infoParts = append(infoParts, "历史现金流量（最近3期）：")
@@ -320,12 +320,12 @@ func generateLLMPrompt(stock models.Stock) string {
 				break
 			}
 			if cf.NetcashOperate != 0 {
-				infoParts = append(infoParts, fmt.Sprintf("  %s: 经营%.2f万元, 投资%.2f万元, 筹资%.2f万元", 
+				infoParts = append(infoParts, fmt.Sprintf("  %s: 经营%.2f万元, 投资%.2f万元, 筹资%.2f万元",
 					cf.ReportDateName, cf.NetcashOperate/10000, cf.NetcashInvest/10000, cf.NetcashFinance/10000))
 			}
 		}
 	}
-	
+
 	// ========== 负债情况 ==========
 	infoParts = append(infoParts, "\n【财务结构】")
 	if stock.BaseInfo.DebtAssetRatio > 0 {
@@ -334,7 +334,7 @@ func generateLLMPrompt(stock models.Stock) string {
 	if stock.BYYSRatio > 0 {
 		infoParts = append(infoParts, fmt.Sprintf("本业营收比：%.2f%%", stock.BYYSRatio*100))
 	}
-	
+
 	// ========== 公司资料 ==========
 	if stock.CompanyProfile.Name != "" {
 		infoParts = append(infoParts, "\n【公司资料】")
@@ -354,7 +354,7 @@ func generateLLMPrompt(stock models.Stock) string {
 			infoParts = append(infoParts, stock.CompanyProfile.MainFormsString())
 		}
 	}
-	
+
 	// ========== 主营业务和概念 ==========
 	infoParts = append(infoParts, "\n【业务与概念】")
 	if stock.MainBusiness != "" {
@@ -363,7 +363,7 @@ func generateLLMPrompt(stock models.Stock) string {
 	if stock.Concept != "" {
 		infoParts = append(infoParts, fmt.Sprintf("所属概念：%s", stock.Concept))
 	}
-	
+
 	// ========== 机构评级和盈利预测 ==========
 	infoParts = append(infoParts, "\n【机构评级与预测】")
 	if len(stock.OrgRatingList) > 0 {
@@ -385,7 +385,7 @@ func generateLLMPrompt(stock models.Stock) string {
 			infoParts = append(infoParts, fmt.Sprintf("  %d年：预测EPS%.2f元，预测PE%.2f", predict.PredictYear, predict.Eps, predict.Pe))
 		}
 	}
-	
+
 	// ========== 股东信息 ==========
 	if len(stock.FreeHoldersTop10) > 0 {
 		infoParts = append(infoParts, "\n【十大流通股东】")
@@ -397,11 +397,11 @@ func generateLLMPrompt(stock models.Stock) string {
 			if holder.IsHoldorg == "1" {
 				holderType = "机构"
 			}
-			infoParts = append(infoParts, fmt.Sprintf("%d. %s (%s) 持股%.2f%% 排名%d", 
+			infoParts = append(infoParts, fmt.Sprintf("%d. %s (%s) 持股%.2f%% 排名%d",
 				i+1, holder.HolderName, holderType, holder.FreeHoldnumRatio, holder.HolderRank))
 		}
 	}
-	
+
 	// ========== 历史利润表数据 ==========
 	if len(stock.HistoricalGincomeList) > 0 {
 		infoParts = append(infoParts, "\n【历史利润表数据（最近3期）】")
@@ -411,40 +411,40 @@ func generateLLMPrompt(stock models.Stock) string {
 			}
 			infoParts = append(infoParts, fmt.Sprintf("\n--- %s (%s) ---", income.ReportDateName, income.ReportDate))
 			if income.TotalOperateIncome > 0 {
-				infoParts = append(infoParts, fmt.Sprintf("  营业总收入：%.2f亿元 (同比%.2f%%)", 
+				infoParts = append(infoParts, fmt.Sprintf("  营业总收入：%.2f亿元 (同比%.2f%%)",
 					income.TotalOperateIncome/100000000, income.TotalOperateIncomeYoy))
 			}
 			if income.OperateIncome > 0 {
-				infoParts = append(infoParts, fmt.Sprintf("  营业收入：%.2f亿元 (同比%.2f%%)", 
+				infoParts = append(infoParts, fmt.Sprintf("  营业收入：%.2f亿元 (同比%.2f%%)",
 					income.OperateIncome/100000000, income.OperateIncomeYoy))
 			}
 			if income.TotalOperateCost > 0 {
-				infoParts = append(infoParts, fmt.Sprintf("  营业总成本：%.2f亿元 (同比%.2f%%)", 
+				infoParts = append(infoParts, fmt.Sprintf("  营业总成本：%.2f亿元 (同比%.2f%%)",
 					income.TotalOperateCost/100000000, income.TotalOperateCostYoy))
 			}
 			if income.ResearchExpense > 0 {
-				infoParts = append(infoParts, fmt.Sprintf("  研发费用：%.2f亿元 (同比%.2f%%)", 
+				infoParts = append(infoParts, fmt.Sprintf("  研发费用：%.2f亿元 (同比%.2f%%)",
 					income.ResearchExpense/100000000, income.ResearchExpenseYoy))
 			}
 			if income.SaleExpense > 0 {
-				infoParts = append(infoParts, fmt.Sprintf("  销售费用：%.2f亿元 (同比%.2f%%)", 
+				infoParts = append(infoParts, fmt.Sprintf("  销售费用：%.2f亿元 (同比%.2f%%)",
 					income.SaleExpense/100000000, income.SaleExpenseYoy))
 			}
 			if income.ManageExpense > 0 {
-				infoParts = append(infoParts, fmt.Sprintf("  管理费用：%.2f亿元 (同比%.2f%%)", 
+				infoParts = append(infoParts, fmt.Sprintf("  管理费用：%.2f亿元 (同比%.2f%%)",
 					income.ManageExpense/100000000, income.ManageExpenseYoy))
 			}
 			if income.FinanceExpense > 0 {
-				infoParts = append(infoParts, fmt.Sprintf("  财务费用：%.2f亿元 (同比%.2f%%)", 
+				infoParts = append(infoParts, fmt.Sprintf("  财务费用：%.2f亿元 (同比%.2f%%)",
 					income.FinanceExpense/100000000, income.FinanceExpenseYoy))
 			}
 			if income.Netprofit > 0 {
-				infoParts = append(infoParts, fmt.Sprintf("  净利润：%.2f亿元 (同比%.2f%%)", 
+				infoParts = append(infoParts, fmt.Sprintf("  净利润：%.2f亿元 (同比%.2f%%)",
 					income.Netprofit/100000000, income.NetprofitYoy))
 			}
 		}
 	}
-	
+
 	// ========== 资金流向 ==========
 	if len(stock.MainMoneyNetInflows) > 0 {
 		infoParts = append(infoParts, "\n【主力资金流向（最近5日）】")
@@ -461,7 +461,7 @@ func generateLLMPrompt(stock models.Stock) string {
 			infoParts = append(infoParts, fmt.Sprintf("  %s: 主力净流入%.2f万元", inflow.TrdDt, mainNetIn))
 		}
 	}
-	
+
 	// ========== 财报信息 ==========
 	infoParts = append(infoParts, "\n【财报披露信息】")
 	if stock.FinaReportDate != "" {
@@ -476,19 +476,19 @@ func generateLLMPrompt(stock models.Stock) string {
 	if stock.FinaReportOpinion != "" {
 		infoParts = append(infoParts, fmt.Sprintf("审计意见：%s", stock.FinaReportOpinion))
 	}
-	
+
 	// ========== 历史波动率 ==========
 	if stock.HistoricalVolatility > 0 {
 		infoParts = append(infoParts, fmt.Sprintf("\n历史波动率：%.2f%%", stock.HistoricalVolatility))
 	}
-	
+
 	// 组装完整prompt
 	prompt := "请搜索最新的信息分析以下股票信息：\n\n"
 	prompt += strings.Join(infoParts, "\n")
 	prompt += "\n\n"
-	prompt += fmt.Sprintf("这是关于%s(%s)的详细准确信息，请给出详细多维度分析包括行业前景，公司护城河，业务预期，2026年增长机构预期。", 
+	prompt += fmt.Sprintf("这是关于%s(%s)的详细准确信息，请给出详细多维度分析包括行业前景，公司护城河，业务预期，2026年增长机构预期。",
 		stock.BaseInfo.SecurityNameAbbr, stock.BaseInfo.Secucode)
-	
+
 	return prompt
 }
 
@@ -1063,8 +1063,9 @@ func BatchQueryStockPricesHandler(c *gin.Context) {
 	}
 
 	prices := make(map[string]float64)
+	marketCaps := make(map[string]float64) // 存储市值（单位：亿元）
 
-	// 批量查询A股价格
+	// 批量查询A股价格和市值
 	if len(aStockCodes) > 0 {
 		fmt.Printf("🔍 [A股批量查询] 查询 %d 只股票: %v\n", len(aStockCodes), aStockCodes)
 		filter := eastmoney.Filter{
@@ -1076,8 +1077,8 @@ func BatchQueryStockPricesHandler(c *gin.Context) {
 		} else {
 			fmt.Printf("✅ [A股查询成功] 返回 %d 只股票\n", len(stocks))
 			for _, stock := range stocks {
-				fmt.Printf("📊 [股票信息] Secucode: %s, SecurityCode: %s, Name: %s, NewPrice: %v (type: %T)\n",
-					stock.Secucode, stock.SecurityCode, stock.SecurityNameAbbr, stock.NewPrice, stock.NewPrice)
+				fmt.Printf("📊 [股票信息] Secucode: %s, SecurityCode: %s, Name: %s, NewPrice: %v (type: %T), MarketCap: %.2f\n",
+					stock.Secucode, stock.SecurityCode, stock.SecurityNameAbbr, stock.NewPrice, stock.NewPrice, stock.TotalMarketCap)
 
 				// 处理 NewPrice，可能是 float64 或 string
 				var price float64
@@ -1098,6 +1099,12 @@ func BatchQueryStockPricesHandler(c *gin.Context) {
 				if price > 0 {
 					prices[stock.Secucode] = price
 					fmt.Printf("💰 [A股价格] %s: %.2f\n", stock.Secucode, price)
+				}
+
+				// 保存市值（TotalMarketCap单位是元，转换为亿元）
+				if stock.TotalMarketCap > 0 {
+					marketCaps[stock.Secucode] = stock.TotalMarketCap / 100000000 // 转换为亿元
+					fmt.Printf("📈 [A股市值] %s: %.2f亿元\n", stock.Secucode, marketCaps[stock.Secucode])
 				}
 			}
 		}
@@ -1125,10 +1132,22 @@ func BatchQueryStockPricesHandler(c *gin.Context) {
 		} else {
 			fmt.Printf("✅ [找到价格] 原始: %s, 大写: %s, 价格: %.2f\n", stock.Code, upperCode, price)
 		}
+
+		// 获取市值（A股有数据，港股暂时为0）
+		marketCap := 0.0
+		if !stock.IsHK {
+			// A股市值
+			if cap, exists := marketCaps[upperCode]; exists {
+				marketCap = cap
+			}
+		}
+		// 港股市值暂时不获取，后续可以优化
+
 		results[i] = gin.H{
-			"code":  stock.Code, // 返回原始代码（保持前端格式）
-			"price": price,
-			"isHK":  stock.IsHK,
+			"code":      stock.Code, // 返回原始代码（保持前端格式）
+			"price":     price,
+			"isHK":      stock.IsHK,
+			"marketCap": marketCap, // 市值（单位：亿元）
 		}
 	}
 

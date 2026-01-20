@@ -188,9 +188,10 @@
                                             <th class="px-4 py-4 cursor-pointer hover:bg-[#f3f4f6] transition-colors group text-right" onclick="handleSort('marketValue')">
                                                 <div class="flex items-center justify-end gap-1.5">
                                                     <i data-lucide="arrow-up-down" class="w-3.5 h-3.5 text-[#9ca3af] opacity-40 group-hover:opacity-100" id="sort-icon-marketValue"></i>
-                                                    市值
+                                                    持仓市值
                                                 </div>
                                             </th>
+                                            <th class="px-4 py-4 text-right hidden">公司市值</th>
                                             <th class="px-4 py-4 text-right">价格/股数</th>
                                             <th class="px-4 py-4 text-center" style="min-width: 250px;">目标水位 (买入 VS 卖出)</th>
                                             <th class="px-4 py-4 text-center w-20">操作</th>
@@ -817,14 +818,17 @@
             }
         }
 
+        const cash = 341635;
+
         // --- 2. 工具函数 ---
+        const formatTotalMoney = (num) => new Intl.NumberFormat('zh-CN', { style: 'currency', currency: 'CNY', maximumFractionDigits: 0 }).format(num+cash);
         const formatMoney = (num) => new Intl.NumberFormat('zh-CN', { style: 'currency', currency: 'CNY', maximumFractionDigits: 0 }).format(num);
         const formatPercent = (val, total) => total === 0 ? '0.0%' : ((val / total) * 100).toFixed(1) + '%';
         
         // 格式化资产差值（总资产 - 150万）
         const formatAssetDiff = (totalAsset) => {
             const BASE_AMOUNT = 1500000; // 150万
-            const diff = totalAsset - BASE_AMOUNT;
+            const diff = totalAsset - BASE_AMOUNT + cash;
             const diffInWan = diff / 10000; // 转换为万元
             const rounded = Math.round(diffInWan * 10) / 10; // 四舍五入到小数点后1位
             
@@ -1327,7 +1331,7 @@
             const { totalAsset, strategyStats } = calculateStats();
 
             // 1. 更新总资产条
-            document.getElementById('total-asset-display').textContent = formatMoney(totalAsset);
+            document.getElementById('total-asset-display').textContent = formatTotalMoney(totalAsset);
             document.getElementById('total-count-display').textContent = state.stocks.length;
             
             // 更新资产差值显示
@@ -1444,6 +1448,13 @@
                             <div class="flex flex-col items-end">
                                 <span class="font-bold text-[#111827] font-mono text-sm" data-value="${assetVal}">${formatMoney(assetVal)}</span>
                                 <span class="text-xs text-[#9ca3af] mt-0.5">${percent}</span>
+                            </div>
+                        </td>
+                        <td class="px-4 py-3 text-right hidden" data-stock-id="${stock.id}" data-cell-type="company-market-cap">
+                            <div class="flex flex-col items-end">
+                                <span class="text-sm text-[#4b5563] font-mono" data-market-cap="${stock.marketCap || 0}">
+                                    ${stock.marketCap && stock.marketCap > 0 ? stock.marketCap.toFixed(2) + '亿' : '<span class="text-[#9ca3af]">-</span>'}
+                                </span>
                             </div>
                         </td>
                         <td class="px-4 py-3 text-right" data-stock-id="${stock.id}" data-cell-type="price">
@@ -1984,6 +1995,21 @@
                             const oldPrice = stock.price;
                             const newPrice = priceData.price;
                             
+                            // 更新公司市值（不保存到本地，只用于显示）
+                            if (priceData.marketCap !== undefined && priceData.marketCap > 0) {
+                                stock.marketCap = priceData.marketCap;
+                                
+                                // 更新DOM - 公司市值单元格
+                                const marketCapCell = document.querySelector(`td[data-stock-id="${stock.id}"][data-cell-type="company-market-cap"]`);
+                                if (marketCapCell) {
+                                    const marketCapSpan = marketCapCell.querySelector('span[data-market-cap]');
+                                    if (marketCapSpan) {
+                                        marketCapSpan.innerHTML = priceData.marketCap.toFixed(2) + '亿';
+                                        marketCapSpan.setAttribute('data-market-cap', priceData.marketCap);
+                                    }
+                                }
+                            }
+                            
                             if (oldPrice !== newPrice) {
                                 // 更新数据
                                 stock.price = newPrice;
@@ -2061,7 +2087,7 @@
                         
                         // 只更新总资产和统计信息，不重新渲染表格
                         const { totalAsset: newTotalAsset, strategyStats } = calculateStats();
-                        document.getElementById('total-asset-display').textContent = formatMoney(newTotalAsset);
+                        document.getElementById('total-asset-display').textContent = formatTotalMoney(newTotalAsset);
                         
                         // 更新资产差值显示
                         const diffDisplay = document.getElementById('asset-diff-display');
