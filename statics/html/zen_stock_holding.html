@@ -249,11 +249,16 @@
 
                 <!-- 汇率信息卡片 -->
                 <div class="bg-white rounded-xl p-5 shadow-sm border border-[#e5e7eb]">
-                    <div class="flex items-center gap-2 mb-3">
-                        <div class="p-2 rounded-lg bg-[#fef3c7] text-[#92400e]">
-                            <i data-lucide="dollar-sign" class="w-4 h-4"></i>
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center gap-2">
+                            <div class="p-2 rounded-lg bg-[#fef3c7] text-[#92400e]">
+                                <i data-lucide="dollar-sign" class="w-4 h-4"></i>
+                            </div>
+                            <h4 class="font-bold text-[#111827] text-sm">汇率信息</h4>
                         </div>
-                        <h4 class="font-bold text-[#111827] text-sm">汇率信息</h4>
+                        <button onclick="toggleRateModal(true)" class="text-[#6b7280] hover:text-[#92400e] p-1.5 rounded-lg hover:bg-[#fef3c7] transition-all" title="设置汇率">
+                            <i data-lucide="settings" class="w-4 h-4"></i>
+                        </button>
                     </div>
                     <div class="space-y-2 text-xs">
                         <div class="flex items-center justify-between">
@@ -288,6 +293,10 @@
                             <span>导入数据</span>
                         </button>
                         <input type="file" id="import-file-input" accept=".json" style="display: none;" onchange="importFromJSON(event)">
+                        <button onclick="toggleCashModal(true)" class="w-full flex items-center justify-center gap-2 bg-white hover:bg-[#f9fafb] text-[#6b7280] hover:text-[#10b981] px-4 py-2.5 rounded-lg font-medium transition-all border border-[#e5e7eb] hover:border-[#10b981]" title="设置现金">
+                            <i data-lucide="wallet" class="w-4 h-4"></i>
+                            <span>设置现金</span>
+                        </button>
                     </div>
                 </div>
 
@@ -480,6 +489,101 @@
         </div>
     </div>
 
+    <!-- 现金设置弹窗 -->
+    <div id="cash-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-[#1f2937]/70 backdrop-blur-sm transition-opacity" onclick="toggleCashModal(false)"></div>
+        
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md relative z-10 overflow-hidden modal-enter border border-[#e5e7eb]">
+            <div class="p-6 border-b border-[#e5e7eb] flex justify-between items-center bg-[#f9fafb]">
+                <h3 class="text-lg font-bold text-[#111827] flex items-center gap-2">
+                    <div class="bg-[#d1fae5] p-2 rounded-lg text-[#10b981]">
+                        <i data-lucide="wallet" class="w-4 h-4"></i>
+                    </div>
+                    设置现金
+                </h3>
+                <button onclick="toggleCashModal(false)" class="text-[#9ca3af] hover:text-[#4b5563] hover:bg-[#e5e7eb] p-2 rounded-full transition-colors">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            
+            <div class="p-8">
+                <form id="cash-form" onsubmit="handleSaveCash(event)" class="space-y-6">
+                    <div class="space-y-2">
+                        <label class="block text-sm font-semibold text-[#374151] mb-2">当前现金金额（元）</label>
+                        <input 
+                            type="number" 
+                            id="cash-input" 
+                            placeholder="请输入现金金额" 
+                            min="0"
+                            step="0.01"
+                            class="w-full px-4 py-3 bg-white border border-[#d1d5db] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#10b981] transition-all font-medium text-[#111827] text-lg"
+                            required
+                        >
+                        <p class="text-xs text-[#6b7280] mt-1">现金将用于计算总资产（持仓市值 + 现金）</p>
+                    </div>
+                    
+                    <div class="pt-4">
+                        <button type="submit" class="w-full bg-[#10b981] hover:bg-[#059669] text-white font-bold py-3.5 px-6 rounded-lg transition-all duration-200 flex items-center justify-center gap-2 shadow-lg shadow-[#10b981]/20 active:translate-y-0.5">
+                            <i data-lucide="save" class="w-5 h-5"></i>
+                            <span>保存设置</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 汇率设置弹窗 -->
+    <div id="rate-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-[#1f2937]/70 backdrop-blur-sm transition-opacity" onclick="toggleRateModal(false)"></div>
+        
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md relative z-10 overflow-hidden modal-enter border border-[#e5e7eb]">
+            <div class="p-6 border-b border-[#e5e7eb] flex justify-between items-center bg-[#f9fafb]">
+                <h3 class="text-lg font-bold text-[#111827] flex items-center gap-2">
+                    <div class="bg-[#fef3c7] p-2 rounded-lg text-[#92400e]">
+                        <i data-lucide="dollar-sign" class="w-4 h-4"></i>
+                    </div>
+                    设置汇率
+                </h3>
+                <button onclick="toggleRateModal(false)" class="text-[#9ca3af] hover:text-[#4b5563] hover:bg-[#e5e7eb] p-2 rounded-full transition-colors">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            
+            <div class="p-8">
+                <form id="rate-form" onsubmit="handleSaveRate(event)" class="space-y-6">
+                    <div class="space-y-2">
+                        <label class="block text-sm font-semibold text-[#374151] mb-2">人民币 → 港币汇率</label>
+                        <input 
+                            type="number" 
+                            id="cny-to-hkd-input" 
+                            placeholder="例如：1.1179" 
+                            min="0.0001"
+                            step="0.0001"
+                            class="w-full px-4 py-3 bg-white border border-[#d1d5db] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#92400e] transition-all font-medium text-[#111827] text-lg"
+                            required
+                        >
+                        <p class="text-xs text-[#6b7280] mt-1">1 人民币 = ? 港币（例如：1.1179）</p>
+                    </div>
+                    
+                    <div class="bg-[#fef3c7] border border-[#fde68a] rounded-lg p-3 flex items-start gap-2">
+                        <i data-lucide="info" class="w-4 h-4 text-[#92400e] mt-0.5 flex-shrink-0"></i>
+                        <p class="text-xs text-[#78350f] leading-relaxed">
+                            <strong>提示：</strong>输入人民币对港币的汇率后，系统会自动计算反向汇率（港币对人民币）。
+                        </p>
+                    </div>
+                    
+                    <div class="pt-4">
+                        <button type="submit" class="w-full bg-[#f59e0b] hover:bg-[#d97706] text-white font-bold py-3.5 px-6 rounded-lg transition-all duration-200 flex items-center justify-center gap-2 shadow-lg shadow-[#f59e0b]/20 active:translate-y-0.5">
+                            <i data-lucide="save" class="w-5 h-5"></i>
+                            <span>保存设置</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- JavaScript Logic -->
     <script>
         // --- 1. 数据与配置 ---
@@ -608,10 +712,28 @@
             }
         };
 
-        // 汇率配置（港币兑人民币）
+        // --- LocalStorage 管理 ---
+        const STORAGE_KEY = 'zen_stock_holdings';
+        const AUTO_REFRESH_KEY = 'zen_auto_refresh_enabled';
+        const CASH_KEY = 'zen_cash_amount';
+        const CNY_TO_HKD_RATE_KEY = 'zen_cny_to_hkd_rate';
+
+        // 汇率配置（从localStorage加载，如果没有则使用默认值）
         // 当前人民币和港币汇率是 1：1.1179，即 1港币 = 1/1.1179 ≈ 0.8946人民币
-        const HKD_TO_CNY_RATE = 1 / 1.1179; // 1港币 ≈ 0.8946人民币
-        const CNY_TO_HKD_RATE = 1.1179; // 1人民币 ≈ 1.1179港币（用于显示）
+        let CNY_TO_HKD_RATE = (() => {
+            try {
+                const savedRate = localStorage.getItem(CNY_TO_HKD_RATE_KEY);
+                if (savedRate !== null) {
+                    const value = parseFloat(savedRate);
+                    return isNaN(value) || value <= 0 ? 1.1179 : value;
+                }
+            } catch (e) {
+                console.error('加载汇率设置失败:', e);
+            }
+            return 1.1179; // 默认值
+        })();
+        
+        let HKD_TO_CNY_RATE = 1 / CNY_TO_HKD_RATE; // 1港币 ≈ ?人民币（自动计算）
 
         let state = {
             stocks: [],
@@ -622,10 +744,6 @@
             isRefreshing: false, // 是否正在刷新中
             autoRefreshEnabled: true // 自动刷新是否启用，默认开启
         };
-
-        // --- LocalStorage 管理 ---
-        const STORAGE_KEY = 'zen_stock_holdings';
-        const AUTO_REFRESH_KEY = 'zen_auto_refresh_enabled';
 
         function loadFromStorage() {
             try {
@@ -818,7 +936,162 @@
             }
         }
 
-        const cash = 341635;
+        // 保存现金到localStorage
+        function saveCashToStorage(value) {
+            try {
+                localStorage.setItem(CASH_KEY, value.toString());
+                cash = value;
+                console.log('✅ 现金已保存:', cash);
+            } catch (e) {
+                console.error('保存现金设置失败:', e);
+            }
+        }
+
+        // 显示/隐藏现金设置弹窗
+        function toggleCashModal(show) {
+            const modal = document.getElementById('cash-modal');
+            if (show) {
+                // 显示弹窗时，填充当前现金值
+                const cashInput = document.getElementById('cash-input');
+                if (cashInput) {
+                    cashInput.value = cash;
+                }
+                modal.classList.remove('hidden');
+                // 重新初始化图标
+                lucide.createIcons();
+            } else {
+                modal.classList.add('hidden');
+            }
+        }
+
+        // 更新总资产显示
+        function updateTotalAssetDisplay() {
+            const { totalAsset } = calculateStats();
+            const totalAssetDisplay = document.getElementById('total-asset-display');
+            if (totalAssetDisplay) {
+                totalAssetDisplay.textContent = formatTotalMoney(totalAsset);
+            }
+            
+            // 更新资产差值显示
+            const diffDisplay = document.getElementById('asset-diff-display');
+            if (diffDisplay) {
+                const diff = formatAssetDiff(totalAsset);
+                diffDisplay.textContent = diff.text;
+                diffDisplay.className = `inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${diff.bgColor} ${diff.textColor}`;
+            }
+        }
+
+        // 保存现金处理函数
+        function handleSaveCash(event) {
+            event.preventDefault();
+            const cashInput = document.getElementById('cash-input');
+            const newCash = parseFloat(cashInput.value);
+            
+            if (isNaN(newCash) || newCash < 0) {
+                alert('请输入有效的现金金额（大于等于0）');
+                return;
+            }
+            
+            // 保存到localStorage
+            saveCashToStorage(newCash);
+            
+            // 关闭弹窗
+            toggleCashModal(false);
+            
+            // 更新总资产显示
+            updateTotalAssetDisplay();
+            
+            // 显示成功提示
+            const indicator = document.getElementById('refresh-indicator');
+            if (indicator) {
+                const originalHTML = indicator.innerHTML;
+                indicator.innerHTML = '<i data-lucide="check-circle" class="w-3.5 h-3.5 text-[#10b981]"></i><span class="text-[#10b981]">现金已更新</span>';
+                lucide.createIcons();
+                setTimeout(() => {
+                    indicator.innerHTML = originalHTML;
+                    lucide.createIcons();
+                }, 2000);
+            }
+        }
+
+        // 保存汇率到localStorage
+        function saveRateToStorage(cnyToHkdRate) {
+            try {
+                localStorage.setItem(CNY_TO_HKD_RATE_KEY, cnyToHkdRate.toString());
+                CNY_TO_HKD_RATE = cnyToHkdRate;
+                HKD_TO_CNY_RATE = 1 / CNY_TO_HKD_RATE;
+                console.log('✅ 汇率已保存: CNY→HKD =', CNY_TO_HKD_RATE, ', HKD→CNY =', HKD_TO_CNY_RATE);
+            } catch (e) {
+                console.error('保存汇率设置失败:', e);
+            }
+        }
+
+        // 显示/隐藏汇率设置弹窗
+        function toggleRateModal(show) {
+            const modal = document.getElementById('rate-modal');
+            if (show) {
+                // 显示弹窗时，填充当前汇率值
+                const rateInput = document.getElementById('cny-to-hkd-input');
+                if (rateInput) {
+                    rateInput.value = CNY_TO_HKD_RATE;
+                }
+                modal.classList.remove('hidden');
+                // 重新初始化图标
+                lucide.createIcons();
+            } else {
+                modal.classList.add('hidden');
+            }
+        }
+
+        // 保存汇率处理函数
+        function handleSaveRate(event) {
+            event.preventDefault();
+            const rateInput = document.getElementById('cny-to-hkd-input');
+            const newRate = parseFloat(rateInput.value);
+            
+            if (isNaN(newRate) || newRate <= 0) {
+                alert('请输入有效的汇率（大于0）');
+                return;
+            }
+            
+            // 保存到localStorage
+            saveRateToStorage(newRate);
+            
+            // 关闭弹窗
+            toggleRateModal(false);
+            
+            // 更新汇率显示
+            updateExchangeRateDisplay();
+            
+            // 重新渲染表格（因为港股价格需要重新计算）
+            render();
+            
+            // 显示成功提示
+            const indicator = document.getElementById('refresh-indicator');
+            if (indicator) {
+                const originalHTML = indicator.innerHTML;
+                indicator.innerHTML = '<i data-lucide="check-circle" class="w-3.5 h-3.5 text-[#f59e0b]"></i><span class="text-[#f59e0b]">汇率已更新</span>';
+                lucide.createIcons();
+                setTimeout(() => {
+                    indicator.innerHTML = originalHTML;
+                    lucide.createIcons();
+                }, 2000);
+            }
+        }
+
+        // 从localStorage加载现金，如果没有则使用默认值
+        let cash = (() => {
+            try {
+                const savedCash = localStorage.getItem(CASH_KEY);
+                if (savedCash !== null) {
+                    const value = parseFloat(savedCash);
+                    return isNaN(value) ? 152810 : value;
+                }
+            } catch (e) {
+                console.error('加载现金设置失败:', e);
+            }
+            return 152810; // 默认值
+        })();
 
         // --- 2. 工具函数 ---
         const formatTotalMoney = (num) => new Intl.NumberFormat('zh-CN', { style: 'currency', currency: 'CNY', maximumFractionDigits: 0 }).format(num+cash);
