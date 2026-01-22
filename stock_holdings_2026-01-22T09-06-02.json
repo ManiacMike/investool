@@ -1,0 +1,589 @@
+{
+  "stocks": [
+    {
+      "id": 1768177675204,
+      "name": "中际旭创",
+      "code": "300308.sz",
+      "count": 200,
+      "price": 621,
+      "strategy": "core",
+      "isHK": false,
+      "tags": [
+        "AI硬件"
+      ],
+      "buyTargetPrice": 585,
+      "sellTargetPrice": 668,
+      "buyPrice": 617,
+      "sellPrice": 617,
+      "marketCap": 6900.04485414
+    },
+    {
+      "id": 1768199916664,
+      "name": "药明康德",
+      "code": "603259.sh",
+      "count": 1200,
+      "price": 97.6,
+      "strategy": "core",
+      "isHK": false,
+      "tags": [
+        "CXO",
+        "医药"
+      ],
+      "buyTargetPrice": 95,
+      "sellTargetPrice": 125,
+      "marketCap": 2912.14698328
+    },
+    {
+      "id": 1768199938079,
+      "name": "阳光电源",
+      "code": "300274.sz",
+      "count": 600,
+      "price": 160.38,
+      "strategy": "core",
+      "isHK": false,
+      "tags": [
+        "储能",
+        "光伏"
+      ],
+      "buyTargetPrice": 160,
+      "sellTargetPrice": 192,
+      "marketCap": 3325.01648181
+    },
+    {
+      "id": 1768199951056,
+      "name": "宁德时代",
+      "code": "300750.sz",
+      "count": 200,
+      "price": 345.8,
+      "strategy": "core",
+      "isHK": false,
+      "tags": [
+        "储能",
+        "电池"
+      ],
+      "buyTargetPrice": 332,
+      "sellTargetPrice": 405,
+      "marketCap": 15781.6324615
+    },
+    {
+      "id": 1768200000059,
+      "name": "洛阳钼业",
+      "code": "603993.sh",
+      "count": 3600,
+      "price": 22.7,
+      "strategy": "core",
+      "isHK": false,
+      "tags": [
+        "铜",
+        "有色"
+      ],
+      "buyTargetPrice": 22,
+      "sellTargetPrice": 28,
+      "buyPrice": 24.25,
+      "sellPrice": 24.25,
+      "marketCap": 4856.50840995
+    },
+    {
+      "id": 1768206714652,
+      "name": "拓荆科技",
+      "code": "688072.sh",
+      "count": 200,
+      "price": 364,
+      "strategy": "core",
+      "isHK": false,
+      "tags": [
+        "半导体材料与设备"
+      ],
+      "buyTargetPrice": 310,
+      "sellTargetPrice": 490,
+      "buyPrice": 385.68,
+      "sellPrice": 385.68,
+      "marketCap": 1027.73544328
+    },
+    {
+      "id": 1768206808654,
+      "name": "艾力斯",
+      "code": "688578.sh",
+      "count": 600,
+      "price": 97.79,
+      "strategy": "core",
+      "isHK": false,
+      "tags": [
+        "创新药",
+        "医药"
+      ],
+      "buyTargetPrice": 95,
+      "sellTargetPrice": 115,
+      "buyPrice": 100.74,
+      "sellPrice": 100.74,
+      "marketCap": 440.055
+    },
+    {
+      "id": 1768207032289,
+      "name": "华友钴业",
+      "code": "603799.sh",
+      "count": 800,
+      "price": 74.52,
+      "strategy": "core",
+      "isHK": false,
+      "tags": [
+        "能源金属",
+        "有色"
+      ],
+      "buyTargetPrice": 71.5,
+      "sellTargetPrice": 88,
+      "buyPrice": 77.63,
+      "sellPrice": 77.63,
+      "marketCap": 1413.44133076
+    },
+    {
+      "id": 1768207059482,
+      "name": "万华化学",
+      "code": "600309.sh",
+      "count": 700,
+      "price": 85.3,
+      "strategy": "core",
+      "isHK": false,
+      "tags": [
+        "化工"
+      ],
+      "buyTargetPrice": 73,
+      "sellTargetPrice": 96,
+      "buyPrice": 78.72,
+      "sellPrice": 78.72,
+      "marketCap": 2670.29229698
+    },
+    {
+      "id": 1768207394584,
+      "name": "世纪华通",
+      "code": "002602.sz",
+      "count": 2700,
+      "price": 20.19,
+      "strategy": "core",
+      "isHK": false,
+      "tags": [
+        "游戏"
+      ],
+      "buyTargetPrice": 18.24,
+      "sellTargetPrice": 22.8,
+      "buyPrice": 19.45,
+      "sellPrice": 19.45,
+      "marketCap": 1488.14076081
+    },
+    {
+      "id": 1768207514827,
+      "name": "盐湖股份",
+      "code": "000792.sz",
+      "count": 1500,
+      "price": 34.99,
+      "strategy": "core",
+      "isHK": false,
+      "tags": [
+        "钾肥",
+        "锂矿",
+        "化工"
+      ],
+      "buyTargetPrice": 30,
+      "sellTargetPrice": 38,
+      "buyPrice": 33.08,
+      "sellPrice": 33.08,
+      "marketCap": 1851.5212321
+    },
+    {
+      "id": 1768207632681,
+      "name": "乐普医疗",
+      "code": "300003.sz",
+      "count": 2000,
+      "price": 18.72,
+      "strategy": "trend",
+      "isHK": false,
+      "tags": [
+        "脑机接口",
+        "医药"
+      ],
+      "buyTargetPrice": 18.6,
+      "sellTargetPrice": 22.5,
+      "buyPrice": 19.05,
+      "sellPrice": 19.05,
+      "marketCap": 345.08383304
+    },
+    {
+      "id": 1768207661408,
+      "name": "捷佳伟创",
+      "code": "300724.sz",
+      "count": 400,
+      "price": 111.75,
+      "strategy": "core",
+      "isHK": false,
+      "tags": [
+        "光伏设备",
+        "商业航天",
+        "光伏"
+      ],
+      "buyTargetPrice": 95,
+      "sellTargetPrice": 135,
+      "buyPrice": 119.5,
+      "sellPrice": 119.5,
+      "marketCap": 389.21631671
+    },
+    {
+      "id": 1768207688402,
+      "name": "越秀资本",
+      "code": "000987.sz",
+      "count": 4000,
+      "price": 10.86,
+      "strategy": "trend",
+      "isHK": false,
+      "tags": [
+        "商业航天",
+        "化债",
+        "大金融"
+      ],
+      "buyTargetPrice": 8.6,
+      "sellTargetPrice": 15,
+      "marketCap": 544.86058537
+    },
+    {
+      "id": 1768207741981,
+      "name": "彤程新材",
+      "code": "603650.sh",
+      "count": 700,
+      "price": 60.9,
+      "strategy": "trend",
+      "isHK": false,
+      "tags": [
+        "半导体设备与材料"
+      ],
+      "buyTargetPrice": 55,
+      "sellTargetPrice": 70,
+      "buyPrice": 62.36,
+      "sellPrice": 62.36,
+      "marketCap": 375.20975495
+    },
+    {
+      "id": 1768208643326,
+      "name": "美的集团",
+      "code": "000333.sz",
+      "count": 400,
+      "price": 77.49,
+      "strategy": "core",
+      "isHK": false,
+      "tags": [
+        "白色家电",
+        "制造业出口"
+      ],
+      "buyTargetPrice": 71,
+      "sellTargetPrice": 88,
+      "buyPrice": 77.31,
+      "sellPrice": 77.31,
+      "marketCap": 5888.30818275
+    },
+    {
+      "id": 1768208785102,
+      "name": "天孚通信",
+      "code": "300394.sz",
+      "count": 200,
+      "price": 199.98,
+      "strategy": "core",
+      "isHK": false,
+      "tags": [
+        "AI硬件"
+      ],
+      "buyTargetPrice": 180,
+      "sellTargetPrice": 238,
+      "buyPrice": 198,
+      "sellPrice": 198,
+      "marketCap": 1554.67629882
+    },
+    {
+      "id": 1768208808343,
+      "name": "腾讯控股",
+      "code": "700.00",
+      "count": 100,
+      "price": 597.5,
+      "strategy": "core",
+      "isHK": true,
+      "tags": [
+        "互联网"
+      ],
+      "buyTargetPrice": 500,
+      "sellTargetPrice": 750
+    },
+    {
+      "id": 1768209233900,
+      "name": "特变电工",
+      "code": "600089.sh",
+      "count": 1000,
+      "price": 28.9,
+      "strategy": "trend",
+      "isHK": false,
+      "tags": [
+        "电网设备"
+      ],
+      "buyTargetPrice": 25,
+      "sellTargetPrice": 32,
+      "marketCap": 1460.25705302
+    },
+    {
+      "id": 1768209297626,
+      "name": "隆基绿能",
+      "code": "601012.sh",
+      "count": 3400,
+      "price": 17.59,
+      "strategy": "reverse",
+      "isHK": false,
+      "tags": [
+        "光伏"
+      ],
+      "buyTargetPrice": 17,
+      "sellTargetPrice": 21.7,
+      "marketCap": 1332.98149964
+    },
+    {
+      "id": 1768209322195,
+      "name": "阿里巴巴-W",
+      "code": "988.09",
+      "count": 700,
+      "price": 164.8,
+      "strategy": "core",
+      "isHK": true,
+      "tags": [
+        "互联网"
+      ],
+      "buyTargetPrice": 150,
+      "sellTargetPrice": 190
+    },
+    {
+      "id": 1768209348188,
+      "name": "巨子生物",
+      "code": "367.02",
+      "count": 1400,
+      "price": 34.74,
+      "strategy": "reverse",
+      "isHK": true,
+      "tags": [
+        "消费"
+      ],
+      "buyPrice": 35.48,
+      "sellPrice": 35.48
+    },
+    {
+      "id": 1768209467120,
+      "name": "比亚迪电子",
+      "code": "285.00",
+      "count": 1000,
+      "price": 34.3,
+      "strategy": "reverse",
+      "isHK": true,
+      "tags": [
+        "无人驾驶",
+        "消费电子"
+      ],
+      "buyPrice": 34.52,
+      "sellPrice": 34.52
+    },
+    {
+      "id": 1768209486056,
+      "name": "小鹏汽车-W",
+      "code": "868.09",
+      "count": 300,
+      "price": 76.95,
+      "strategy": "reverse",
+      "isHK": true,
+      "tags": [
+        "无人驾驶",
+        "汽车"
+      ],
+      "buyPrice": 80.35,
+      "sellPrice": 80.35
+    },
+    {
+      "id": 1768210844526,
+      "name": "药明生物",
+      "code": "269.02",
+      "count": 1000,
+      "price": 38.96,
+      "strategy": "core",
+      "isHK": true,
+      "tags": [
+        "医药",
+        "创新药"
+      ],
+      "buyPrice": 37.58,
+      "sellPrice": 37.58
+    },
+    {
+      "id": 1768223836902,
+      "name": "百济神州",
+      "code": "160.06",
+      "count": 200,
+      "price": 199.8,
+      "strategy": "core",
+      "isHK": true,
+      "tags": [
+        "医药",
+        "创新药"
+      ],
+      "buyPrice": 203.4,
+      "sellPrice": 203.4
+    },
+    {
+      "id": 1768541446938,
+      "name": "宗申动力",
+      "code": "001696.sz",
+      "count": 2400,
+      "price": 22.45,
+      "strategy": "core",
+      "isHK": false,
+      "tags": [
+        "低空经济"
+      ],
+      "buyTargetPrice": 21,
+      "sellTargetPrice": 26,
+      "marketCap": 257.05854354
+    },
+    {
+      "id": 1768541540777,
+      "name": "易点天下",
+      "code": "301171.sz",
+      "count": 500,
+      "price": 60.52,
+      "strategy": "trend",
+      "isHK": false,
+      "tags": [
+        "AI应用"
+      ],
+      "buyTargetPrice": 50,
+      "sellTargetPrice": 78,
+      "buyPrice": 81.82,
+      "sellPrice": 81.82,
+      "marketCap": 285.58534971
+    },
+    {
+      "id": 1768541887810,
+      "name": "潮宏基",
+      "code": "002345.sz",
+      "count": 3000,
+      "price": 13.34,
+      "strategy": "core",
+      "isHK": false,
+      "tags": [
+        "消费"
+      ],
+      "buyTargetPrice": 11.5,
+      "sellTargetPrice": 14.5,
+      "buyPrice": 12.76,
+      "sellPrice": 12.76,
+      "marketCap": 118.52759511
+    },
+    {
+      "id": 1768541919184,
+      "name": "美图公司",
+      "code": "357.01",
+      "count": 7000,
+      "price": 8.29,
+      "strategy": "trend",
+      "isHK": true,
+      "tags": [
+        "AI应用"
+      ],
+      "buyPrice": 8.91,
+      "sellPrice": 8.91
+    },
+    {
+      "id": 1768788092188,
+      "name": "巨化股份",
+      "code": "600160.sh",
+      "count": 1000,
+      "price": 38.98,
+      "strategy": "core",
+      "isHK": false,
+      "tags": [
+        "氟化工",
+        "液冷"
+      ],
+      "marketCap": 1052.36102237
+    },
+    {
+      "id": 1768788124842,
+      "name": "许继电气",
+      "code": "000400.sz",
+      "count": 1500,
+      "price": 31.2,
+      "strategy": "core",
+      "isHK": false,
+      "tags": [
+        "电网设备"
+      ],
+      "marketCap": 317.81014169
+    },
+    {
+      "id": 1768971656523,
+      "name": "金风科技",
+      "code": "002202.sz",
+      "count": 1000,
+      "price": 26.89,
+      "strategy": "trend",
+      "isHK": false,
+      "tags": [
+        "商业航天"
+      ],
+      "marketCap": 1136.12069028
+    },
+    {
+      "id": 1768971680636,
+      "name": "兆易创新",
+      "code": "603986.sh",
+      "count": 100,
+      "price": 301.47,
+      "strategy": "trend",
+      "isHK": false,
+      "tags": [
+        "半导体设备和材料"
+      ],
+      "marketCap": 2100.53790072
+    },
+    {
+      "id": 1769045898758,
+      "name": "中际联合",
+      "code": "605305.sh",
+      "count": 800,
+      "price": 47.59,
+      "strategy": "core",
+      "isHK": false,
+      "tags": [
+        "风电设备"
+      ],
+      "marketCap": 101.138268
+    },
+    {
+      "id": 1769045955531,
+      "name": "生益科技",
+      "code": "600183.sh",
+      "count": 500,
+      "price": 74.1,
+      "strategy": "core",
+      "isHK": false,
+      "tags": [
+        "pcb",
+        "AI硬件"
+      ],
+      "marketCap": 1799.97734943
+    },
+    {
+      "id": 1769067822502,
+      "name": "长电科技",
+      "code": "600584.sh",
+      "count": 500,
+      "price": 49.4,
+      "strategy": "trend",
+      "isHK": false,
+      "tags": [
+        "半导体设备与材料"
+      ],
+      "marketCap": 883.97079758
+    }
+  ],
+  "exportTime": "2026-01-22T09:06:02.444Z",
+  "version": "1.0"
+}
