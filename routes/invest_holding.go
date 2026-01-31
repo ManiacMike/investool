@@ -1103,8 +1103,12 @@ func BatchQueryStockPricesHandler(c *gin.Context) {
 
 				// 保存市值（TotalMarketCap单位是元，转换为亿元）
 				if stock.TotalMarketCap > 0 {
-					marketCaps[stock.Secucode] = stock.TotalMarketCap / 100000000 // 转换为亿元
-					fmt.Printf("📈 [A股市值] %s: %.2f亿元\n", stock.Secucode, marketCaps[stock.Secucode])
+					// 使用大写格式存储，确保与查找时一致
+					secucodeUpper := strings.ToUpper(stock.Secucode)
+					marketCaps[secucodeUpper] = stock.TotalMarketCap / 100000000 // 转换为亿元
+					fmt.Printf("📈 [A股市值] Secucode: %s, 大写: %s, 市值: %.2f亿元\n", stock.Secucode, secucodeUpper, marketCaps[secucodeUpper])
+				} else {
+					fmt.Printf("⚠️ [A股市值为0] Secucode: %s, TotalMarketCap: %.2f\n", stock.Secucode, stock.TotalMarketCap)
 				}
 			}
 		}
@@ -1139,6 +1143,14 @@ func BatchQueryStockPricesHandler(c *gin.Context) {
 			// A股市值
 			if cap, exists := marketCaps[upperCode]; exists {
 				marketCap = cap
+				fmt.Printf("✅ [找到市值] 原始: %s, 大写: %s, 市值: %.2f亿元\n", stock.Code, upperCode, marketCap)
+			} else {
+				// 调试：打印所有可用的市值keys
+				keys := make([]string, 0, len(marketCaps))
+				for k := range marketCaps {
+					keys = append(keys, k)
+				}
+				fmt.Printf("⚠️ [未找到市值] 原始: %s, 大写: %s, 可用的市值keys: %v\n", stock.Code, upperCode, keys)
 			}
 		}
 		// 港股市值暂时不获取，后续可以优化

@@ -324,78 +324,78 @@
         <div class="absolute inset-0 bg-[#1f2937]/70 backdrop-blur-sm transition-opacity" onclick="toggleModal(false)"></div>
         
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg relative z-10 overflow-hidden modal-enter border border-[#e5e7eb]">
-            <div class="p-6 border-b border-[#e5e7eb] flex justify-between items-center bg-[#f9fafb]">
-                <h3 id="modal-title" class="text-lg font-bold text-[#111827] flex items-center gap-2">
-                    <div class="bg-[#eef2ff] p-2 rounded-lg text-[#6366f1]">
-                        <i data-lucide="plus" class="w-4 h-4"></i>
+            <div class="p-4 border-b border-[#e5e7eb] flex justify-between items-center bg-[#f9fafb]">
+                <h3 id="modal-title" class="text-base font-bold text-[#111827] flex items-center gap-2">
+                    <div class="bg-[#eef2ff] p-1.5 rounded-lg text-[#6366f1]">
+                        <i data-lucide="plus" class="w-3.5 h-3.5"></i>
                     </div>
                     录入新持仓
                 </h3>
-                <button onclick="toggleModal(false)" class="text-[#9ca3af] hover:text-[#4b5563] hover:bg-[#e5e7eb] p-2 rounded-full transition-colors">
-                    <i data-lucide="x" class="w-5 h-5"></i>
+                <button onclick="toggleModal(false)" class="text-[#9ca3af] hover:text-[#4b5563] hover:bg-[#e5e7eb] p-1.5 rounded-full transition-colors">
+                    <i data-lucide="x" class="w-4 h-4"></i>
                 </button>
             </div>
             
-            <div class="p-8">
-                <form id="add-stock-form" onsubmit="handleAddStock(event)" class="space-y-6">
+            <div class="p-4">
+                <form id="add-stock-form" onsubmit="handleAddStock(event)" class="space-y-3">
                     <input type="hidden" id="edit-stock-id" value="">
                     <input type="hidden" id="form-isHK" value="false">
                     <div>
-                        <label class="block text-sm font-semibold text-[#374151] mb-3">选择策略归属</label>
-                        <div class="grid grid-cols-3 gap-3" id="strategy-selector">
+                        <label class="block text-xs font-semibold text-[#374151] mb-1.5">选择策略归属</label>
+                        <div class="grid grid-cols-3 gap-2" id="strategy-selector">
                             <!-- 策略按钮通过JS动态增强 -->
-                            <button type="button" onclick="selectStrategy('trend')" class="strategy-btn relative flex flex-col items-center gap-2 py-4 px-2 rounded-xl border transition-all text-sm bg-white border-[#e5e7eb] text-[#6b7280] hover:bg-[#f9fafb]" data-value="trend">
+                            <button type="button" onclick="selectStrategy('trend')" class="strategy-btn relative flex flex-col items-center gap-1 py-2 px-2 rounded-lg border transition-all text-xs bg-white border-[#e5e7eb] text-[#6b7280] hover:bg-[#f9fafb]" data-value="trend">
                                 <span class="font-bold">趋势</span>
-                                <span class="text-[10px] opacity-70">进攻</span>
+                                <span class="text-[9px] opacity-70">进攻</span>
                             </button>
-                            <button type="button" onclick="selectStrategy('core')" class="strategy-btn relative flex flex-col items-center gap-2 py-4 px-2 rounded-xl border transition-all text-sm bg-white border-[#e5e7eb] text-[#6b7280] hover:bg-[#f9fafb]" data-value="core">
+                            <button type="button" onclick="selectStrategy('core')" class="strategy-btn relative flex flex-col items-center gap-1 py-2 px-2 rounded-lg border transition-all text-xs bg-white border-[#e5e7eb] text-[#6b7280] hover:bg-[#f9fafb]" data-value="core">
                                 <span class="font-bold">核心</span>
-                                <span class="text-[10px] opacity-70">压舱</span>
+                                <span class="text-[9px] opacity-70">压舱</span>
                             </button>
-                            <button type="button" onclick="selectStrategy('reverse')" class="strategy-btn relative flex flex-col items-center gap-2 py-4 px-2 rounded-xl border transition-all text-sm bg-white border-[#e5e7eb] text-[#6b7280] hover:bg-[#f9fafb]" data-value="reverse">
+                            <button type="button" onclick="selectStrategy('reverse')" class="strategy-btn relative flex flex-col items-center gap-1 py-2 px-2 rounded-lg border transition-all text-xs bg-white border-[#e5e7eb] text-[#6b7280] hover:bg-[#f9fafb]" data-value="reverse">
                                 <span class="font-bold">逆向</span>
-                                <span class="text-[10px] opacity-70">反转</span>
+                                <span class="text-[9px] opacity-70">反转</span>
                             </button>
                         </div>
                         <input type="hidden" id="form-strategy" value="trend">
                     </div>
 
-                    <div class="space-y-3">
-                        <div class="bg-[#eff6ff] border border-[#bfdbfe] rounded-lg p-3 flex items-start gap-2">
+                    <div class="space-y-2">
+                        <!-- <div class="bg-[#eff6ff] border border-[#bfdbfe] rounded-lg p-3 flex items-start gap-2">
                             <i data-lucide="info" class="w-4 h-4 text-[#3b82f6] mt-0.5 flex-shrink-0"></i>
                             <p class="text-xs text-[#1e40af] leading-relaxed">
                                 <strong>智能填充：</strong>输入股票名称或代码后，点击下方按钮自动查询完整信息。提交时如价格未填写，系统会自动获取最新价格。
                             </p>
-                        </div>
+                        </div> -->
                         
                         <!-- 市场选择 -->
                         <div>
-                            <label class="block text-xs font-bold text-[#6b7280] uppercase tracking-wider mb-2">选择市场 <span class="text-[#9ca3af] font-normal normal-case">(解决同名股票问题)</span></label>
-                            <div class="flex gap-3">
+                            <label class="block text-xs font-bold text-[#6b7280] uppercase tracking-wider mb-1">选择市场 <span class="text-[#9ca3af] font-normal normal-case">(解决同名股票问题)</span></label>
+                            <div class="flex gap-2">
                                 <label class="market-radio flex-1 cursor-pointer">
                                     <input type="radio" name="market" value="a" id="market-a" class="sr-only" checked onchange="handleMarketChange('a')">
-                                    <div class="market-radio-label px-4 py-3 rounded-lg border-2 border-[#e5e7eb] bg-white text-center hover:border-[#d1d5db]">
-                                        <div class="flex items-center justify-center gap-2">
-                                            <i data-lucide="trending-up" class="w-4 h-4 text-[#6b7280]"></i>
-                                            <span class="text-sm font-semibold text-[#111827]">A股</span>
+                                    <div class="market-radio-label px-3 py-2 rounded-lg border-2 border-[#e5e7eb] bg-white text-center hover:border-[#d1d5db]">
+                                        <div class="flex items-center justify-center gap-1.5">
+                                            <i data-lucide="trending-up" class="w-3.5 h-3.5 text-[#6b7280]"></i>
+                                            <span class="text-xs font-semibold text-[#111827]">A股</span>
                                         </div>
                                     </div>
                                 </label>
                                 <label class="market-radio flex-1 cursor-pointer">
                                     <input type="radio" name="market" value="hk" id="market-hk" class="sr-only" onchange="handleMarketChange('hk')">
-                                    <div class="market-radio-label px-4 py-3 rounded-lg border-2 border-[#e5e7eb] bg-white text-center hover:border-[#d1d5db]">
-                                        <div class="flex items-center justify-center gap-2">
-                                            <i data-lucide="globe" class="w-4 h-4 text-[#6b7280]"></i>
-                                            <span class="text-sm font-semibold text-[#111827]">港股</span>
+                                    <div class="market-radio-label px-3 py-2 rounded-lg border-2 border-[#e5e7eb] bg-white text-center hover:border-[#d1d5db]">
+                                        <div class="flex items-center justify-center gap-1.5">
+                                            <i data-lucide="globe" class="w-3.5 h-3.5 text-[#6b7280]"></i>
+                                            <span class="text-xs font-semibold text-[#111827]">港股</span>
                                         </div>
                                     </div>
                                 </label>
                                 <label class="market-radio flex-1 cursor-pointer">
                                     <input type="radio" name="market" value="" id="market-all" class="sr-only" onchange="handleMarketChange('')">
-                                    <div class="market-radio-label px-4 py-3 rounded-lg border-2 border-[#e5e7eb] bg-white text-center hover:border-[#d1d5db]">
-                                        <div class="flex items-center justify-center gap-2">
-                                            <i data-lucide="search" class="w-4 h-4 text-[#6b7280]"></i>
-                                            <span class="text-sm font-semibold text-[#111827]">全部</span>
+                                    <div class="market-radio-label px-3 py-2 rounded-lg border-2 border-[#e5e7eb] bg-white text-center hover:border-[#d1d5db]">
+                                        <div class="flex items-center justify-center gap-1.5">
+                                            <i data-lucide="search" class="w-3.5 h-3.5 text-[#6b7280]"></i>
+                                            <span class="text-xs font-semibold text-[#111827]">全部</span>
                                         </div>
                                     </div>
                                 </label>
@@ -403,60 +403,74 @@
                             <input type="hidden" id="form-market" value="a">
                         </div>
                         
-                        <div class="grid grid-cols-2 gap-5">
-                            <div class="space-y-1.5">
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="space-y-1">
                                 <label class="block text-xs font-bold text-[#6b7280] uppercase tracking-wider">股票名称 <span class="text-[#ef4444]">*</span></label>
-                                <input type="text" id="form-name" placeholder="如：中际旭创" class="w-full px-4 py-3 bg-white border border-[#d1d5db] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6366f1] transition-all font-medium text-[#111827]">
+                                <input type="text" id="form-name" placeholder="如：中际旭创" class="w-full px-3 py-2 bg-white border border-[#d1d5db] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6366f1] transition-all text-sm font-medium text-[#111827]">
                             </div>
-                            <div class="space-y-1.5">
+                            <div class="space-y-1">
                                 <label class="block text-xs font-bold text-[#6b7280] uppercase tracking-wider">代码 <span class="text-[#9ca3af] font-normal">(或名称)</span></label>
-                                <input type="text" id="form-code" placeholder="300308 或 00700" class="w-full px-4 py-3 bg-white border border-[#d1d5db] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6366f1] transition-all font-mono font-medium text-[#111827]">
+                                <input type="text" id="form-code" placeholder="300308 或 00700" class="w-full px-3 py-2 bg-white border border-[#d1d5db] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6366f1] transition-all text-sm font-mono font-medium text-[#111827]">
                             </div>
                         </div>
-                        <button type="button" onclick="handleAutoQuery(event)" class="w-full text-xs text-[#6366f1] hover:text-[#4f46e5] font-medium flex items-center justify-center gap-1.5 py-2 hover:bg-[#eef2ff] rounded-lg transition-all">
+                        <button type="button" onclick="handleAutoQuery(event)" class="w-full text-xs text-[#6366f1] hover:text-[#4f46e5] font-medium flex items-center justify-center gap-1.5 py-1.5 hover:bg-[#eef2ff] rounded-lg transition-all">
                             <i data-lucide="search" class="w-3.5 h-3.5"></i>
                             自动查询并填充信息
                         </button>
                     </div>
 
-                    <div class="grid grid-cols-2 gap-5">
-                        <div class="space-y-1.5">
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="space-y-1">
                             <label class="block text-xs font-bold text-[#6b7280] uppercase tracking-wider">持仓股数</label>
-                            <input type="number" id="form-count" required min="1" class="w-full px-4 py-3 bg-white border border-[#d1d5db] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6366f1] transition-all font-mono font-medium text-[#111827]">
+                            <input type="number" id="form-count" required min="1" class="w-full px-3 py-2 bg-white border border-[#d1d5db] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6366f1] transition-all text-sm font-mono font-medium text-[#111827]">
                         </div>
-                        <div class="space-y-1.5">
+                        <div class="space-y-1">
                             <label class="block text-xs font-bold text-[#6b7280] uppercase tracking-wider">当前现价 <span class="text-[#9ca3af] font-normal">(选填)</span></label>
                             <div class="relative">
-                                <span class="absolute left-4 top-3.5 text-[#9ca3af]">¥</span>
-                                <input type="number" id="form-price" min="0" step="0.01" placeholder="留空自动查询" class="w-full pl-8 pr-4 py-3 bg-white border border-[#d1d5db] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6366f1] transition-all font-mono font-medium text-[#111827]">
+                                <span class="absolute left-3 top-2.5 text-[#9ca3af] text-sm">¥</span>
+                                <input type="number" id="form-price" min="0" step="0.01" placeholder="留空自动查询" class="w-full pl-7 pr-3 py-2 bg-white border border-[#d1d5db] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6366f1] transition-all text-sm font-mono font-medium text-[#111827]" oninput="if(document.getElementById('target-prices-section') && !document.getElementById('target-prices-section').classList.contains('hidden')) calculateTargetPrices()">
                             </div>
                         </div>
                     </div>
                     
-                    <!-- 买入和卖出目标价格（编辑时显示） -->
-                    <div id="target-prices-section" class="hidden grid grid-cols-2 gap-5">
-                        <div class="space-y-1.5">
-                            <label class="block text-xs font-bold text-[#6b7280] uppercase tracking-wider">买入目标价 <span class="text-[#9ca3af] font-normal">(选填)</span></label>
-                            <div class="relative">
-                                <span class="absolute left-4 top-3.5 text-[#9ca3af]">¥</span>
-                                <input type="number" id="form-buy-target" min="0" step="0.01" placeholder="买入目标价" class="w-full pl-8 pr-4 py-3 bg-white border border-[#d1d5db] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#10b981] transition-all font-mono font-medium text-[#111827]">
+                    <!-- PEG目标价格计算（编辑时显示） -->
+                    <div id="target-prices-section" class="hidden space-y-2">
+                        <!-- 公司市值显示 -->
+                        <div class="space-y-1">
+                            <label class="block text-xs font-bold text-[#6b7280] uppercase tracking-wider">公司总市值</label>
+                            <div class="px-3 py-2 bg-[#f3f4f6] border border-[#e5e7eb] rounded-lg">
+                                <span class="text-xs font-bold text-[#111827] font-mono" id="form-market-cap-display">暂无数据</span>
+                                <span class="text-[10px] text-[#6b7280] ml-1">亿元</span>
+                            </div>
+                            <p class="text-[10px] text-[#9ca3af]">公司市值数据来自价格刷新，请先刷新价格获取最新市值</p>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="space-y-1">
+                                <label class="block text-xs font-bold text-[#6b7280] uppercase tracking-wider">净利润增速 <span class="text-[#9ca3af] font-normal">(选填)</span></label>
+                                <div class="flex items-center gap-2">
+                                    <input type="number" id="form-profit-growth-rate" min="0" step="0.1" placeholder="例如：30" class="flex-1 px-3 py-2 bg-white border border-[#d1d5db] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6366f1] transition-all text-sm font-mono font-medium text-[#111827]" oninput="calculateTargetPrices()">
+                                    <span class="text-sm text-[#6b7280] font-medium whitespace-nowrap">%</span>
+                                </div>
+                            </div>
+                            <div class="space-y-1">
+                                <label class="block text-xs font-bold text-[#6b7280] uppercase tracking-wider">当前净利润 <span class="text-[#9ca3af] font-normal">(选填)</span></label>
+                                <div class="flex items-center gap-2">
+                                    <input type="number" id="form-current-profit" min="0" step="0.01" placeholder="例如：10.5" class="flex-1 px-3 py-2 bg-white border border-[#d1d5db] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6366f1] transition-all text-sm font-mono font-medium text-[#111827]" oninput="calculateTargetPrices()">
+                                    <span class="text-sm text-[#6b7280] font-medium whitespace-nowrap">亿</span>
+                                </div>
                             </div>
                         </div>
-                        <div class="space-y-1.5">
-                            <label class="block text-xs font-bold text-[#6b7280] uppercase tracking-wider">卖出目标价 <span class="text-[#9ca3af] font-normal">(选填)</span></label>
-                            <div class="relative">
-                                <span class="absolute left-4 top-3.5 text-[#9ca3af]">¥</span>
-                                <input type="number" id="form-sell-target" min="0" step="0.01" placeholder="卖出目标价" class="w-full pl-8 pr-4 py-3 bg-white border border-[#d1d5db] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#ef4444] transition-all font-mono font-medium text-[#111827]">
-                            </div>
-                        </div>
+                        <!-- 隐藏字段，用于保存计算出的目标价格 -->
+                        <input type="hidden" id="form-buy-target" value="">
+                        <input type="hidden" id="form-sell-target" value="">
                     </div>
                     
                     <!-- 标签输入区域 -->
-                    <div class="space-y-2">
+                    <div class="space-y-1.5">
                         <label class="block text-xs font-bold text-[#6b7280] uppercase tracking-wider">
                             股票标签 <span class="text-[#9ca3af] font-normal normal-case">(最多3个)</span>
                         </label>
-                        <div id="tags-container" class="flex flex-wrap gap-2 min-h-[2.5rem] p-2 border border-[#d1d5db] rounded-lg bg-[#f9fafb]">
+                        <div id="tags-container" class="flex flex-wrap gap-1.5 min-h-[2rem] p-1.5 border border-[#d1d5db] rounded-lg bg-[#f9fafb]">
                             <!-- 标签将通过JS动态添加 -->
                         </div>
                         <div class="flex gap-2">
@@ -465,22 +479,22 @@
                                 id="tag-input" 
                                 placeholder="输入标签后按回车添加" 
                                 maxlength="10"
-                                class="flex-1 px-3 py-2 text-sm border border-[#d1d5db] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6366f1] transition-all"
+                                class="flex-1 px-2.5 py-1.5 text-xs border border-[#d1d5db] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6366f1] transition-all"
                                 onkeydown="handleTagInputKeydown(event)"
                             >
                             <button 
                                 type="button" 
                                 onclick="addTag()" 
-                                class="px-4 py-2 text-sm bg-[#6366f1] hover:bg-[#4f46e5] text-white rounded-lg transition-all font-medium"
+                                class="px-3 py-1.5 text-xs bg-[#6366f1] hover:bg-[#4f46e5] text-white rounded-lg transition-all font-medium"
                             >
                                 添加
                             </button>
                         </div>
                     </div>
                     
-                    <div class="pt-4">
-                        <button type="submit" class="w-full bg-[#6366f1] hover:bg-[#4f46e5] text-white font-bold py-3.5 px-6 rounded-lg transition-all duration-200 flex items-center justify-center gap-2 shadow-lg shadow-[#6366f1]/20 active:translate-y-0.5">
-                            <i data-lucide="plus" class="w-5 h-5"></i>
+                    <div class="pt-2">
+                        <button type="submit" class="w-full bg-[#6366f1] hover:bg-[#4f46e5] text-white font-semibold py-2 px-4 rounded-lg transition-all duration-200 flex items-center justify-center gap-2 shadow-md shadow-[#6366f1]/20 active:translate-y-0.5 text-sm">
+                            <i data-lucide="plus" class="w-4 h-4"></i>
                             <span id="submit-btn-text">确认添加</span>
                         </button>
                     </div>
@@ -751,6 +765,9 @@
                 if (data) {
                     const parsed = JSON.parse(data);
                     state.stocks = parsed.stocks || [];
+                    // 统计有市值的股票数量
+                    const stocksWithMarketCap = state.stocks.filter(s => s.marketCap && s.marketCap > 0).length;
+                    console.log(`📥 [加载数据] 共 ${state.stocks.length} 只股票，其中 ${stocksWithMarketCap} 只有市值数据`);
                 }
             } catch (e) {
                 console.error('加载数据失败:', e);
@@ -769,10 +786,13 @@
 
         function saveToStorage() {
             try {
+                // 统计有市值的股票数量
+                const stocksWithMarketCap = state.stocks.filter(s => s.marketCap && s.marketCap > 0).length;
                 localStorage.setItem(STORAGE_KEY, JSON.stringify({
                     stocks: state.stocks,
                     lastUpdate: new Date().toISOString()
                 }));
+                console.log(`💾 [保存数据] 共 ${state.stocks.length} 只股票，其中 ${stocksWithMarketCap} 只有市值数据`);
             } catch (e) {
                 console.error('保存数据失败:', e);
             }
@@ -1730,7 +1750,7 @@
                                 </span>
                             </div>
                         </td>
-                        <td class="px-4 py-3 text-right" data-stock-id="${stock.id}" data-cell-type="price">
+                        <td class="px-4 py-3 text-right" data-stock-id="${stock.id}" data-cell-type="price" title="${stock.marketCap && stock.marketCap > 0 ? '公司总市值: ' + stock.marketCap.toFixed(2) + '亿元' : '公司总市值: 暂无数据'}">
                             <div class="flex flex-col items-end">
                                 <span class="text-sm text-[#4b5563] font-mono" data-price="${stock.price}">${currencySymbol}${stock.price}</span>
                                 <span class="text-xs text-[#9ca3af] mt-0.5">${stock.count}股</span>
@@ -1808,10 +1828,27 @@
             document.getElementById('edit-stock-id').value = id;
             document.getElementById('form-isHK').value = stock.isHK ? 'true' : 'false';
             
-            // 填充目标价格（编辑时显示）
-            document.getElementById('form-buy-target').value = stock.buyTargetPrice || '';
-            document.getElementById('form-sell-target').value = stock.sellTargetPrice || '';
+            // 填充PEG计算相关数据（编辑时显示）
+            document.getElementById('form-profit-growth-rate').value = stock.profitGrowthRate || '';
+            document.getElementById('form-current-profit').value = stock.currentProfit || '';
+            
+            // 填充公司市值显示
+            const marketCapDisplay = document.getElementById('form-market-cap-display');
+            if (marketCapDisplay) {
+                if (stock.marketCap && stock.marketCap > 0) {
+                    marketCapDisplay.textContent = stock.marketCap.toFixed(2);
+                    marketCapDisplay.className = 'text-xs font-bold text-[#111827] font-mono';
+                } else {
+                    marketCapDisplay.textContent = '暂无数据';
+                    marketCapDisplay.className = 'text-xs font-bold text-[#9ca3af] font-mono';
+                }
+            }
+            
             document.getElementById('target-prices-section').classList.remove('hidden');
+            // 如果有数据，触发计算
+            setTimeout(() => {
+                calculateTargetPrices();
+            }, 100);
             
             // 填充标签
             currentTags = stock.tags ? [...stock.tags] : [];
@@ -1832,6 +1869,120 @@
             toggleModal(true);
         }
 
+        // 计算市值调节系数K
+        // K = 1 - α · log₁₀(当前市值 / 1000亿)
+        // 1000亿是基准点，K=1
+        // α 是调节系数，默认0.1（可根据实际情况调整）
+        function calculateMarketCapCoefficient(marketCap) {
+            const ALPHA = 0.1; // 调节系数，可根据实际情况调整
+            const BASELINE = 1000; // 基准市值（亿元），K=1
+            
+            if (marketCap <= 0) {
+                return 1; // 如果没有市值数据，不调节
+            }
+            
+            // K = 1 - α · log₁₀(当前市值 / 1000亿)
+            const k = 1 - ALPHA * Math.log10(marketCap / BASELINE);
+            
+            // 限制K的范围，避免极端值（建议范围：0.5 - 1.5）
+            return Math.max(0.5, Math.min(1.5, k));
+        }
+
+        // 根据增速区间计算买入和卖出PE（阶梯式 PEG + PE 封顶）
+        function calculatePEByGrowthRate(growthRate) {
+            let buyPEG, buyPECap, sellPEG, sellPECap;
+            
+            // 根据增速区间确定PEG和PE上限标准
+            if (growthRate < 15) {
+                // 低增速 (<15%)
+                buyPEG = 0.5;
+                buyPECap = 10;
+                sellPEG = 1.2;
+                sellPECap = 20;
+            } else if (growthRate >= 15 && growthRate <= 40) {
+                // 中增速 (15% - 40%)
+                buyPEG = 0.8;
+                buyPECap = 20;
+                sellPEG = 1.5;
+                sellPECap = 45;
+            } else {
+                // 高增速 (>40%)
+                buyPEG = 1.0;
+                buyPECap = 40;
+                sellPEG = 1.5;
+                sellPECap = 80;
+            }
+            
+            // 计算PEG对应的PE
+            const buyPEByPEG = buyPEG * growthRate;
+            const sellPEByPEG = sellPEG * growthRate;
+            
+            // 买入PE = min(PEG对应的PE, PE上限)
+            const buyPE = Math.min(buyPEByPEG, buyPECap);
+            // 卖出PE = min(PEG对应的PE, PE上限)
+            const sellPE = Math.min(sellPEByPEG, sellPECap);
+            
+            return { buyPE, sellPE };
+        }
+
+        // 计算目标价格（基于阶梯式 PEG + PE 封顶）
+        function calculateTargetPrices() {
+            const growthRate = parseFloat(document.getElementById('form-profit-growth-rate').value) || 0;
+            const currentProfit = parseFloat(document.getElementById('form-current-profit').value) || 0;
+            const currentPrice = parseFloat(document.getElementById('form-price').value) || 0;
+            
+            // 获取公司市值（从股票数据中获取，如果编辑模式）
+            let marketCap = 0;
+            const editId = document.getElementById('edit-stock-id').value;
+            if (editId) {
+                const stock = state.stocks.find(s => s.id === Number(editId));
+                if (stock && stock.marketCap) {
+                    marketCap = stock.marketCap; // 单位：亿元
+                }
+            }
+            
+            // 如果缺少必要数据，清空隐藏字段
+            if (!growthRate || !currentProfit || !currentPrice || !marketCap) {
+                document.getElementById('form-buy-target').value = '';
+                document.getElementById('form-sell-target').value = '';
+                return;
+            }
+            
+            // 阶梯式 PEG + PE 封顶公式 + 市值调节系数K
+            // PEG = PE / 增长率（增长率用百分比，如50表示50%）
+            // PE = 市盈率 = 市值 / 净利润
+            // 买入/卖出PE = min(PEG标准对应的PE, PE上限)
+            // 修正后的PE = 原始PE × K（市值调节系数）
+            // K = 1 - α · log₁₀(当前市值 / 1000亿)
+            // 目标市值 = 修正后的PE × 净利润
+            // 目标价格 = (目标市值 × 当前价格) / 当前市值
+            
+            // 根据增速区间计算买入和卖出PE（原始PE）
+            const { buyPE: originalBuyPE, sellPE: originalSellPE } = calculatePEByGrowthRate(growthRate);
+            
+            // 计算市值调节系数K
+            const k = calculateMarketCapCoefficient(marketCap);
+            
+            // 应用K系数修正PE：修正后的PE = 原始PE × K
+            const buyPE = originalBuyPE * k;
+            const sellPE = originalSellPE * k;
+            
+            // 计算买入和卖出市值（亿元）
+            const buyMarketCap = buyPE * currentProfit;
+            const sellMarketCap = sellPE * currentProfit;
+            
+            // 计算目标价格
+            const buyPrice = (buyMarketCap * currentPrice) / marketCap;
+            const sellPrice = (sellMarketCap * currentPrice) / marketCap;
+            
+            // 调试日志
+            console.log(`📊 [PEG计算] 增速: ${growthRate}%, 市值: ${marketCap.toFixed(2)}亿, K系数: ${k.toFixed(3)}, 买入PE: ${originalBuyPE.toFixed(2)} → ${buyPE.toFixed(2)}, 卖出PE: ${originalSellPE.toFixed(2)} → ${sellPE.toFixed(2)}`);
+            
+            // 保存到隐藏字段（用于提交时保存）
+            document.getElementById('form-buy-target').value = buyPrice > 0 ? buyPrice : '';
+            document.getElementById('form-sell-target').value = sellPrice > 0 ? sellPrice : '';
+        }
+
         function toggleModal(show) {
             const modal = document.getElementById('add-modal');
             if (show) {
@@ -1846,6 +1997,12 @@
                 document.getElementById('submit-btn-text').textContent = '确认添加';
                 // 隐藏目标价格字段（录入时不显示）
                 document.getElementById('target-prices-section').classList.add('hidden');
+                // 重置公司市值显示
+                const marketCapDisplay = document.getElementById('form-market-cap-display');
+                if (marketCapDisplay) {
+                    marketCapDisplay.textContent = '暂无数据';
+                    marketCapDisplay.className = 'text-xs font-bold text-[#9ca3af] font-mono';
+                }
                 // 重置市场选择为A股
                 document.getElementById('form-market').value = 'a';
                 document.getElementById('market-a').checked = true;
@@ -2032,15 +2189,48 @@
             // 获取标签（最多3个）
             const tags = currentTags.slice(0, 3);
             
-            // 获取目标价格（编辑时才有）
-            const buyTargetPrice = editId ? (Number(document.getElementById('form-buy-target').value) || 0) : 0;
-            const sellTargetPrice = editId ? (Number(document.getElementById('form-sell-target').value) || 0) : 0;
+            // 获取PEG计算相关数据（编辑时才有）
+            const profitGrowthRate = editId ? (Number(document.getElementById('form-profit-growth-rate').value) || 0) : 0;
+            const currentProfit = editId ? (Number(document.getElementById('form-current-profit').value) || 0) : 0;
+            
+            // 计算目标价格（如果输入了净利润增速和净利润）
+            let buyTargetPrice = 0;
+            let sellTargetPrice = 0;
+            if (editId && profitGrowthRate > 0 && currentProfit > 0 && price > 0) {
+                // 获取公司市值
+                const stock = state.stocks.find(s => s.id === Number(editId));
+                const marketCap = stock && stock.marketCap ? stock.marketCap : 0; // 单位：亿元
+                
+                if (marketCap > 0) {
+                    // 阶梯式 PEG + PE 封顶公式 + 市值调节系数K
+                    // 根据增速区间计算买入和卖出PE（原始PE）
+                    const { buyPE: originalBuyPE, sellPE: originalSellPE } = calculatePEByGrowthRate(profitGrowthRate);
+                    
+                    // 计算市值调节系数K
+                    const k = calculateMarketCapCoefficient(marketCap);
+                    
+                    // 应用K系数修正PE：修正后的PE = 原始PE × K
+                    const buyPE = originalBuyPE * k;
+                    const sellPE = originalSellPE * k;
+                    
+                    // 计算买入和卖出市值（亿元）
+                    const buyMarketCap = buyPE * currentProfit;
+                    const sellMarketCap = sellPE * currentProfit;
+                    
+                    // 计算目标价格
+                    buyTargetPrice = (buyMarketCap * price) / marketCap;
+                    sellTargetPrice = (sellMarketCap * price) / marketCap;
+                    
+                    console.log(`💾 [保存计算] 增速: ${profitGrowthRate}%, 市值: ${marketCap.toFixed(2)}亿, K系数: ${k.toFixed(3)}, 买入PE: ${originalBuyPE.toFixed(2)} → ${buyPE.toFixed(2)}, 卖出PE: ${originalSellPE.toFixed(2)} → ${sellPE.toFixed(2)}`);
+                }
+            }
             
             if (editId) {
                 // 编辑模式
                 const index = state.stocks.findIndex(s => s.id === Number(editId));
                 if (index !== -1) {
-                    state.stocks[index] = {
+                    const oldStock = state.stocks[index];
+                    const updatedStock = {
                         id: Number(editId),
                         name,
                         code: code || 'N/A',
@@ -2048,10 +2238,43 @@
                         price,
                         strategy,
                         isHK: isHK,
-                        tags: tags,
-                        buyTargetPrice: buyTargetPrice > 0 ? buyTargetPrice : undefined,
-                        sellTargetPrice: sellTargetPrice > 0 ? sellTargetPrice : undefined
+                        tags: tags
                     };
+                    
+                    // 保留原有的市值数据（重要：必须保留，市值来自价格刷新，不应因编辑而丢失）
+                    if (oldStock.marketCap && oldStock.marketCap > 0) {
+                        updatedStock.marketCap = oldStock.marketCap;
+                        console.log(`💾 [保留市值] ${name}: ${oldStock.marketCap.toFixed(2)}亿元`);
+                    }
+                    
+                    // 保存PEG计算相关数据
+                    if (profitGrowthRate > 0) {
+                        updatedStock.profitGrowthRate = profitGrowthRate;
+                    } else if (oldStock.profitGrowthRate) {
+                        // 如果用户清空了，保留原有值
+                        updatedStock.profitGrowthRate = oldStock.profitGrowthRate;
+                    }
+                    if (currentProfit > 0) {
+                        updatedStock.currentProfit = currentProfit;
+                    } else if (oldStock.currentProfit) {
+                        // 如果用户清空了，保留原有值
+                        updatedStock.currentProfit = oldStock.currentProfit;
+                    }
+                    
+                    // 保存目标价格
+                    // 如果重新计算了目标价格，使用新值；否则保留原有值
+                    if (buyTargetPrice > 0) {
+                        updatedStock.buyTargetPrice = buyTargetPrice;
+                    } else if (oldStock.buyTargetPrice) {
+                        updatedStock.buyTargetPrice = oldStock.buyTargetPrice;
+                    }
+                    if (sellTargetPrice > 0) {
+                        updatedStock.sellTargetPrice = sellTargetPrice;
+                    } else if (oldStock.sellTargetPrice) {
+                        updatedStock.sellTargetPrice = oldStock.sellTargetPrice;
+                    }
+                    
+                    state.stocks[index] = updatedStock;
                 }
             } else {
                 // 新增模式
@@ -2264,24 +2487,56 @@
                     let hasUpdate = false;
                     result.data.forEach(priceData => {
                         const stock = state.stocks.find(s => s.code === priceData.code);
-                        if (stock && priceData.price > 0) {
-                            const oldPrice = stock.price;
-                            const newPrice = priceData.price;
+                        if (!stock) return;
+                        
+                        // 更新公司市值（无论价格是否为0，只要有市值数据就更新）
+                        if (priceData.marketCap !== undefined && priceData.marketCap > 0) {
+                            const oldMarketCap = stock.marketCap || 0;
+                            const marketCapChanged = Math.abs((oldMarketCap || 0) - priceData.marketCap) > 0.01; // 允许小数点误差
                             
-                            // 更新公司市值（不保存到本地，只用于显示）
-                            if (priceData.marketCap !== undefined && priceData.marketCap > 0) {
+                            if (marketCapChanged) {
                                 stock.marketCap = priceData.marketCap;
-                                
-                                // 更新DOM - 公司市值单元格
-                                const marketCapCell = document.querySelector(`td[data-stock-id="${stock.id}"][data-cell-type="company-market-cap"]`);
-                                if (marketCapCell) {
-                                    const marketCapSpan = marketCapCell.querySelector('span[data-market-cap]');
-                                    if (marketCapSpan) {
-                                        marketCapSpan.innerHTML = priceData.marketCap.toFixed(2) + '亿';
-                                        marketCapSpan.setAttribute('data-market-cap', priceData.marketCap);
-                                    }
+                                hasUpdate = true; // 市值有变化，标记需要保存
+                                console.log(`💾 [市值已更新] ${stock.name}: ${oldMarketCap.toFixed(2)} → ${priceData.marketCap.toFixed(2)}亿元，已标记保存`);
+                            } else {
+                                stock.marketCap = priceData.marketCap; // 即使没变化也更新，确保数据一致
+                            }
+                            
+                            // 更新DOM - 公司市值单元格
+                            const marketCapCell = document.querySelector(`td[data-stock-id="${stock.id}"][data-cell-type="company-market-cap"]`);
+                            if (marketCapCell) {
+                                const marketCapSpan = marketCapCell.querySelector('span[data-market-cap]');
+                                if (marketCapSpan) {
+                                    marketCapSpan.innerHTML = priceData.marketCap.toFixed(2) + '亿';
+                                    marketCapSpan.setAttribute('data-market-cap', priceData.marketCap);
                                 }
                             }
+                            
+                            // 更新价格单元格的hover提示（显示公司市值）
+                            const priceCell = document.querySelector(`td[data-stock-id="${stock.id}"][data-cell-type="price"]`);
+                            if (priceCell) {
+                                priceCell.setAttribute('title', `公司总市值: ${priceData.marketCap.toFixed(2)}亿元`);
+                            }
+                            
+                            // 如果表单正在编辑该股票，更新表单中的市值显示
+                            const editId = document.getElementById('edit-stock-id').value;
+                            if (editId && Number(editId) === stock.id) {
+                                const marketCapDisplay = document.getElementById('form-market-cap-display');
+                                if (marketCapDisplay) {
+                                    marketCapDisplay.textContent = priceData.marketCap.toFixed(2);
+                                    marketCapDisplay.className = 'text-xs font-bold text-[#111827] font-mono';
+                                    // 如果表单中有PEG计算数据，重新计算
+                                    setTimeout(() => {
+                                        calculateTargetPrices();
+                                    }, 100);
+                                }
+                            }
+                        }
+                        
+                        // 更新价格（需要价格大于0）
+                        if (priceData.price > 0) {
+                            const oldPrice = stock.price;
+                            const newPrice = priceData.price;
                             
                             if (oldPrice !== newPrice) {
                                 // 更新数据
@@ -2356,7 +2611,9 @@
 
                     // 如果有更新，保存到本地并更新总资产显示
                     if (hasUpdate) {
+                        console.log('💾 [触发保存] hasUpdate=true，开始保存到localStorage');
                         saveToStorage();
+                        console.log('✅ [保存完成] 数据已保存到localStorage');
                         
                         // 只更新总资产和统计信息，不重新渲染表格
                         const { totalAsset: newTotalAsset, strategyStats } = calculateStats();
