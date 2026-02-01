@@ -140,6 +140,7 @@
                                         <button onclick="setFilter('trend')" class="filter-btn px-3 py-1.5 text-xs font-semibold rounded-md transition-all duration-200 text-[#6b7280] hover:text-[#111827]" data-filter="trend">进攻</button>
                                         <button onclick="setFilter('core')" class="filter-btn px-3 py-1.5 text-xs font-semibold rounded-md transition-all duration-200 text-[#6b7280] hover:text-[#111827]" data-filter="core">核心</button>
                                         <button onclick="setFilter('reverse')" class="filter-btn px-3 py-1.5 text-xs font-semibold rounded-md transition-all duration-200 text-[#6b7280] hover:text-[#111827]" data-filter="reverse">逆向</button>
+                                        <button onclick="setFilter('watch')" class="filter-btn px-3 py-1.5 text-xs font-semibold rounded-md transition-all duration-200 text-[#6b7280] hover:text-[#111827]" data-filter="watch">观察仓</button>
                                     </div>
                                     
                                     <!-- 自动刷新开关 -->
@@ -193,7 +194,12 @@
                                             </th>
                                             <th class="px-4 py-4 text-right hidden">公司市值</th>
                                             <th class="px-4 py-4 text-right">价格/股数</th>
-                                            <th class="px-4 py-4 text-center" style="min-width: 250px;">目标水位 (买入 VS 卖出)</th>
+                                            <th class="px-4 py-4 cursor-pointer hover:bg-[#f3f4f6] transition-colors group text-center" style="min-width: 250px;" onclick="handleSort('targetRatio')">
+                                                <div class="flex items-center justify-center gap-2">
+                                                    <span>目标水位 (买入 VS 卖出)</span>
+                                                    <i data-lucide="arrow-up-down" class="w-3.5 h-3.5 text-[#9ca3af] opacity-40 group-hover:opacity-100" id="sort-icon-targetRatio"></i>
+                                                </div>
+                                            </th>
                                             <th class="px-4 py-4 text-center w-20">操作</th>
                                         </tr>
                                     </thead>
@@ -324,7 +330,7 @@
         <div class="absolute inset-0 bg-[#1f2937]/70 backdrop-blur-sm transition-opacity" onclick="toggleModal(false)"></div>
         
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg relative z-10 overflow-hidden modal-enter border border-[#e5e7eb]">
-            <div class="p-4 border-b border-[#e5e7eb] flex justify-between items-center bg-[#f9fafb]">
+            <div class="p-3 border-b border-[#e5e7eb] flex justify-between items-center bg-[#f9fafb]">
                 <h3 id="modal-title" class="text-base font-bold text-[#111827] flex items-center gap-2">
                     <div class="bg-[#eef2ff] p-1.5 rounded-lg text-[#6366f1]">
                         <i data-lucide="plus" class="w-3.5 h-3.5"></i>
@@ -336,25 +342,29 @@
                 </button>
             </div>
             
-            <div class="p-4">
-                <form id="add-stock-form" onsubmit="handleAddStock(event)" class="space-y-3">
+            <div class="p-3">
+                <form id="add-stock-form" onsubmit="handleAddStock(event)" class="space-y-2">
                     <input type="hidden" id="edit-stock-id" value="">
                     <input type="hidden" id="form-isHK" value="false">
                     <div>
-                        <label class="block text-xs font-semibold text-[#374151] mb-1.5">选择策略归属</label>
-                        <div class="grid grid-cols-3 gap-2" id="strategy-selector">
+                        <label class="block text-xs font-semibold text-[#374151] mb-1">选择策略归属</label>
+                        <div class="grid grid-cols-4 gap-1.5" id="strategy-selector">
                             <!-- 策略按钮通过JS动态增强 -->
-                            <button type="button" onclick="selectStrategy('trend')" class="strategy-btn relative flex flex-col items-center gap-1 py-2 px-2 rounded-lg border transition-all text-xs bg-white border-[#e5e7eb] text-[#6b7280] hover:bg-[#f9fafb]" data-value="trend">
+                            <button type="button" onclick="selectStrategy('trend')" class="strategy-btn relative flex flex-col items-center gap-0.5 py-1.5 px-1.5 rounded-lg border transition-all text-xs bg-white border-[#e5e7eb] text-[#6b7280] hover:bg-[#f9fafb]" data-value="trend">
                                 <span class="font-bold">趋势</span>
                                 <span class="text-[9px] opacity-70">进攻</span>
                             </button>
-                            <button type="button" onclick="selectStrategy('core')" class="strategy-btn relative flex flex-col items-center gap-1 py-2 px-2 rounded-lg border transition-all text-xs bg-white border-[#e5e7eb] text-[#6b7280] hover:bg-[#f9fafb]" data-value="core">
+                            <button type="button" onclick="selectStrategy('core')" class="strategy-btn relative flex flex-col items-center gap-0.5 py-1.5 px-1.5 rounded-lg border transition-all text-xs bg-white border-[#e5e7eb] text-[#6b7280] hover:bg-[#f9fafb]" data-value="core">
                                 <span class="font-bold">核心</span>
                                 <span class="text-[9px] opacity-70">压舱</span>
                             </button>
-                            <button type="button" onclick="selectStrategy('reverse')" class="strategy-btn relative flex flex-col items-center gap-1 py-2 px-2 rounded-lg border transition-all text-xs bg-white border-[#e5e7eb] text-[#6b7280] hover:bg-[#f9fafb]" data-value="reverse">
+                            <button type="button" onclick="selectStrategy('reverse')" class="strategy-btn relative flex flex-col items-center gap-0.5 py-1.5 px-1.5 rounded-lg border transition-all text-xs bg-white border-[#e5e7eb] text-[#6b7280] hover:bg-[#f9fafb]" data-value="reverse">
                                 <span class="font-bold">逆向</span>
                                 <span class="text-[9px] opacity-70">反转</span>
+                            </button>
+                            <button type="button" onclick="selectStrategy('watch')" class="strategy-btn relative flex flex-col items-center gap-0.5 py-1.5 px-1.5 rounded-lg border transition-all text-xs bg-white border-[#e5e7eb] text-[#6b7280] hover:bg-[#f9fafb]" data-value="watch">
+                                <span class="font-bold">观察</span>
+                                <span class="text-[9px] opacity-70">观察仓</span>
                             </button>
                         </div>
                         <input type="hidden" id="form-strategy" value="trend">
@@ -444,52 +454,113 @@
                             </div>
                             <p class="text-[10px] text-[#9ca3af]">公司市值数据来自价格刷新，请先刷新价格获取最新市值</p>
                         </div>
-                        <div class="grid grid-cols-2 gap-3">
-                            <div class="space-y-1">
-                                <label class="block text-xs font-bold text-[#6b7280] uppercase tracking-wider">净利润增速 <span class="text-[#9ca3af] font-normal">(选填)</span></label>
-                                <div class="flex items-center gap-2">
-                                    <input type="number" id="form-profit-growth-rate" min="0" step="0.1" placeholder="例如：30" class="flex-1 px-3 py-2 bg-white border border-[#d1d5db] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6366f1] transition-all text-sm font-mono font-medium text-[#111827]" oninput="calculateTargetPrices()">
-                                    <span class="text-sm text-[#6b7280] font-medium whitespace-nowrap">%</span>
+                        
+                        <!-- 标签输入区域 -->
+                        <div class="space-y-1.5">
+                            <label class="block text-xs font-bold text-[#6b7280] uppercase tracking-wider">
+                                股票标签 <span class="text-[#9ca3af] font-normal normal-case">(最多3个)</span>
+                            </label>
+                            <div id="tags-container" class="flex flex-wrap gap-1.5 min-h-[2rem] p-1.5 border border-[#d1d5db] rounded-lg bg-[#f9fafb]">
+                                <!-- 标签将通过JS动态添加 -->
+                            </div>
+                            <div class="flex gap-2">
+                                <input 
+                                    type="text" 
+                                    id="tag-input" 
+                                    placeholder="输入标签后按回车添加" 
+                                    maxlength="10"
+                                    class="flex-1 px-2.5 py-1.5 text-xs border border-[#d1d5db] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6366f1] transition-all"
+                                    onkeydown="handleTagInputKeydown(event)"
+                                >
+                                <button 
+                                    type="button" 
+                                    onclick="addTag()" 
+                                    class="px-3 py-1.5 text-xs bg-[#6366f1] hover:bg-[#4f46e5] text-white rounded-lg transition-all font-medium"
+                                >
+                                    添加
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- 估值模型切换 -->
+                        <div class="space-y-3">
+                            <!-- Tab切换 -->
+                            <div class="flex gap-2 border-b border-[#e5e7eb]">
+                                <button 
+                                    type="button"
+                                    id="valuation-tab-peg"
+                                    onclick="switchValuationTab('peg')"
+                                    class="px-4 py-2 text-xs font-semibold text-[#6366f1] border-b-2 border-[#6366f1] transition-all"
+                                >
+                                    PEG估值
+                                </button>
+                                <button 
+                                    type="button"
+                                    id="valuation-tab-pe"
+                                    onclick="switchValuationTab('pe')"
+                                    class="px-4 py-2 text-xs font-semibold text-[#6b7280] border-b-2 border-transparent hover:text-[#6366f1] transition-all"
+                                >
+                                    PE分位
+                                </button>
+                            </div>
+                            
+                            <!-- Tab1: PEG估值 -->
+                            <div id="valuation-content-peg" class="space-y-3">
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div class="space-y-1">
+                                        <label class="block text-xs font-bold text-[#6b7280] uppercase tracking-wider">净利润增速 <span class="text-[#9ca3af] font-normal">(选填)</span></label>
+                                        <div class="flex items-center gap-2">
+                                            <input type="number" id="form-profit-growth-rate" min="0" step="0.1" placeholder="例如：30" class="flex-1 px-3 py-2 bg-white border border-[#d1d5db] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6366f1] transition-all text-sm font-mono font-medium text-[#111827]" oninput="calculateTargetPrices()">
+                                            <span class="text-sm text-[#6b7280] font-medium whitespace-nowrap">%</span>
+                                        </div>
+                                    </div>
+                                    <div class="space-y-1">
+                                        <label class="block text-xs font-bold text-[#6b7280] uppercase tracking-wider">当前净利润 <span class="text-[#9ca3af] font-normal">(选填)</span></label>
+                                        <div class="flex items-center gap-2">
+                                            <input type="number" id="form-current-profit" min="0" step="0.01" placeholder="例如：10.5" class="flex-1 px-3 py-2 bg-white border border-[#d1d5db] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6366f1] transition-all text-sm font-mono font-medium text-[#111827]" oninput="debouncedCalculateTargetPrices()">
+                                            <span class="text-sm text-[#6b7280] font-medium whitespace-nowrap">亿</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="space-y-1">
+                                    <label class="block text-xs font-bold text-[#6b7280] uppercase tracking-wider">溢价参数 <span class="text-[#9ca3af] font-normal">(选填，默认1)</span></label>
+                                    <div class="flex items-center gap-2">
+                                        <input type="number" id="form-premium-ratio" min="0" step="0.01" value="1" placeholder="例如：1.2" class="flex-1 px-3 py-2 bg-white border border-[#d1d5db] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6366f1] transition-all text-sm font-mono font-medium text-[#111827]" oninput="debouncedCalculateTargetPrices()">
+                                        <span class="text-sm text-[#6b7280] font-medium whitespace-nowrap">倍</span>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="space-y-1">
-                                <label class="block text-xs font-bold text-[#6b7280] uppercase tracking-wider">当前净利润 <span class="text-[#9ca3af] font-normal">(选填)</span></label>
-                                <div class="flex items-center gap-2">
-                                    <input type="number" id="form-current-profit" min="0" step="0.01" placeholder="例如：10.5" class="flex-1 px-3 py-2 bg-white border border-[#d1d5db] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6366f1] transition-all text-sm font-mono font-medium text-[#111827]" oninput="calculateTargetPrices()">
-                                    <span class="text-sm text-[#6b7280] font-medium whitespace-nowrap">亿</span>
+                            
+                            <!-- Tab2: PE分位 -->
+                            <div id="valuation-content-pe" class="hidden space-y-3">
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div class="space-y-1">
+                                        <label class="block text-xs font-bold text-[#6b7280] uppercase tracking-wider">PE最小值 <span class="text-[#9ca3af] font-normal">(选填)</span></label>
+                                        <div class="flex items-center gap-2">
+                                            <input type="number" id="form-pe-min" min="0" step="0.1" placeholder="例如：10" class="flex-1 px-3 py-2 bg-white border border-[#d1d5db] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6366f1] transition-all text-sm font-mono font-medium text-[#111827]" oninput="calculateTargetPrices()">
+                                        </div>
+                                    </div>
+                                    <div class="space-y-1">
+                                        <label class="block text-xs font-bold text-[#6b7280] uppercase tracking-wider">PE最大值 <span class="text-[#9ca3af] font-normal">(选填)</span></label>
+                                        <div class="flex items-center gap-2">
+                                            <input type="number" id="form-pe-max" min="0" step="0.1" placeholder="例如：30" class="flex-1 px-3 py-2 bg-white border border-[#d1d5db] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6366f1] transition-all text-sm font-mono font-medium text-[#111827]" oninput="calculateTargetPrices()">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="space-y-1">
+                                    <label class="block text-xs font-bold text-[#6b7280] uppercase tracking-wider">当前净利润 <span class="text-[#9ca3af] font-normal">(选填)</span></label>
+                                    <div class="flex items-center gap-2">
+                                        <input type="number" id="form-current-profit-pe" min="0" step="0.01" placeholder="例如：10.5" class="flex-1 px-3 py-2 bg-white border border-[#d1d5db] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6366f1] transition-all text-sm font-mono font-medium text-[#111827]" oninput="debouncedCalculateTargetPrices()">
+                                        <span class="text-sm text-[#6b7280] font-medium whitespace-nowrap">亿</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
+                        
                         <!-- 隐藏字段，用于保存计算出的目标价格 -->
                         <input type="hidden" id="form-buy-target" value="">
                         <input type="hidden" id="form-sell-target" value="">
-                    </div>
-                    
-                    <!-- 标签输入区域 -->
-                    <div class="space-y-1.5">
-                        <label class="block text-xs font-bold text-[#6b7280] uppercase tracking-wider">
-                            股票标签 <span class="text-[#9ca3af] font-normal normal-case">(最多3个)</span>
-                        </label>
-                        <div id="tags-container" class="flex flex-wrap gap-1.5 min-h-[2rem] p-1.5 border border-[#d1d5db] rounded-lg bg-[#f9fafb]">
-                            <!-- 标签将通过JS动态添加 -->
-                        </div>
-                        <div class="flex gap-2">
-                            <input 
-                                type="text" 
-                                id="tag-input" 
-                                placeholder="输入标签后按回车添加" 
-                                maxlength="10"
-                                class="flex-1 px-2.5 py-1.5 text-xs border border-[#d1d5db] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6366f1] transition-all"
-                                onkeydown="handleTagInputKeydown(event)"
-                            >
-                            <button 
-                                type="button" 
-                                onclick="addTag()" 
-                                class="px-3 py-1.5 text-xs bg-[#6366f1] hover:bg-[#4f46e5] text-white rounded-lg transition-all font-medium"
-                            >
-                                添加
-                            </button>
-                        </div>
+                        <input type="hidden" id="form-valuation-model" value="peg">
                     </div>
                     
                     <div class="pt-2">
@@ -721,6 +792,40 @@
                         '政策转向信号（如行业整顿结束）',
                         '公司回购股份或高管增持',
                         '产品涨价函或去库存结束的信号'
+                    ]
+                }
+            },
+            watch: {
+                id: 'watch',
+                name: '观察仓',
+                gradient: 'from-[#6b7280] to-[#4b5563]', 
+                bgLight: 'bg-[#f3f4f6]',
+                text: 'text-[#374151]',
+                border: 'border-[#6b7280]/20',
+                icon: 'eye',
+                desc: '观察 · 跟踪 · 不参与',
+                allocation: '0%',
+                thinking: '仅用于观察和跟踪，不参与总资产计算。',
+                tips: {
+                    selection: [
+                        '感兴趣但未买入的股票',
+                        '需要持续跟踪的标的',
+                        '潜在投资机会'
+                    ],
+                    buying: [
+                        '观察仓不参与实际投资',
+                        '可以设置任意股数用于跟踪'
+                    ],
+                    holding: [
+                        '仅用于观察和跟踪',
+                        '不参与总资产计算'
+                    ],
+                    selling: [
+                        '可以随时删除或转为实际持仓'
+                    ],
+                    events: [
+                        '定期查看价格变化',
+                        '跟踪公司动态'
                     ]
                 }
             }
@@ -1527,8 +1632,12 @@
         }
 
         function calculateStats() {
-            // 计算总资产时，港股价格需要换算成人民币
+            // 计算总资产时，排除观察仓，港股价格需要换算成人民币
             const totalAsset = state.stocks.reduce((acc, stock) => {
+                // 观察仓不参与总资产计算
+                if (stock.strategy === 'watch') {
+                    return acc;
+                }
                 const priceInCNY = stock.isHK ? stock.price * HKD_TO_CNY_RATE : stock.price;
                 return acc + (stock.count * priceInCNY);
             }, 0);
@@ -1536,7 +1645,8 @@
             const strategyStats = {
                 trend: { total: 0, count: 0 },
                 core: { total: 0, count: 0 },
-                reverse: { total: 0, count: 0 }
+                reverse: { total: 0, count: 0 },
+                watch: { total: 0, count: 0 }
             };
 
             state.stocks.forEach(stock => {
@@ -1556,10 +1666,14 @@
             const container = document.getElementById('tags-statistics-content');
             if (!container) return;
 
-            // 统计每个标签的持仓总价值
+            // 统计每个标签的持仓总价值（排除观察仓）
             const tagStats = {};
             
             state.stocks.forEach(stock => {
+                // 观察仓不参与标签统计
+                if (stock.strategy === 'watch') {
+                    return;
+                }
                 if (stock.tags && stock.tags.length > 0) {
                     const priceInCNY = stock.isHK ? stock.price * HKD_TO_CNY_RATE : stock.price;
                     const assetVal = priceInCNY * stock.count;
@@ -1639,7 +1753,8 @@
             const dashboard = document.getElementById('strategy-dashboard');
             dashboard.innerHTML = Object.values(STRATEGIES).map(strat => {
                 const stratTotal = strategyStats[strat.id].total;
-                const percentage = totalAsset > 0 ? (stratTotal / totalAsset) * 100 : 0;
+                // 观察仓不显示百分比，显示"-"
+                const percentage = strat.id === 'watch' ? '-' : (totalAsset > 0 ? (stratTotal / totalAsset) * 100 : 0);
                 
                 return `
                 <div class="bg-white rounded-xl p-5 shadow-sm border border-[#e5e7eb] hover:shadow-md transition-all duration-200 relative overflow-hidden">
@@ -1656,8 +1771,8 @@
                                 </div>
                             </div>
                             <div class="text-right">
-                                <span class="text-2xl font-bold ${strat.text}">${percentage.toFixed(0)}</span>
-                                <span class="text-xs text-[#9ca3af] font-medium">%</span>
+                                <span class="text-2xl font-bold ${strat.text}">${percentage === '-' ? '-' : percentage.toFixed(0)}</span>
+                                ${percentage !== '-' ? '<span class="text-xs text-[#9ca3af] font-medium">%</span>' : ''}
                             </div>
                         </div>
                         <div class="flex items-baseline justify-between pt-3 border-t border-[#f3f4f6]">
@@ -1678,13 +1793,33 @@
             processed.sort((a, b) => {
                 let comparison = 0;
                 if (state.sortConfig.key === 'strategy') {
-                    const order = { trend: 1, core: 2, reverse: 3 };
-                    comparison = order[a.strategy] - order[b.strategy];
+                    const order = { trend: 1, core: 2, reverse: 3, watch: 4 };
+                    comparison = (order[a.strategy] || 99) - (order[b.strategy] || 99);
                 } else if (state.sortConfig.key === 'marketValue' || state.sortConfig.key === 'percentage') {
                     // 排序时使用换算后的价格
                     const aPriceInCNY = a.isHK ? a.price * HKD_TO_CNY_RATE : a.price;
                     const bPriceInCNY = b.isHK ? b.price * HKD_TO_CNY_RATE : b.price;
                     comparison = (aPriceInCNY * a.count) - (bPriceInCNY * b.count);
+                } else if (state.sortConfig.key === 'targetRatio') {
+                    // 计算当前价格与买入卖出价中轴价的比例
+                    const getTargetRatio = (stock) => {
+                        const buyTarget = stock.buyTargetPrice || 0;
+                        const sellTarget = stock.sellTargetPrice || 0;
+                        const currentPrice = stock.price || 0;
+                        
+                        if (!buyTarget || !sellTarget || sellTarget <= buyTarget || !currentPrice) {
+                            return 0; // 没有目标价或当前价，返回0（排在最后）
+                        }
+                        
+                        // 中轴价 = (买入价 + 卖出价) / 2
+                        const midPrice = (buyTarget + sellTarget) / 2;
+                        // 比例 = 当前价格 / 中轴价
+                        return currentPrice / midPrice;
+                    };
+                    
+                    const aRatio = getTargetRatio(a);
+                    const bRatio = getTargetRatio(b);
+                    comparison = aRatio - bRatio;
                 }
                 return state.sortConfig.direction === 'asc' ? comparison : -comparison;
             });
@@ -1711,7 +1846,8 @@
                     // 港股价格换算成人民币计算市值
                     const priceInCNY = stock.isHK ? stock.price * HKD_TO_CNY_RATE : stock.price;
                     const assetVal = priceInCNY * stock.count;
-                    const percent = formatPercent(assetVal, totalAsset);
+                    // 观察仓不显示百分比
+                    const percent = stock.strategy === 'watch' ? '-' : formatPercent(assetVal, totalAsset);
                     
                     // 货币符号和标识
                     const currencySymbol = stock.isHK ? 'HK$' : '¥';
@@ -1828,9 +1964,23 @@
             document.getElementById('edit-stock-id').value = id;
             document.getElementById('form-isHK').value = stock.isHK ? 'true' : 'false';
             
-            // 填充PEG计算相关数据（编辑时显示）
+            // 填充估值模型相关数据（编辑时显示）
+            const valuationModel = stock.valuationModel || 'peg';
+            document.getElementById('form-valuation-model').value = valuationModel;
+            
+            // 填充PEG计算相关数据
             document.getElementById('form-profit-growth-rate').value = stock.profitGrowthRate || '';
             document.getElementById('form-current-profit').value = stock.currentProfit || '';
+            document.getElementById('form-premium-ratio').value = stock.premiumRatio || '1';
+            
+            // 填充PE分位相关数据
+            document.getElementById('form-pe-min').value = stock.peMin || '';
+            document.getElementById('form-pe-max').value = stock.peMax || '';
+            // 同步当前净利润到PE分位tab
+            document.getElementById('form-current-profit-pe').value = stock.currentProfit || '';
+            
+            // 切换到对应的估值模型Tab
+            switchValuationTab(valuationModel);
             
             // 填充公司市值显示
             const marketCapDisplay = document.getElementById('form-market-cap-display');
@@ -1925,11 +2075,53 @@
             return { buyPE, sellPE };
         }
 
-        // 计算目标价格（基于阶梯式 PEG + PE 封顶）
+
+        // 切换估值模型Tab
+        function switchValuationTab(model) {
+            // 更新隐藏字段
+            document.getElementById('form-valuation-model').value = model;
+            
+            // 更新Tab按钮样式
+            const pegTab = document.getElementById('valuation-tab-peg');
+            const peTab = document.getElementById('valuation-tab-pe');
+            const pegContent = document.getElementById('valuation-content-peg');
+            const peContent = document.getElementById('valuation-content-pe');
+            
+            if (model === 'peg') {
+                pegTab.classList.remove('text-[#6b7280]', 'border-transparent');
+                pegTab.classList.add('text-[#6366f1]', 'border-[#6366f1]');
+                peTab.classList.remove('text-[#6366f1]', 'border-[#6366f1]');
+                peTab.classList.add('text-[#6b7280]', 'border-transparent');
+                pegContent.classList.remove('hidden');
+                peContent.classList.add('hidden');
+            } else {
+                peTab.classList.remove('text-[#6b7280]', 'border-transparent');
+                peTab.classList.add('text-[#6366f1]', 'border-[#6366f1]');
+                pegTab.classList.remove('text-[#6366f1]', 'border-[#6366f1]');
+                pegTab.classList.add('text-[#6b7280]', 'border-transparent');
+                peContent.classList.remove('hidden');
+                pegContent.classList.add('hidden');
+            }
+            
+            // 重新计算价格
+            calculateTargetPrices();
+        }
+
+        // 防抖函数，用于延迟执行计算
+        let calculateTargetPricesTimer = null;
+        function debouncedCalculateTargetPrices() {
+            if (calculateTargetPricesTimer) {
+                clearTimeout(calculateTargetPricesTimer);
+            }
+            calculateTargetPricesTimer = setTimeout(() => {
+                calculateTargetPrices();
+            }, 300); // 300ms延迟
+        }
+
+        // 计算目标价格（基于阶梯式 PEG + PE 封顶 或 PE分位）
         function calculateTargetPrices() {
-            const growthRate = parseFloat(document.getElementById('form-profit-growth-rate').value) || 0;
-            const currentProfit = parseFloat(document.getElementById('form-current-profit').value) || 0;
             const currentPrice = parseFloat(document.getElementById('form-price').value) || 0;
+            const valuationModel = document.getElementById('form-valuation-model').value || 'peg';
             
             // 获取公司市值（从股票数据中获取，如果编辑模式）
             let marketCap = 0;
@@ -1942,41 +2134,91 @@
             }
             
             // 如果缺少必要数据，清空隐藏字段
-            if (!growthRate || !currentProfit || !currentPrice || !marketCap) {
+            if (!currentPrice || !marketCap) {
                 document.getElementById('form-buy-target').value = '';
                 document.getElementById('form-sell-target').value = '';
                 return;
             }
             
-            // 阶梯式 PEG + PE 封顶公式 + 市值调节系数K
-            // PEG = PE / 增长率（增长率用百分比，如50表示50%）
-            // PE = 市盈率 = 市值 / 净利润
-            // 买入/卖出PE = min(PEG标准对应的PE, PE上限)
-            // 修正后的PE = 原始PE × K（市值调节系数）
-            // K = 1 - α · log₁₀(当前市值 / 1000亿)
-            // 目标市值 = 修正后的PE × 净利润
-            // 目标价格 = (目标市值 × 当前价格) / 当前市值
+            let buyPrice = 0;
+            let sellPrice = 0;
             
-            // 根据增速区间计算买入和卖出PE（原始PE）
-            const { buyPE: originalBuyPE, sellPE: originalSellPE } = calculatePEByGrowthRate(growthRate);
-            
-            // 计算市值调节系数K
-            const k = calculateMarketCapCoefficient(marketCap);
-            
-            // 应用K系数修正PE：修正后的PE = 原始PE × K
-            const buyPE = originalBuyPE * k;
-            const sellPE = originalSellPE * k;
-            
-            // 计算买入和卖出市值（亿元）
-            const buyMarketCap = buyPE * currentProfit;
-            const sellMarketCap = sellPE * currentProfit;
-            
-            // 计算目标价格
-            const buyPrice = (buyMarketCap * currentPrice) / marketCap;
-            const sellPrice = (sellMarketCap * currentPrice) / marketCap;
-            
-            // 调试日志
-            console.log(`📊 [PEG计算] 增速: ${growthRate}%, 市值: ${marketCap.toFixed(2)}亿, K系数: ${k.toFixed(3)}, 买入PE: ${originalBuyPE.toFixed(2)} → ${buyPE.toFixed(2)}, 卖出PE: ${originalSellPE.toFixed(2)} → ${sellPE.toFixed(2)}`);
+            if (valuationModel === 'peg') {
+                // PEG估值模型
+                const growthRate = parseFloat(document.getElementById('form-profit-growth-rate').value) || 0;
+                const currentProfit = parseFloat(document.getElementById('form-current-profit').value) || 0;
+                
+                // 如果缺少必要数据，清空隐藏字段
+                if (!growthRate || !currentProfit) {
+                    document.getElementById('form-buy-target').value = '';
+                    document.getElementById('form-sell-target').value = '';
+                    return;
+                }
+                
+                // 阶梯式 PEG + PE 封顶公式 + 市值调节系数K
+                // PEG = PE / 增长率（增长率用百分比，如50表示50%）
+                // PE = 市盈率 = 市值 / 净利润
+                // 买入/卖出PE = min(PEG标准对应的PE, PE上限)
+                // 修正后的PE = 原始PE × K（市值调节系数）
+                // K = 1 - α · log₁₀(当前市值 / 1000亿)
+                // 目标市值 = 修正后的PE × 净利润
+                // 目标价格 = (目标市值 × 当前价格) / 当前市值
+                
+                // 根据增速区间计算买入和卖出PE（原始PE）
+                const { buyPE: originalBuyPE, sellPE: originalSellPE } = calculatePEByGrowthRate(growthRate);
+                
+                // 计算市值调节系数K
+                const k = calculateMarketCapCoefficient(marketCap);
+                
+                // 应用K系数修正PE：修正后的PE = 原始PE × K
+                const buyPE = originalBuyPE * k;
+                const sellPE = originalSellPE * k;
+                
+                // 计算买入和卖出市值（亿元）
+                const buyMarketCap = buyPE * currentProfit;
+                const sellMarketCap = sellPE * currentProfit;
+                
+                // 计算目标价格
+                buyPrice = (buyMarketCap * currentPrice) / marketCap;
+                sellPrice = (sellMarketCap * currentPrice) / marketCap;
+                
+                // 应用溢价参数：买入卖出价 = 溢价 * 原有卖出价
+                const premiumRatio = parseFloat(document.getElementById('form-premium-ratio').value) || 1;
+                buyPrice = buyPrice * premiumRatio;
+                sellPrice = sellPrice * premiumRatio;
+                
+                // 调试日志
+                console.log(`📊 [PEG计算] 增速: ${growthRate}%, 市值: ${marketCap.toFixed(2)}亿, K系数: ${k.toFixed(3)}, 买入PE: ${originalBuyPE.toFixed(2)} → ${buyPE.toFixed(2)}, 卖出PE: ${originalSellPE.toFixed(2)} → ${sellPE.toFixed(2)}, 溢价: ${premiumRatio.toFixed(2)}`);
+            } else {
+                // PE分位模型
+                const peMin = parseFloat(document.getElementById('form-pe-min').value) || 0;
+                const peMax = parseFloat(document.getElementById('form-pe-max').value) || 0;
+                // 优先从PE分位tab读取，如果没有则从PEG tab读取
+                const currentProfit = parseFloat(document.getElementById('form-current-profit-pe').value) || 
+                                     parseFloat(document.getElementById('form-current-profit').value) || 0;
+                
+                // 如果缺少必要数据，清空隐藏字段
+                if (!peMin || !peMax || !currentProfit) {
+                    document.getElementById('form-buy-target').value = '';
+                    document.getElementById('form-sell-target').value = '';
+                    return;
+                }
+                
+                // PE分位计算
+                // 买入市值 = PE最小值 × 当前净利润
+                // 卖出市值 = PE最大值 × 当前净利润
+                // 买入价格 = (买入市值 × 当前价格) / 当前市值
+                // 卖出价格 = (卖出市值 × 当前价格) / 当前市值
+                
+                const buyMarketCap = peMin * currentProfit;
+                const sellMarketCap = peMax * currentProfit;
+                
+                buyPrice = (buyMarketCap * currentPrice) / marketCap;
+                sellPrice = (sellMarketCap * currentPrice) / marketCap;
+                
+                // 调试日志
+                console.log(`📊 [PE分位计算] PE范围: ${peMin} - ${peMax}, 市值: ${marketCap.toFixed(2)}亿, 净利润: ${currentProfit.toFixed(2)}亿`);
+            }
             
             // 保存到隐藏字段（用于提交时保存）
             document.getElementById('form-buy-target').value = buyPrice > 0 ? buyPrice : '';
@@ -2189,39 +2431,62 @@
             // 获取标签（最多3个）
             const tags = currentTags.slice(0, 3);
             
-            // 获取PEG计算相关数据（编辑时才有）
+            // 获取估值模型相关数据（编辑时才有）
+            const valuationModel = editId ? (document.getElementById('form-valuation-model').value || 'peg') : 'peg';
             const profitGrowthRate = editId ? (Number(document.getElementById('form-profit-growth-rate').value) || 0) : 0;
-            const currentProfit = editId ? (Number(document.getElementById('form-current-profit').value) || 0) : 0;
+            // 优先从PE分位tab读取，如果没有则从PEG tab读取
+            const currentProfitPe = editId ? (Number(document.getElementById('form-current-profit-pe').value) || 0) : 0;
+            const currentProfitPeg = editId ? (Number(document.getElementById('form-current-profit').value) || 0) : 0;
+            const currentProfit = currentProfitPe || currentProfitPeg;
+            const peMin = editId ? (Number(document.getElementById('form-pe-min').value) || 0) : 0;
+            const peMax = editId ? (Number(document.getElementById('form-pe-max').value) || 0) : 0;
             
-            // 计算目标价格（如果输入了净利润增速和净利润）
+            // 计算目标价格（如果输入了相关数据）
             let buyTargetPrice = 0;
             let sellTargetPrice = 0;
-            if (editId && profitGrowthRate > 0 && currentProfit > 0 && price > 0) {
+            if (editId && price > 0) {
                 // 获取公司市值
                 const stock = state.stocks.find(s => s.id === Number(editId));
                 const marketCap = stock && stock.marketCap ? stock.marketCap : 0; // 单位：亿元
                 
                 if (marketCap > 0) {
-                    // 阶梯式 PEG + PE 封顶公式 + 市值调节系数K
-                    // 根据增速区间计算买入和卖出PE（原始PE）
-                    const { buyPE: originalBuyPE, sellPE: originalSellPE } = calculatePEByGrowthRate(profitGrowthRate);
-                    
-                    // 计算市值调节系数K
-                    const k = calculateMarketCapCoefficient(marketCap);
-                    
-                    // 应用K系数修正PE：修正后的PE = 原始PE × K
-                    const buyPE = originalBuyPE * k;
-                    const sellPE = originalSellPE * k;
-                    
-                    // 计算买入和卖出市值（亿元）
-                    const buyMarketCap = buyPE * currentProfit;
-                    const sellMarketCap = sellPE * currentProfit;
-                    
-                    // 计算目标价格
-                    buyTargetPrice = (buyMarketCap * price) / marketCap;
-                    sellTargetPrice = (sellMarketCap * price) / marketCap;
-                    
-                    console.log(`💾 [保存计算] 增速: ${profitGrowthRate}%, 市值: ${marketCap.toFixed(2)}亿, K系数: ${k.toFixed(3)}, 买入PE: ${originalBuyPE.toFixed(2)} → ${buyPE.toFixed(2)}, 卖出PE: ${originalSellPE.toFixed(2)} → ${sellPE.toFixed(2)}`);
+                    if (valuationModel === 'peg' && profitGrowthRate > 0 && currentProfit > 0) {
+                        // PEG估值模型
+                        // 阶梯式 PEG + PE 封顶公式 + 市值调节系数K
+                        // 根据增速区间计算买入和卖出PE（原始PE）
+                        const { buyPE: originalBuyPE, sellPE: originalSellPE } = calculatePEByGrowthRate(profitGrowthRate);
+                        
+                        // 计算市值调节系数K
+                        const k = calculateMarketCapCoefficient(marketCap);
+                        
+                        // 应用K系数修正PE：修正后的PE = 原始PE × K
+                        const buyPE = originalBuyPE * k;
+                        const sellPE = originalSellPE * k;
+                        
+                        // 计算买入和卖出市值（亿元）
+                        const buyMarketCap = buyPE * currentProfit;
+                        const sellMarketCap = sellPE * currentProfit;
+                        
+                        // 计算目标价格
+                        buyTargetPrice = (buyMarketCap * price) / marketCap;
+                        sellTargetPrice = (sellMarketCap * price) / marketCap;
+                        
+                        // 应用溢价参数：买入卖出价 = 溢价 * 原有卖出价
+                        const premiumRatio = editId ? (Number(document.getElementById('form-premium-ratio').value) || 1) : 1;
+                        buyTargetPrice = buyTargetPrice * premiumRatio;
+                        sellTargetPrice = sellTargetPrice * premiumRatio;
+                        
+                        console.log(`💾 [保存计算-PEG] 增速: ${profitGrowthRate}%, 市值: ${marketCap.toFixed(2)}亿, K系数: ${k.toFixed(3)}, 买入PE: ${originalBuyPE.toFixed(2)} → ${buyPE.toFixed(2)}, 卖出PE: ${originalSellPE.toFixed(2)} → ${sellPE.toFixed(2)}, 溢价: ${premiumRatio.toFixed(2)}`);
+                    } else if (valuationModel === 'pe' && peMin > 0 && peMax > 0 && currentProfit > 0) {
+                        // PE分位模型
+                        const buyMarketCap = peMin * currentProfit;
+                        const sellMarketCap = peMax * currentProfit;
+                        
+                        buyTargetPrice = (buyMarketCap * price) / marketCap;
+                        sellTargetPrice = (sellMarketCap * price) / marketCap;
+                        
+                        console.log(`💾 [保存计算-PE分位] PE范围: ${peMin} - ${peMax}, 市值: ${marketCap.toFixed(2)}亿, 净利润: ${currentProfit.toFixed(2)}亿`);
+                    }
                 }
             }
             
@@ -2247,6 +2512,9 @@
                         console.log(`💾 [保留市值] ${name}: ${oldStock.marketCap.toFixed(2)}亿元`);
                     }
                     
+                    // 保存估值模型
+                    updatedStock.valuationModel = valuationModel;
+                    
                     // 保存PEG计算相关数据
                     if (profitGrowthRate > 0) {
                         updatedStock.profitGrowthRate = profitGrowthRate;
@@ -2259,6 +2527,22 @@
                     } else if (oldStock.currentProfit) {
                         // 如果用户清空了，保留原有值
                         updatedStock.currentProfit = oldStock.currentProfit;
+                    }
+                    
+                    // 保存溢价参数
+                    const premiumRatio = parseFloat(document.getElementById('form-premium-ratio').value) || 1;
+                    updatedStock.premiumRatio = premiumRatio;
+                    
+                    // 保存PE分位相关数据
+                    if (peMin > 0) {
+                        updatedStock.peMin = peMin;
+                    } else if (oldStock.peMin) {
+                        updatedStock.peMin = oldStock.peMin;
+                    }
+                    if (peMax > 0) {
+                        updatedStock.peMax = peMax;
+                    } else if (oldStock.peMax) {
+                        updatedStock.peMax = oldStock.peMax;
                     }
                     
                     // 保存目标价格
@@ -2411,7 +2695,7 @@
 
         // --- 5. 辅助 UI 更新 ---
         function updateSortIcons() {
-            ['strategy', 'marketValue', 'percentage'].forEach(key => {
+            ['strategy', 'marketValue', 'percentage', 'targetRatio'].forEach(key => {
                 const icon = document.getElementById(`sort-icon-${key}`);
                 if (!icon) return;
                 
@@ -2546,7 +2830,8 @@
                                 // 计算新市值
                                 const priceInCNY = stock.isHK ? newPrice * HKD_TO_CNY_RATE : newPrice;
                                 const newAssetVal = priceInCNY * stock.count;
-                                const newPercent = formatPercent(newAssetVal, totalAsset);
+                                // 观察仓不显示百分比
+                                const newPercent = stock.strategy === 'watch' ? '-' : formatPercent(newAssetVal, totalAsset);
                                 
                                 // 更新DOM - 价格单元格
                                 const priceCell = document.querySelector(`td[data-stock-id="${stock.id}"][data-cell-type="price"]`);

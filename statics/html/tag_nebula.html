@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>标签星云 - 资产分布透视</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        
+        /* 星云容器背景 */
+        .nebula-container {
+            background-color: #f8fafc;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.1) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(236, 72, 153, 0.1) 0px, transparent 50%);
+            box-shadow: inset 0 0 100px rgba(255,255,255,0.8);
+        }
+
+        /* 气泡基础样式 */
+        .bubble {
+            transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s ease, filter 0.3s ease;
+            cursor: pointer;
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255,255,255,0.6);
+            box-shadow: 
+                0 4px 6px -1px rgba(0, 0, 0, 0.05), 
+                0 2px 4px -1px rgba(0, 0, 0, 0.03),
+                inset 0 2px 4px rgba(255,255,255,0.4);
+        }
+
+        /* 漂浮动画 - 已禁用 */
+        /* @keyframes float {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            33% { transform: translateY(-8px) rotate(1deg); }
+            66% { transform: translateY(5px) rotate(-1deg); }
+        }
+        .floating {
+            animation-name: float;
+            animation-timing-function: ease-in-out;
+            animation-iteration-count: infinite;
+        } */
+
+        /* 交互状态 */
+        .bubble-dimmed {
+            opacity: 0.15;
+            transform: scale(0.9);
+            filter: grayscale(80%);
+        }
+
+        .bubble-active {
+            opacity: 1 !important;
+            transform: scale(1.15) translateY(-5px);
+            z-index: 50;
+            box-shadow: 
+                0 20px 25px -5px rgba(0, 0, 0, 0.1), 
+                0 10px 10px -5px rgba(0, 0, 0, 0.04),
+                0 0 0 4px rgba(255,255,255,0.8);
+        }
+
+        /* Tooltip 样式 */
+        #nebula-tooltip {
+            position: fixed;
+            pointer-events: none;
+            z-index: 100;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(8px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            border-radius: 0.75rem;
+            border: 1px solid rgba(229, 231, 235, 0.5);
+            padding: 1rem;
+            min-width: 240px;
+        }
+        #nebula-tooltip.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 min-h-screen p-4 md:p-8 flex flex-col">
+
+    <div class="max-w-6xl mx-auto w-full space-y-6 flex-1 flex flex-col">
+        
+        <!-- 头部 -->
+        <div class="flex flex-col md:flex-row justify-between items-end gap-4 shrink-0">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900 flex items-center gap-3">
+                    <div class="p-2 bg-indigo-600 rounded-xl text-white shadow-lg shadow-indigo-200">
+                        <i data-lucide="orbit" class="w-6 h-6"></i>
+                    </div>
+                    标签星云
+                </h1>
+                <p class="text-gray-500 mt-2 text-sm">赛道资金分布透视</p>
+            </div>
+            
+            <div class="flex gap-4 text-right">
+                <div>
+                    <div class="text-xs text-gray-400 uppercase font-bold tracking-wider">赛道总数</div>
+                    <div class="text-2xl font-bold text-gray-800" id="stat-tags">0</div>
+                </div>
+                <div>
+                    <div class="text-xs text-gray-400 uppercase font-bold tracking-wider">持仓总额</div>
+                    <div class="text-2xl font-bold text-indigo-600" id="stat-total">¥0</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 核心视图：星云图 -->
+        <div class="bg-white rounded-3xl shadow-xl shadow-gray-200/50 border border-gray-100 overflow-hidden flex-1 flex flex-col min-h-[500px]">
+            <div class="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50 shrink-0">
+                <h2 class="font-bold text-gray-700 flex items-center gap-2">
+                    <i data-lucide="network" class="w-4 h-4 text-indigo-500"></i>
+                    赛道星云
+                </h2>
+                <span class="text-xs text-gray-400 bg-white px-2 py-1 rounded border">交互提示：鼠标悬停气泡查看持仓明细</span>
+            </div>
+            
+            <!-- 星云容器 -->
+            <div id="nebula-stage" class="nebula-container relative w-full flex-1 flex flex-wrap content-center justify-center gap-6 p-10 overflow-hidden">
+                <!-- 气泡将通过 JS 渲染在这里 -->
+                <div class="absolute inset-0 flex items-center justify-center text-gray-300 pointer-events-none z-0">
+                    <i data-lucide="loader" class="w-10 h-10 animate-spin"></i>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Tooltip 结构 -->
+    <div id="nebula-tooltip">
+        <!-- 动态内容 -->
+    </div>
+
+    <script>
+        // --- 数据获取 ---
+        const STORAGE_KEY = 'zen_stock_holdings';
+        const HKD_TO_CNY_RATE = 0.8946; // 港币转人民币汇率
+
+        // 从localStorage获取持仓数据
+        function getStockData() {
+            try {
+                const stored = localStorage.getItem(STORAGE_KEY);
+                if (stored) {
+                    const data = JSON.parse(stored);
+                    return data.stocks || [];
+                }
+            } catch (e) {
+                console.error('读取数据失败:', e);
+            }
+            return [];
+        }
+
+        // --- 颜色生成算法 ---
+        function generateColor(str) {
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+                hash = str.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            const h = Math.abs(hash % 360); 
+            const s = 70 + (Math.abs(hash) % 20); 
+            const l = 90 + (Math.abs(hash) % 5); 
+            const textL = 30 + (Math.abs(hash) % 10);
+
+            return {
+                bg: `hsl(${h}, ${s}%, ${l}%)`,
+                text: `hsl(${h}, ${s}%, ${textL}%)`,
+                border: `hsl(${h}, ${s}%, ${l - 10}%)`,
+                accent: `hsl(${h}, ${s}%, ${textL + 10}%)`
+            };
+        }
+
+        // --- 格式化金额 ---
+        function formatMoney(value) {
+            if (value >= 10000) {
+                return '¥' + (value / 10000).toFixed(1) + '万';
+            }
+            return '¥' + value.toFixed(2);
+        }
+
+        // --- 核心逻辑 ---
+        const tooltip = document.getElementById('nebula-tooltip');
+        let tagMap = {};
+
+        function init() {
+            // 1. 从localStorage获取数据
+            const stocks = getStockData();
+            
+            if (stocks.length === 0) {
+                document.getElementById('nebula-stage').innerHTML = `
+                    <div class="absolute inset-0 flex items-center justify-center text-gray-300 pointer-events-none z-0">
+                        <div class="text-center">
+                            <i data-lucide="sparkles" class="w-12 h-12 mx-auto mb-3 opacity-30"></i>
+                            <p class="text-sm">暂无持仓数据</p>
+                            <p class="text-xs mt-1">请在<a href="/invest/zen-holding" class="text-indigo-500 hover:underline">持仓管理</a>页面添加股票和标签</p>
+                        </div>
+                    </div>
+                `;
+                lucide.createIcons();
+                return;
+            }
+
+            // 2. 数据处理
+            const totalAsset = stocks.reduce((acc, stock) => {
+                const priceInCNY = stock.isHK ? (stock.price * HKD_TO_CNY_RATE) : stock.price;
+                return acc + (stock.count * priceInCNY);
+            }, 0);
+            
+            tagMap = {}; // Reset
+
+            stocks.forEach(stock => {
+                if (stock.tags && stock.tags.length > 0) {
+                    const priceInCNY = stock.isHK ? (stock.price * HKD_TO_CNY_RATE) : stock.price;
+                    const assetVal = priceInCNY * stock.count;
+                    
+                    stock.tags.forEach(tag => {
+                        if (!tagMap[tag]) tagMap[tag] = { name: tag, value: 0, stocks: [] };
+                        tagMap[tag].value += assetVal;
+                        tagMap[tag].stocks.push({
+                            name: stock.name,
+                            code: stock.code,
+                            value: assetVal,
+                            id: stock.id
+                        });
+                    });
+                }
+            });
+
+            const tagsArray = Object.values(tagMap).sort((a, b) => b.value - a.value);
+
+            // 更新头部统计
+            document.getElementById('stat-tags').innerText = tagsArray.length;
+            document.getElementById('stat-total').innerText = formatMoney(totalAsset);
+
+            // 3. 渲染星云 (Bubbles)
+            const nebulaStage = document.getElementById('nebula-stage');
+            nebulaStage.innerHTML = ''; 
+
+            if (tagsArray.length === 0) {
+                nebulaStage.innerHTML = `
+                    <div class="absolute inset-0 flex items-center justify-center text-gray-300 pointer-events-none z-0">
+                        <div class="text-center">
+                            <i data-lucide="sparkles" class="w-12 h-12 mx-auto mb-3 opacity-30"></i>
+                            <p class="text-sm">暂无标签数据</p>
+                            <p class="text-xs mt-1">为股票添加标签后，将在此显示标签星云</p>
+                        </div>
+                    </div>
+                `;
+                lucide.createIcons();
+                return;
+            }
+
+            const maxVal = tagsArray[0].value;
+            const minSize = 80;
+            const maxSize = 180;
+
+            tagsArray.forEach((tag, index) => {
+                const ratio = Math.sqrt(tag.value) / Math.sqrt(maxVal); 
+                const size = minSize + ratio * (maxSize - minSize);
+                const colors = generateColor(tag.name);
+                
+                const duration = 4 + Math.random() * 4; 
+                const delay = Math.random() * -5;
+
+                const bubble = document.createElement('div');
+                bubble.className = 'bubble floating flex flex-col items-center justify-center rounded-full text-center select-none absolute md:relative';
+                
+                Object.assign(bubble.style, {
+                    width: `${size}px`,
+                    height: `${size}px`,
+                    backgroundColor: colors.bg,
+                    color: colors.text,
+                    borderColor: colors.border,
+                    animationDuration: `${duration}s`,
+                    animationDelay: `${delay}s`,
+                    zIndex: Math.floor(ratio * 10)
+                });
+
+                bubble.innerHTML = `
+                    <span class="font-bold leading-tight px-2 break-words" style="font-size:${12 + ratio * 6}px">${tag.name}</span>
+                    <span class="mt-1 font-mono opacity-60" style="font-size:${10 + ratio * 2}px">${formatMoney(tag.value)}</span>
+                `;
+
+                // 数据绑定
+                bubble.dataset.tagName = tag.name;
+
+                // 事件监听
+                bubble.addEventListener('mouseenter', (e) => showTooltip(e, tag, colors));
+                bubble.addEventListener('mousemove', moveTooltip);
+                bubble.addEventListener('mouseleave', hideTooltip);
+
+                nebulaStage.appendChild(bubble);
+            });
+
+            lucide.createIcons();
+        }
+
+        // --- Tooltip 逻辑 ---
+
+        function showTooltip(e, tagData, colors) {
+            // 1. 高亮气泡
+            document.querySelectorAll('.bubble').forEach(b => {
+                if (b.dataset.tagName === tagData.name) {
+                    b.classList.add('bubble-active');
+                    b.style.animationPlayState = 'paused';
+                } else {
+                    b.classList.add('bubble-dimmed');
+                }
+            });
+
+            // 2. 填充内容
+            const stockListHtml = tagData.stocks.sort((a,b) => b.value - a.value).map(stock => {
+                const percent = ((stock.value / tagData.value) * 100).toFixed(1) + '%';
+                return `
+                    <div class="flex justify-between items-center text-sm py-1 border-b border-gray-50 last:border-0">
+                        <div class="flex flex-col">
+                            <span class="font-bold text-gray-700">${stock.name}</span>
+                            <span class="text-[10px] text-gray-400 font-mono">${stock.code}</span>
+                        </div>
+                        <div class="text-right">
+                            <div class="font-mono text-gray-600">${formatMoney(stock.value)}</div>
+                            <div class="text-[10px] text-gray-400">占比 ${percent}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            tooltip.innerHTML = `
+                <div class="flex items-center gap-2 mb-3 pb-2 border-b border-gray-100">
+                    <div class="w-3 h-3 rounded-full" style="background:${colors.text}"></div>
+                    <div class="font-bold text-lg" style="color:${colors.text}">${tagData.name}</div>
+                    <div class="ml-auto font-mono text-gray-500 font-bold">${formatMoney(tagData.value)}</div>
+                </div>
+                <div class="space-y-1 max-h-[200px] overflow-y-auto custom-scrollbar">
+                    ${stockListHtml}
+                </div>
+            `;
+            
+            tooltip.style.borderColor = colors.border;
+            tooltip.classList.add('show');
+            moveTooltip(e);
+        }
+
+        function moveTooltip(e) {
+            // 简单防溢出处理
+            const x = e.clientX + 20;
+            const y = e.clientY + 20;
+            
+            // 检查右边缘
+            const tooltipRect = tooltip.getBoundingClientRect();
+            let finalX = x;
+            let finalY = y;
+
+            if (x + tooltipRect.width > window.innerWidth) {
+                finalX = e.clientX - tooltipRect.width - 10;
+            }
+            if (y + tooltipRect.height > window.innerHeight) {
+                finalY = e.clientY - tooltipRect.height - 10;
+            }
+
+            tooltip.style.left = `${finalX}px`;
+            tooltip.style.top = `${finalY}px`;
+        }
+
+        function hideTooltip() {
+            // 恢复气泡状态
+            document.querySelectorAll('.bubble').forEach(b => {
+                b.classList.remove('bubble-active', 'bubble-dimmed');
+                b.style.animationPlayState = 'running';
+            });
+            // 隐藏
+            tooltip.classList.remove('show');
+        }
+
+        // --- 启动 ---
+        init();
+        lucide.createIcons();
+
+        // 监听localStorage变化，实时更新
+        window.addEventListener('storage', () => {
+            init();
+        });
+
+        // 定期检查数据变化（用于同页面更新）
+        setInterval(() => {
+            const currentData = getStockData();
+            if (currentData.length !== (tagMap ? Object.values(tagMap).reduce((acc, tag) => acc + tag.stocks.length, 0) : 0)) {
+                init();
+            }
+        }, 2000);
+
+    </script>
+</body>
+</html>
