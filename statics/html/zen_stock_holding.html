@@ -2041,9 +2041,6 @@
         // 根据增速区间计算买入和卖出PE（阶梯式 PEG + PE 封顶）
         function calculatePEByGrowthRate(growthRate) {
             let buyPEG, buyPECap, sellPEG, sellPECap;
-            if(growthRate > 50){
-                growthRate = 50;
-            }
             
             // 根据增速区间确定PEG和PE上限标准
             if (growthRate < 15) {
@@ -2052,17 +2049,15 @@
                 buyPECap = 15; // 既然低增速，给20倍都嫌多
                 sellPEG = 1.2;
                 sellPECap = 25;
-            } else if (growthRate >= 15 && growthRate <= 30) {
+            } else if (growthRate >= 15 && growthRate <= 40) {
                 // 中增速 (黄金区间)：这是最稳健的，可以稍微给高一点容忍度
-                buyPEG = 0.6;  // 稍微提一点，0.5太难买到了
+                buyPEG = 0.5;  // 稍微提一点，0.5太难买到了
                 buyPECap = 25;
-                sellPEG = 1.3;
+                sellPEG = 1.5;
                 sellPECap = 45;
             } else {
-                // 高增速 (>30%)：注意，把高增速门槛从 40 降到 30，并压低 PEG
-                // 逻辑：高增长很难维持，需要打折
-                buyPEG = 0.7;  // 绝对不能给 1.0，给 0.7 才有安全边际
-                buyPECap = 40; // 40倍以上买入，只有赌博才做
+                buyPEG = 0.5;  // 绝对不能给 1.0，给 0.7 才有安全边际
+                buyPECap = 35; // 40倍以上买入，只有赌博才做
                 
                 sellPEG = 1.5; // 卖出稍微宽容，但也别给 2.0
                 sellPECap = 65; // 60-70倍是A股绝大多数成长股的“铁顶”
