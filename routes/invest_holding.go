@@ -846,6 +846,18 @@ func ZenStockHoldingHandler(c *gin.Context) {
 	c.HTML(http.StatusOK, "zen_stock_holding.html", data)
 }
 
+// ZenStockNoteHandler 股票笔记页面
+func ZenStockNoteHandler(c *gin.Context) {
+	data := gin.H{
+		"Env":       viper.GetString("env"),
+		"HostURL":   viper.GetString("server.host_url"),
+		"Version":   version.Version,
+		"PageTitle": "股票笔记",
+		"Error":     "",
+	}
+	c.HTML(http.StatusOK, "zen_stock_note.html", data)
+}
+
 // QueryStockInfoHandler 查询股票基础信息API（用于自动补全）
 // 使用新浪接口快速查询，然后从东方财富获取价格
 func QueryStockInfoHandler(c *gin.Context) {
