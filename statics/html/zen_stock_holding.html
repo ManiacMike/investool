@@ -89,7 +89,7 @@
 </head>
 <body class="bg-[#f9fafb] text-[#111827] min-h-screen selection:bg-[#6366f1]/20 selection:text-[#3730a3]">
 
-    <div class="max-w-[1800px] mx-auto p-4 md:p-8">
+    <div class="max-w-[min(100%,2200px)] mx-auto p-4 md:p-8">
         
         <!-- Header -->
         <header class="mb-8 flex flex-col items-center">
@@ -118,15 +118,15 @@
                 <!-- 持仓明细区域：左右分栏 -->
                 <div class="grid grid-cols-1 md:grid-cols-10 gap-6">
                     
-                    <!-- 投资要点 Tips (左侧，占3/10，30%) -->
-                    <div class="md:col-span-3">
+                    <!-- 投资要点 Tips（侧栏已隐藏，保留 DOM 供日后恢复） -->
+                    <div id="investment-tips-column" class="md:col-span-3 hidden" aria-hidden="true">
                         <div id="investment-tips" class="bg-white rounded-2xl shadow-sm border border-[#e5e7eb] overflow-hidden sticky top-4">
                             <!-- Tips内容将通过JS插入 -->
                         </div>
                     </div>
 
-                    <!-- 表格区域 (右侧，占7/10，70%) -->
-                    <div class="md:col-span-7">
+                    <!-- 表格区域（原 7/10，侧栏隐藏后占满） -->
+                    <div class="md:col-span-10">
                         <div class="bg-white rounded-2xl shadow-sm border border-[#e5e7eb] overflow-hidden">
                             <div class="p-6 border-b border-[#e5e7eb] flex flex-col md:flex-row justify-between items-center gap-4 bg-[#ffffff]">
                                 <div class="flex items-center gap-4">
@@ -186,6 +186,7 @@
                                                 </div>
                                             </th>
                                             <th class="px-4 py-4">股票名称</th>
+                                            <th class="px-3 py-4 text-center whitespace-nowrap w-[4.5rem]" title="各维度指标（mock）">红绿灯</th>
                                             <th class="px-4 py-4 cursor-pointer hover:bg-[#f3f4f6] transition-colors group text-right" onclick="handleSort('marketValue')">
                                                 <div class="flex items-center justify-end gap-1.5">
                                                     <i data-lucide="arrow-up-down" class="w-3.5 h-3.5 text-[#9ca3af] opacity-40 group-hover:opacity-100" id="sort-icon-marketValue"></i>
@@ -1241,6 +1242,27 @@
             
             return { text, bgColor, textColor };
         };
+
+        /** 指标红绿灯 mock：8 个纵向排列的灯（🟢🟡🔴），按 id 稳定随机 */
+        function mockTrafficLightEmojis(seed) {
+            const lights = ['🟢', '🟡', '🔴'];
+            let h = Number(seed) || 0;
+            if (typeof seed === 'string') {
+                for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) | 0;
+            }
+            const out = [];
+            for (let i = 0; i < 8; i++) {
+                h = (h * 1103515245 + 12345 + i * 17) | 0;
+                out.push(lights[Math.abs(h) % 3]);
+            }
+            return out;
+        }
+
+        function renderMockTrafficLightsCell(stock) {
+            const emojis = mockTrafficLightEmojis(stock.id != null ? stock.id : stock.code || stock.name || 0);
+            const lines = emojis.map(e => `<span class="block leading-none">${e}</span>`).join('');
+            return `<div class="inline-flex flex-col items-center justify-center gap-0.5 py-0.5 select-none" title="mock：8 维指标示意">${lines}</div>`;
+        }
         
         // 渲染价格滑块（参考静态页面样式）
         function renderPriceSlider(stock) {
@@ -1385,8 +1407,13 @@
         }
 
         function renderInvestmentTips() {
+            const tipsColumn = document.getElementById('investment-tips-column');
+            if (!tipsColumn || tipsColumn.classList.contains('hidden')) {
+                return;
+            }
             const strategyId = state.currentTipsStrategy;
             const tipsContainer = document.getElementById('investment-tips');
+            if (!tipsContainer) return;
             
             // 如果是"全部"视图，显示总体策略规划
             if (strategyId === 'all') {
@@ -1831,7 +1858,7 @@
             if (processed.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="7" class="px-6 py-20 text-center">
+                        <td colspan="8" class="px-6 py-20 text-center">
                             <div class="flex flex-col items-center justify-center text-[#9ca3af]">
                                 <div class="bg-[#f3f4f6] p-4 rounded-full mb-3">
                                     <i data-lucide="sparkles" class="w-8 h-8 text-[#d1d5db]"></i>
@@ -1872,6 +1899,9 @@
                                 </div>
                                 <span class="text-xs text-[#9ca3af] font-mono mt-0.5">${stock.code}</span>
                             </div>
+                        </td>
+                        <td class="px-3 py-3 text-center align-middle text-base">
+                            ${renderMockTrafficLightsCell(stock)}
                         </td>
                         <td class="px-4 py-3 text-right" data-stock-id="${stock.id}" data-cell-type="market-value">
                             <div class="flex flex-col items-end">
