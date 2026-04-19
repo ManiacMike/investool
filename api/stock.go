@@ -1,6 +1,6 @@
 // 首页
 
-package routes
+package api
 
 import (
 	"fmt"
@@ -29,7 +29,6 @@ func StockIndex(c *gin.Context) {
 		"IndustryList": models.StockIndustryList,
 	}
 	c.HTML(http.StatusOK, "stock_index.html", data)
-	return
 }
 
 // ParamStockSelector StockSelector 请求参数
@@ -75,7 +74,6 @@ func StockSelector(c *gin.Context) {
 	}
 	data["Stocks"] = dlist
 	c.JSON(http.StatusOK, data)
-	return
 }
 
 // ParamStockChecker StockChecker 请求参数
@@ -224,5 +222,4 @@ func StockChecker(c *gin.Context) {
 	data["Lines"] = lines
 	data["MainMoneyNetInflows"] = mainInflows
 	c.JSON(http.StatusOK, data)
-	return
 }

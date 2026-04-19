@@ -27,6 +27,7 @@ import (
 	_ "github.com/axiaoxin-com/investool/routes/docs"
 	"github.com/spf13/viper"
 
+	"github.com/axiaoxin-com/investool/api"
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
@@ -64,7 +65,7 @@ func Register(httpHandler http.Handler) {
 		// ginSwagger 生成的在线 API 文档路由
 		x.GET("/apidocs/*any", ginSwagger.DisablingWrapHandler(swaggerFiles.Handler, DisableGinSwaggerEnvkey))
 		// 默认的 ping 方法，返回 server 相关信息
-		x.Any("/ping", Ping)
+		x.Any("/ping", api.Ping)
 	}
 
 	// 注册 favicon.ico 和 robots.txt
@@ -74,7 +75,6 @@ func Register(httpHandler http.Handler) {
 			logging.Error(c, "read favicon file error:"+err.Error())
 		}
 		c.Data(http.StatusOK, "image/x-icon", file)
-		return
 	})
 	app.GET("/robots.txt", func(c *gin.Context) {
 		file, err := statics.Files.ReadFile("robots.txt")
@@ -82,7 +82,6 @@ func Register(httpHandler http.Handler) {
 			logging.Error(c, "read robots file error:"+err.Error())
 		}
 		c.Data(http.StatusOK, "text/plain", file)
-		return
 	})
 	app.GET("/ads.txt", func(c *gin.Context) {
 		file, err := statics.Files.ReadFile("ads.txt")
@@ -90,7 +89,6 @@ func Register(httpHandler http.Handler) {
 			logging.Error(c, "read ads file error:"+err.Error())
 		}
 		c.Data(http.StatusOK, "text/plain", file)
-		return
 	})
 	app.GET("/apple-touch-icon-120x120-precomposed.png", func(c *gin.Context) {
 		file, err := statics.Files.ReadFile("img/sidenav_icon.png")
@@ -98,7 +96,6 @@ func Register(httpHandler http.Handler) {
 			logging.Error(c, "read favicon file error:"+err.Error())
 		}
 		c.Data(http.StatusOK, "image/x-icon", file)
-		return
 	})
 	app.GET("/apple-touch-icon-120x120.png", func(c *gin.Context) {
 		file, err := statics.Files.ReadFile("img/sidenav_icon.png")
@@ -106,7 +103,6 @@ func Register(httpHandler http.Handler) {
 			logging.Error(c, "read favicon file error:"+err.Error())
 		}
 		c.Data(http.StatusOK, "image/x-icon", file)
-		return
 	})
 	app.GET("/apple-touch-icon-precomposed.png", func(c *gin.Context) {
 		file, err := statics.Files.ReadFile("img/sidenav_icon.png")
@@ -114,7 +110,6 @@ func Register(httpHandler http.Handler) {
 			logging.Error(c, "read favicon file error:"+err.Error())
 		}
 		c.Data(http.StatusOK, "image/x-icon", file)
-		return
 	})
 	app.GET("/apple-touch-icon.png", func(c *gin.Context) {
 		file, err := statics.Files.ReadFile("img/sidenav_icon.png")
@@ -122,7 +117,6 @@ func Register(httpHandler http.Handler) {
 			logging.Error(c, "read favicon file error:"+err.Error())
 		}
 		c.Data(http.StatusOK, "image/x-icon", file)
-		return
 	})
 
 	// 注册其他 gin HandlerFunc

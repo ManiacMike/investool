@@ -1,11 +1,6 @@
-// 基金
-
-package routes
+package api
 
 import (
-	"net/http"
-	"sync"
-
 	"github.com/axiaoxin-com/goutils"
 	"github.com/axiaoxin-com/investool/core"
 	"github.com/axiaoxin-com/investool/datacenter/eastmoney"
@@ -14,7 +9,11 @@ import (
 	"github.com/axiaoxin-com/logging"
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"
+	"net/http"
+	"sync"
 )
+
+// 基金
 
 // ParamFundIndex FundIndex 请求参数
 type ParamFundIndex struct {
@@ -71,7 +70,6 @@ func FundIndex(c *gin.Context) {
 		"FundTypes":     models.Fund4433TypeList,
 	}
 	c.HTML(http.StatusOK, "fund_index.html", data)
-	return
 }
 
 // ParamFundFilter FundFilter 请求参数
@@ -136,7 +134,6 @@ func FundFilter(c *gin.Context) {
 		"FundTypes":   fundTypes,
 	}
 	c.HTML(http.StatusOK, "fund_filter.html", data)
-	return
 }
 
 // ParamFundCheck FundCheck 请求参数
@@ -280,7 +277,6 @@ func FundCheck(c *gin.Context) {
 		"Param":             p,
 	}
 	c.JSON(http.StatusOK, data)
-	return
 }
 
 // ParamFundSimilarity FundSimilarity 请求参数
@@ -335,7 +331,6 @@ func FundSimilarity(c *gin.Context) {
 		"Result":    result,
 	}
 	c.HTML(http.StatusOK, "fund_similarity.html", data)
-	return
 }
 
 // ParamFundManagers 基金经理筛选参数
@@ -449,5 +444,39 @@ func FundManagers(c *gin.Context) {
 		"Params":     p,
 	}
 	c.HTML(http.StatusOK, "fund_managers.html", data)
-	return
+}
+
+// 根据股票查基金
+
+// ParamQueryFundByStock QueryFundByStock 请求参数
+type ParamQueryFundByStock struct {
+	Keywords string `form:"keywords" binding:"required"`
+}
+
+// QueryFundByStock 股票选基
+func QueryFundByStock(c *gin.Context) {
+	data := gin.H{
+		"Env":       viper.GetString("env"),
+		"HostURL":   viper.GetString("server.host_url"),
+		"Version":   version.Version,
+		"PageTitle": "InvesTool | 基金 | 股票选基",
+		"Error":     "",
+	}
+
+	param := ParamQueryFundByStock{}
+	if err := c.ShouldBind(&param); err != nil {
+		data["Error"] = err.Error()
+		c.JSON(http.StatusOK, data)
+		return
+	}
+	keywords := goutils.SplitStringFields(param.Keywords)
+	searcher := core.NewSearcher(c)
+	dlist, err := searcher.SearchFundByStock(c, keywords...)
+	if err != nil {
+		data["Error"] = err.Error()
+		c.JSON(http.StatusOK, data)
+		return
+	}
+	data["Funds"] = dlist
+	c.HTML(http.StatusOK, "hold_stock_fund.html", data)
 }

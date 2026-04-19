@@ -2,30 +2,33 @@
 
 package routes
 
-import "github.com/gin-gonic/gin"
+import (
+	"github.com/axiaoxin-com/investool/api"
+	"github.com/gin-gonic/gin"
+)
 
 // Routes 注册 API URL 路由
 func Routes(app *gin.Engine) {
-	app.GET("/", FundIndex)
-	app.GET("/stock", StockIndex)
-	app.POST("/selector", StockSelector)
-	app.POST("/checker", StockChecker)
-	app.GET("/fund", FundIndex)
-	app.GET("/fund/filter", FundFilter)
-	app.POST("/fund/check", FundCheck)
-	app.GET("/about", About)
-	app.GET("/comment", Comment)
-	app.GET("/fund/similarity", FundSimilarity)
-	app.GET("/materials", Materials)
-	app.POST("/fund/query_by_stock", QueryFundByStock)
-	app.GET("/fund/managers", FundManagers)
-	app.GET("/invest/holding-calculator", InvestHoldingHandler)
-	app.GET("/invest/stock-analyzer", StockAnalyzerHandler)
-	app.GET("/invest/query-stock", QueryStockDataHandler)
-	app.POST("/invest/calculate-stock-score", CalculateStockScoreHandler)
-	app.POST("/invest/position-deviation", PositionDeviationHandler)
-	app.GET("/invest/zen-holding", ZenStockHoldingHandler)
-	app.GET("/invest/zen-note", ZenStockNoteHandler)
-	app.GET("/api/stock/query", QueryStockInfoHandler)
-	app.POST("/api/stock/batch-prices", BatchQueryStockPricesHandler)
+	app.GET("/", api.FundIndex)
+	app.GET("/stock", api.StockIndex)
+	app.POST("/selector", api.StockSelector)
+	app.POST("/checker", api.StockChecker)
+	app.GET("/fund", api.FundIndex)
+	app.GET("/fund/filter", api.FundFilter)
+	app.POST("/fund/check", api.FundCheck)
+	app.GET("/about", api.About)
+	app.GET("/comment", api.Comment)
+	app.GET("/fund/similarity", api.FundSimilarity)
+	app.GET("/materials", api.Materials)
+	app.POST("/fund/query_by_stock", api.QueryFundByStock)
+	app.GET("/fund/managers", api.FundManagers)
+	app.GET("/invest/holding-calculator", api.InvestHoldingHandler)
+	app.GET("/invest/stock-analyzer", api.StockAnalyzerHandler)
+	app.GET("/invest/query-stock", api.QueryStockDataHandler)
+	app.POST("/invest/calculate-stock-score", api.CalculateStockScoreHandler)
+	app.POST("/invest/position-deviation", api.PositionDeviationHandler)
+	app.GET("/invest/zen-holding", api.ZenStockHoldingHandler)
+	app.GET("/invest/zen-note", api.ZenStockNoteHandler)
+	app.GET("/api/stock/query", api.QueryStockInfoHandler)
+	app.POST("/api/stock/batch-prices", api.BatchQueryStockPricesHandler)
 }
