@@ -89,7 +89,7 @@
 </head>
 <body class="bg-[#f9fafb] text-[#111827] min-h-screen selection:bg-[#6366f1]/20 selection:text-[#3730a3]">
 
-    <div class="max-w-[min(100%,2200px)] mx-auto p-4 md:p-8">
+    <div class="max-w-[min(100%,2200px)] mx-auto p-4 md:px-12 lg:px-20 xl:px-32 py-8">
         
         <!-- Header -->
         <header class="mb-8 flex flex-col items-center">
@@ -186,7 +186,12 @@
                                                 </div>
                                             </th>
                                             <th class="px-4 py-4">股票名称</th>
-                                            <th class="px-3 py-4 text-center whitespace-nowrap w-[4.5rem]" title="各维度指标（mock）">红绿灯</th>
+                                            <th class="px-3 py-4 text-center whitespace-nowrap min-w-[10rem] cursor-pointer hover:bg-[#f3f4f6] transition-colors group" onclick="handleSort('trafficLight')" title="点击按评分排序&#10;绿灯+5分，黄/灰灯+2分，红灯+0分&#10;&#10;1.AI 2.基本面 3.政策 4.宏观 5.新能源 6.护城河 7.股东回报 8.技术面">
+                                                <div class="flex items-center justify-center gap-1.5">
+                                                    选股红绿灯
+                                                    <i data-lucide="arrow-up-down" class="w-3.5 h-3.5 text-[#9ca3af] opacity-40 group-hover:opacity-100" id="sort-icon-trafficLight"></i>
+                                                </div>
+                                            </th>
                                             <th class="px-4 py-4 cursor-pointer hover:bg-[#f3f4f6] transition-colors group text-right" onclick="handleSort('marketValue')">
                                                 <div class="flex items-center justify-end gap-1.5">
                                                     <i data-lucide="arrow-up-down" class="w-3.5 h-3.5 text-[#9ca3af] opacity-40 group-hover:opacity-100" id="sort-icon-marketValue"></i>
@@ -503,6 +508,14 @@
                                 >
                                     PE分位
                                 </button>
+                                <button 
+                                    type="button"
+                                    id="valuation-tab-manual"
+                                    onclick="switchValuationTab('manual')"
+                                    class="px-4 py-2 text-xs font-semibold text-[#6b7280] border-b-2 border-transparent hover:text-[#6366f1] transition-all"
+                                >
+                                    手动设置
+                                </button>
                             </div>
                             
                             <!-- Tab1: PEG估值 -->
@@ -556,15 +569,29 @@
                                     </div>
                                 </div>
                             </div>
+                            
+                            <!-- Tab3: 手动设置 -->
+                            <div id="valuation-content-manual" class="hidden space-y-3">
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div class="space-y-1">
+                                        <label class="block text-xs font-bold text-[#6b7280] uppercase tracking-wider">买入目标价 <span class="text-[#9ca3af] font-normal">(选填)</span></label>
+                                        <input type="number" id="form-buy-manual" min="0" step="0.01" placeholder="例如：150.5" class="w-full px-3 py-2 bg-white border border-[#d1d5db] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6366f1] transition-all text-sm font-mono font-medium text-[#111827]" oninput="calculateTargetPrices()">
+                                    </div>
+                                    <div class="space-y-1">
+                                        <label class="block text-xs font-bold text-[#6b7280] uppercase tracking-wider">卖出目标价 <span class="text-[#9ca3af] font-normal">(选填)</span></label>
+                                        <input type="number" id="form-sell-manual" min="0" step="0.01" placeholder="例如：210.3" class="w-full px-3 py-2 bg-white border border-[#d1d5db] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6366f1] transition-all text-sm font-mono font-medium text-[#111827]" oninput="calculateTargetPrices()">
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                         
-                        <!-- 隐藏字段，用于保存计算出的目标价格 -->
-                        <input type="hidden" id="form-buy-target" value="">
-                        <input type="hidden" id="form-sell-target" value="">
-                        <input type="hidden" id="form-valuation-model" value="peg">
-                    </div>
-                    
-                    <div class="pt-2">
+                    <!-- 隐藏字段，用于保存计算出的目标价格 -->
+                    <input type="hidden" id="form-buy-target" value="">
+                    <input type="hidden" id="form-sell-target" value="">
+                    <input type="hidden" id="form-valuation-model" value="peg">
+                </div>
+                
+                <div class="pt-2">
                         <button type="submit" class="w-full bg-[#6366f1] hover:bg-[#4f46e5] text-white font-semibold py-2 px-4 rounded-lg transition-all duration-200 flex items-center justify-center gap-2 shadow-md shadow-[#6366f1]/20 active:translate-y-0.5 text-sm">
                             <i data-lucide="plus" class="w-4 h-4"></i>
                             <span id="submit-btn-text">确认添加</span>
@@ -670,9 +697,93 @@
         </div>
     </div>
 
+    <!-- 选股红绿灯评价弹窗 -->
+    <div id="traffic-light-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-[#1f2937]/70 backdrop-blur-sm transition-opacity" onclick="toggleTrafficLightModal(false)"></div>
+        
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl relative z-10 overflow-hidden modal-enter border border-[#e5e7eb]">
+            <div class="p-6 border-b border-[#e5e7eb] flex justify-between items-center bg-[#f9fafb]">
+                <h3 class="text-lg font-bold text-[#111827] flex items-center gap-2">
+                    <div class="bg-[#e0f2fe] p-2 rounded-lg text-[#0369a1]">
+                        <i data-lucide="activity" class="w-4 h-4"></i>
+                    </div>
+                    选股红绿灯评价 (8维度)
+                </h3>
+                <button onclick="toggleTrafficLightModal(false)" class="text-[#9ca3af] hover:text-[#4b5563] hover:bg-[#e5e7eb] p-2 rounded-full transition-colors">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            
+            <div class="p-6">
+                <form id="traffic-light-form" onsubmit="handleSaveTrafficLights(event)" class="space-y-6">
+                    <input type="hidden" id="tl-stock-id" value="">
+                    
+                    <div id="traffic-lights-form-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- JS动态生成 -->
+                    </div>
+                    
+                    <div class="pt-4 border-t border-[#e5e7eb]">
+                        <button type="submit" class="w-full bg-[#0284c7] hover:bg-[#0369a1] text-white font-bold py-3 px-6 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 shadow-lg shadow-[#0284c7]/20 active:translate-y-0.5">
+                            <i data-lucide="check-circle" class="w-5 h-5"></i>
+                            <span>保存评价结果</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- JavaScript Logic -->
     <script>
         // --- 1. 数据与配置 ---
+        const TRAFFIC_LIGHT_DIMENSIONS = [
+            { id: 'ai', name: '1. AI发展大背景', desc: '绿: 核心受益\n黄: 边缘领域\n红: 易被替代' },
+            { id: 'garp', name: '2. 优质价投基本面', desc: '绿: ROE>15%, PEG<1\n黄: 业绩稳估值略高\n红: 增收不增利' },
+            { id: 'policy', name: '3. 国家战略与政策', desc: '绿: 明确补贴/自主可控\n黄: 规划未落地/去产能\n红: 政策明确压制' },
+            { id: 'macro', name: '4. 全球宏观', desc: '绿: 海外营收>30%高毛利\n黄: 刚需属性具备定价权\n红: 纯内需陷入行业价格战' },
+            { id: 'new_energy', name: '5. 新能源进化', desc: '绿: 新质生产力\n黄: 竞争激烈待出清\n红: 技术路线被淘汰' },
+            { id: 'moat', name: '6. 行业竞争格局', desc: '绿: 集中度提升具有定价权\n黄: 细分赛道隐形冠军\n红: 门槛低毛利持续萎缩' },
+            { id: 'yield', name: '7. 股东回报与分红', desc: '绿: 股息率>3%且有回购\n黄: 分红稳定但比例一般\n红: 长期不分红/大额融资' },
+            { id: 'technical', name: '8. 市场拥挤度与技术面', desc: '绿: 机构低位/底部突破\n黄: 热门赛道/缩量盘整\n红: 基金重仓/下行破位' }
+        ];
+
+        function renderTrafficLightsForm() {
+            const container = document.getElementById('traffic-lights-form-container');
+            if (!container) return;
+            
+            let html = '';
+            TRAFFIC_LIGHT_DIMENSIONS.forEach(dim => {
+                html += `
+                    <div class="flex flex-col gap-2 p-3 bg-[#f9fafb] rounded-xl border border-[#e5e7eb] hover:border-[#bae6fd] hover:bg-[#f0f9ff]/50 transition-all duration-200 shadow-sm" title="${dim.desc}">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-extrabold text-[#374151]">${dim.name}</span>
+                            <i data-lucide="info" class="w-3 h-3 text-[#9ca3af] cursor-help"></i>
+                        </div>
+                        <div class="flex items-center gap-3 mt-1">
+                            <label class="cursor-pointer inline-flex items-center gap-1.5 px-2 py-1 rounded-lg hover:bg-white transition-colors group">
+                                <input type="radio" name="tl-modal-${dim.id}" value="green" class="w-3.5 h-3.5 text-[#2ecc71] focus:ring-[#2ecc71] border-[#d1d5db]">
+                                <span class="text-[11px] text-[#6b7280] group-hover:text-[#2ecc71] font-bold">绿灯</span>
+                            </label>
+                            <label class="cursor-pointer inline-flex items-center gap-1.5 px-2 py-1 rounded-lg hover:bg-white transition-colors group">
+                                <input type="radio" name="tl-modal-${dim.id}" value="yellow" class="w-3.5 h-3.5 text-[#f1c40f] focus:ring-[#f1c40f] border-[#d1d5db]">
+                                <span class="text-[11px] text-[#6b7280] group-hover:text-[#f59e0b] font-bold">黄灯</span>
+                            </label>
+                            <label class="cursor-pointer inline-flex items-center gap-1.5 px-2 py-1 rounded-lg hover:bg-white transition-colors group">
+                                <input type="radio" name="tl-modal-${dim.id}" value="red" class="w-3.5 h-3.5 text-[#e74c3c] focus:ring-[#e74c3c] border-[#d1d5db]">
+                                <span class="text-[11px] text-[#6b7280] group-hover:text-[#e74c3c] font-bold">红灯</span>
+                            </label>
+                            <label class="cursor-pointer inline-flex items-center gap-1.5 px-2 py-1 rounded-lg hover:bg-white transition-colors group ml-auto">
+                                <input type="radio" name="tl-modal-${dim.id}" value="none" checked class="w-3.5 h-3.5 text-[#9ca3af] focus:ring-[#9ca3af] border-[#d1d5db]">
+                                <span class="text-[11px] text-[#9ca3af] font-bold">未选</span>
+                            </label>
+                        </div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+            lucide.createIcons();
+        }
+
         const ZEN_QUOTES = [
             { text: "股市是财富从急躁的人手中转移到耐心的人手中的工具。", author: "沃伦·巴菲特" },
             { text: "别人贪婪时我恐惧，别人恐惧时我贪婪。", author: "沃伦·巴菲特" },
@@ -1243,25 +1354,32 @@
             return { text, bgColor, textColor };
         };
 
-        /** 指标红绿灯 mock：8 个纵向排列的灯（🟢🟡🔴），按 id 稳定随机 */
-        function mockTrafficLightEmojis(seed) {
-            const lights = ['🟢', '🟡', '🔴'];
-            let h = Number(seed) || 0;
-            if (typeof seed === 'string') {
-                for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) | 0;
-            }
-            const out = [];
-            for (let i = 0; i < 8; i++) {
-                h = (h * 1103515245 + 12345 + i * 17) | 0;
-                out.push(lights[Math.abs(h) % 3]);
-            }
-            return out;
+        /** 指标红绿灯：无数据时返回 8 个灰色（未选）圆点 */
+        function mockTrafficLightEmojis() {
+            // 无红绿灯数据时，一律显示灰色（未选择）
+            return Array(8).fill('bg-[#d1d5db]');
         }
 
-        function renderMockTrafficLightsCell(stock) {
-            const emojis = mockTrafficLightEmojis(stock.id != null ? stock.id : stock.code || stock.name || 0);
-            const lines = emojis.map(e => `<span class="block leading-none">${e}</span>`).join('');
-            return `<div class="inline-flex flex-col items-center justify-center gap-0.5 py-0.5 select-none" title="mock：8 维指标示意">${lines}</div>`;
+        function renderTrafficLightsCell(stock) {
+            const colorsMap = {
+                'green': 'bg-[#2ecc71]',
+                'yellow': 'bg-[#f1c40f]',
+                'red': 'bg-[#e74c3c]',
+                'none': 'bg-[#d1d5db]'
+            };
+            
+            let dots = '';
+            if (stock.trafficLights) {
+                TRAFFIC_LIGHT_DIMENSIONS.forEach(dim => {
+                    const val = stock.trafficLights[dim.id] || 'none';
+                    dots += `<div class="w-2.5 h-2.5 rounded-full shrink-0 ${colorsMap[val]}" title="${dim.name}: ${val === 'green' ? '绿' : val === 'yellow' ? '黄' : val === 'red' ? '红' : '无'}"></div>`;
+                });
+            } else {
+                // 回退逻辑：如果还没有数据，显示灰色（或者保留原有的Mock逻辑）
+                const bgColors = mockTrafficLightEmojis(stock.id != null ? stock.id : stock.code || stock.name || 0);
+                dots = bgColors.map(bg => `<div class="w-2.5 h-2.5 rounded-full shrink-0 ${bg}"></div>`).join('');
+            }
+            return `<div class="flex flex-nowrap items-center justify-center gap-1.5 py-0.5 select-none" title="多维度评分红绿灯">${dots}</div>`;
         }
         
         // 渲染价格滑块（参考静态页面样式）
@@ -1305,16 +1423,28 @@
                 // 显示2位小数，移除末尾的0
                 return parseFloat(price.toFixed(2)).toString();
             };
+
+            // 获取估值模型图标
+            // 估值模型文字标签（统一灰色，紧挨进度条）
+            const getModelBadge = (model) => {
+                const labels = { peg: 'PEG', pe: 'PE', manual: '手' };
+                const titles = { peg: 'PEG估值', pe: 'PE分位', manual: '手动设置' };
+                return { text: labels[model] || 'PEG', title: titles[model] || 'PEG估值' };
+            };
+            const badge = getModelBadge(stock.valuationModel);
             
             return `
-                <div class="w-40 mx-auto flex flex-col gap-1.5">
-                    <div class="flex justify-between text-[10px] text-[#9ca3af] font-mono">
+                <div class="flex flex-col gap-1.5">
+                    <div class="flex justify-between text-[10px] text-[#9ca3af] font-mono items-center">
                         <span class="text-[#10b981]">买:${formatPrice(buyTarget)}</span>
-                        <span class="${labelColor} font-bold scale-90 origin-center">${label}</span>
+                        <span class="${labelColor} font-bold">${label}</span>
                         <span class="text-[#ef4444]">卖:${formatPrice(sellTarget)}</span>
                     </div>
-                    <div class="relative h-1.5 bg-[#e5e7eb] rounded-full w-full">
-                        <div class="absolute top-1/2 -translate-y-1/2 w-3 h-3 ${markerColor} rounded-full border-2 border-white shadow-sm transition-all duration-500" style="left: calc(${clampedPos}% - 6px);"></div>
+                    <div class="flex items-center gap-1.5">
+                        <span class="flex-shrink-0 text-[9px] font-semibold text-[#9ca3af] cursor-default w-6 text-center" title="${badge.title}">${badge.text}</span>
+                        <div class="relative h-1.5 bg-[#e5e7eb] rounded-full flex-1">
+                            <div class="absolute top-1/2 -translate-y-1/2 w-3 h-3 ${markerColor} rounded-full border-2 border-white shadow-sm transition-all duration-500" style="left: calc(${clampedPos}% - 6px);"></div>
+                        </div>
                     </div>
                 </div>
             `;
@@ -1324,6 +1454,7 @@
         
         function init() {
             loadFromStorage(); // 加载本地数据
+            renderTrafficLightsForm(); // 初始化红绿灯表单
             renderQuote();
             renderInvestmentTips(); // 渲染投资要点
             render();
@@ -1815,13 +1946,29 @@
             renderTagsStatistics(totalAsset);
 
             // 4. 处理表格数据 (筛选 + 排序)
-            let processed = state.stocks.filter(s => state.filter === 'all' || s.strategy === state.filter);
+            // 全部视图排除观察仓，观察仓只在明确筛选 watch 时显示
+            let processed = state.stocks.filter(s => {
+                if (state.filter === 'all') return s.strategy !== 'watch';
+                return s.strategy === state.filter;
+            });
             
             processed.sort((a, b) => {
                 let comparison = 0;
                 if (state.sortConfig.key === 'strategy') {
                     const order = { trend: 1, core: 2, reverse: 3, watch: 4 };
                     comparison = (order[a.strategy] || 99) - (order[b.strategy] || 99);
+                } else if (state.sortConfig.key === 'trafficLight') {
+                    // 绿灯+5分，黄灯/灰灯+2分，红灯+0分
+                    const calcScore = (stock) => {
+                        if (!stock.trafficLights) return 0;
+                        return TRAFFIC_LIGHT_DIMENSIONS.reduce((sum, dim) => {
+                            const val = stock.trafficLights[dim.id] || 'none';
+                            if (val === 'green') return sum + 5;
+                            if (val === 'yellow' || val === 'none') return sum + 2;
+                            return sum; // red: +0
+                        }, 0);
+                    };
+                    comparison = calcScore(a) - calcScore(b);
                 } else if (state.sortConfig.key === 'marketValue' || state.sortConfig.key === 'percentage') {
                     // 排序时使用换算后的价格
                     const aPriceInCNY = a.isHK ? a.price * HKD_TO_CNY_RATE : a.price;
@@ -1900,8 +2047,8 @@
                                 <span class="text-xs text-[#9ca3af] font-mono mt-0.5">${stock.code}</span>
                             </div>
                         </td>
-                        <td class="px-3 py-3 text-center align-middle text-base">
-                            ${renderMockTrafficLightsCell(stock)}
+                        <td class="px-3 py-3 text-center align-middle text-sm whitespace-nowrap">
+                            ${renderTrafficLightsCell(stock)}
                         </td>
                         <td class="px-4 py-3 text-right" data-stock-id="${stock.id}" data-cell-type="market-value">
                             <div class="flex flex-col items-end">
@@ -1930,8 +2077,11 @@
                                 <a href="/invest/zen-note?code=${stock.code}&name=${encodeURIComponent(stock.name)}" target="_blank" class="text-[#d1d5db] hover:text-[#10b981] transition-colors p-1.5 rounded-lg hover:bg-[#d1fae5]" title="笔记">
                                     <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
                                 </a>
-                                <button onclick="handleEdit(${stock.id})" class="text-[#d1d5db] hover:text-[#6366f1] transition-colors p-1.5 rounded-lg hover:bg-[#eef2ff]" title="编辑">
+                                <button onclick="handleEdit(${stock.id})" class="text-[#d1d5db] hover:text-[#6366f1] transition-colors p-1.5 rounded-lg hover:bg-[#eef2ff]" title="编辑基本信息">
                                     <i data-lucide="edit-2" class="w-3.5 h-3.5"></i>
+                                </button>
+                                <button onclick="toggleTrafficLightModal(true, ${stock.id})" class="text-[#d1d5db] hover:text-[#0ea5e9] transition-colors p-1.5 rounded-lg hover:bg-[#f0f9ff]" title="红绿灯评价">
+                                    <i data-lucide="activity" class="w-3.5 h-3.5"></i>
                                 </button>
                                 <button onclick="handleDelete(${stock.id})" class="text-[#d1d5db] hover:text-[#ef4444] transition-colors p-1.5 rounded-lg hover:bg-[#fee2e2]" title="删除">
                                     <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
@@ -2012,6 +2162,10 @@
             // 同步当前净利润到PE分位tab
             document.getElementById('form-current-profit-pe').value = stock.currentProfit || '';
             
+            // 填充手动设置相关数据
+            document.getElementById('form-buy-manual').value = (valuationModel === 'manual') ? (stock.buyTargetPrice || '') : '';
+            document.getElementById('form-sell-manual').value = (valuationModel === 'manual') ? (stock.sellTargetPrice || '') : '';
+            
             // 切换到对应的估值模型Tab
             switchValuationTab(valuationModel);
             
@@ -2050,6 +2204,50 @@
             document.getElementById('submit-btn-text').textContent = '确认修改';
             
             toggleModal(true);
+        }
+
+        // --- 红绿灯评价弹窗逻辑 ---
+        function toggleTrafficLightModal(show, stockId) {
+            const modal = document.getElementById('traffic-light-modal');
+            if (show) {
+                const stock = state.stocks.find(s => s.id === stockId);
+                if (!stock) return;
+                
+                document.getElementById('tl-stock-id').value = stockId;
+                
+                // 重置红绿灯
+                TRAFFIC_LIGHT_DIMENSIONS.forEach(dim => {
+                    const val = (stock.trafficLights && stock.trafficLights[dim.id]) || 'none';
+                    const radio = document.querySelector(`input[name="tl-modal-${dim.id}"][value="${val}"]`);
+                    if (radio) radio.checked = true;
+                });
+                
+                modal.classList.remove('hidden');
+            } else {
+                modal.classList.add('hidden');
+            }
+        }
+
+        function handleSaveTrafficLights(e) {
+            e.preventDefault();
+            const stockId = Number(document.getElementById('tl-stock-id').value);
+            const stockIndex = state.stocks.findIndex(s => s.id === stockId);
+            
+            if (stockIndex === -1) return;
+            
+            const trafficLights = {};
+            TRAFFIC_LIGHT_DIMENSIONS.forEach(dim => {
+                const checked = document.querySelector(`input[name="tl-modal-${dim.id}"]:checked`);
+                trafficLights[dim.id] = checked ? checked.value : 'none';
+            });
+            
+            state.stocks[stockIndex].trafficLights = trafficLights;
+            saveToStorage();
+            toggleTrafficLightModal(false);
+            render();
+            
+            // 提示成功
+            console.log(`✅ 已更新股票 ID[${stockId}] 的红绿灯评价`);
         }
 
         // 计算市值调节系数K
@@ -2114,27 +2312,22 @@
             // 更新隐藏字段
             document.getElementById('form-valuation-model').value = model;
             
-            // 更新Tab按钮样式
-            const pegTab = document.getElementById('valuation-tab-peg');
-            const peTab = document.getElementById('valuation-tab-pe');
-            const pegContent = document.getElementById('valuation-content-peg');
-            const peContent = document.getElementById('valuation-content-pe');
-            
-            if (model === 'peg') {
-                pegTab.classList.remove('text-[#6b7280]', 'border-transparent');
-                pegTab.classList.add('text-[#6366f1]', 'border-[#6366f1]');
-                peTab.classList.remove('text-[#6366f1]', 'border-[#6366f1]');
-                peTab.classList.add('text-[#6b7280]', 'border-transparent');
-                pegContent.classList.remove('hidden');
-                peContent.classList.add('hidden');
-            } else {
-                peTab.classList.remove('text-[#6b7280]', 'border-transparent');
-                peTab.classList.add('text-[#6366f1]', 'border-[#6366f1]');
-                pegTab.classList.remove('text-[#6366f1]', 'border-[#6366f1]');
-                pegTab.classList.add('text-[#6b7280]', 'border-transparent');
-                peContent.classList.remove('hidden');
-                pegContent.classList.add('hidden');
-            }
+            const tabs = ['peg', 'pe', 'manual'];
+            tabs.forEach(t => {
+                const tabBtn = document.getElementById(`valuation-tab-${t}`);
+                const tabContent = document.getElementById(`valuation-content-${t}`);
+                if (!tabBtn || !tabContent) return;
+                
+                if (t === model) {
+                    tabBtn.classList.remove('text-[#6b7280]', 'border-transparent');
+                    tabBtn.classList.add('text-[#6366f1]', 'border-[#6366f1]');
+                    tabContent.classList.remove('hidden');
+                } else {
+                    tabBtn.classList.remove('text-[#6366f1]', 'border-[#6366f1]');
+                    tabBtn.classList.add('text-[#6b7280]', 'border-transparent');
+                    tabContent.classList.add('hidden');
+                }
+            });
             
             // 重新计算价格
             calculateTargetPrices();
@@ -2222,7 +2415,7 @@
                 
                 // 调试日志
                 console.log(`📊 [PEG计算] 增速: ${growthRate}%, 市值: ${marketCap.toFixed(2)}亿, K系数: ${k.toFixed(3)}, 买入PE: ${originalBuyPE.toFixed(2)} → ${buyPE.toFixed(2)}, 卖出PE: ${originalSellPE.toFixed(2)} → ${sellPE.toFixed(2)}, 溢价: ${premiumRatio.toFixed(2)}`);
-            } else {
+            } else if (valuationModel === 'pe') {
                 // PE分位模型
                 const peMin = parseFloat(document.getElementById('form-pe-min').value) || 0;
                 const peMax = parseFloat(document.getElementById('form-pe-max').value) || 0;
@@ -2251,6 +2444,12 @@
                 
                 // 调试日志
                 console.log(`📊 [PE分位计算] PE范围: ${peMin} - ${peMax}, 市值: ${marketCap.toFixed(2)}亿, 净利润: ${currentProfit.toFixed(2)}亿`);
+            } else if (valuationModel === 'manual') {
+                // 手动设置模型
+                buyPrice = parseFloat(document.getElementById('form-buy-manual').value) || 0;
+                sellPrice = parseFloat(document.getElementById('form-sell-manual').value) || 0;
+                
+                console.log(`📊 [手动设置] 买入: ${buyPrice}, 卖出: ${sellPrice}`);
             }
             
             // 保存到隐藏字段（用于提交时保存）
@@ -2478,47 +2677,32 @@
             let buyTargetPrice = 0;
             let sellTargetPrice = 0;
             if (editId && price > 0) {
-                // 获取公司市值
-                const stock = state.stocks.find(s => s.id === Number(editId));
-                const marketCap = stock && stock.marketCap ? stock.marketCap : 0; // 单位：亿元
-                
-                if (marketCap > 0) {
-                    if (valuationModel === 'peg' && profitGrowthRate > 0 && currentProfit > 0) {
-                        // PEG估值模型
-                        // 阶梯式 PEG + PE 封顶公式 + 市值调节系数K
-                        // 根据增速区间计算买入和卖出PE（原始PE）
-                        const { buyPE: originalBuyPE, sellPE: originalSellPE } = calculatePEByGrowthRate(profitGrowthRate);
-                        
-                        // 计算市值调节系数K
-                        const k = calculateMarketCapCoefficient(marketCap);
-                        
-                        // 应用K系数修正PE：修正后的PE = 原始PE × K
-                        const buyPE = originalBuyPE * k;
-                        const sellPE = originalSellPE * k;
-                        
-                        // 计算买入和卖出市值（亿元）
-                        const buyMarketCap = buyPE * currentProfit;
-                        const sellMarketCap = sellPE * currentProfit;
-                        
-                        // 计算目标价格
-                        buyTargetPrice = (buyMarketCap * price) / marketCap;
-                        sellTargetPrice = (sellMarketCap * price) / marketCap;
-                        
-                        // 应用溢价参数：买入卖出价 = 溢价 * 原有卖出价
-                        const premiumRatio = editId ? (Number(document.getElementById('form-premium-ratio').value) || 1) : 1;
-                        buyTargetPrice = buyTargetPrice * premiumRatio;
-                        sellTargetPrice = sellTargetPrice * premiumRatio;
-                        
-                        console.log(`💾 [保存计算-PEG] 增速: ${profitGrowthRate}%, 市值: ${marketCap.toFixed(2)}亿, K系数: ${k.toFixed(3)}, 买入PE: ${originalBuyPE.toFixed(2)} → ${buyPE.toFixed(2)}, 卖出PE: ${originalSellPE.toFixed(2)} → ${sellPE.toFixed(2)}, 溢价: ${premiumRatio.toFixed(2)}`);
-                    } else if (valuationModel === 'pe' && peMin > 0 && peMax > 0 && currentProfit > 0) {
-                        // PE分位模型
-                        const buyMarketCap = peMin * currentProfit;
-                        const sellMarketCap = peMax * currentProfit;
-                        
-                        buyTargetPrice = (buyMarketCap * price) / marketCap;
-                        sellTargetPrice = (sellMarketCap * price) / marketCap;
-                        
-                        console.log(`💾 [保存计算-PE分位] PE范围: ${peMin} - ${peMax}, 市值: ${marketCap.toFixed(2)}亿, 净利润: ${currentProfit.toFixed(2)}亿`);
+                if (valuationModel === 'manual') {
+                    // 手动模式：直接读表单，不需要市值
+                    buyTargetPrice  = parseFloat(document.getElementById('form-buy-manual').value)  || 0;
+                    sellTargetPrice = parseFloat(document.getElementById('form-sell-manual').value) || 0;
+                    console.log(`💾 [保存计算-手动设置] 买入: ${buyTargetPrice}, 卖出: ${sellTargetPrice}`);
+                } else {
+                    // PEG / PE 需要市值
+                    const stock = state.stocks.find(s => s.id === Number(editId));
+                    const marketCap = stock && stock.marketCap ? stock.marketCap : 0;
+                    if (marketCap > 0) {
+                        if (valuationModel === 'peg' && profitGrowthRate > 0 && currentProfit > 0) {
+                            const { buyPE: originalBuyPE, sellPE: originalSellPE } = calculatePEByGrowthRate(profitGrowthRate);
+                            const k = calculateMarketCapCoefficient(marketCap);
+                            const buyPE = originalBuyPE * k;
+                            const sellPE = originalSellPE * k;
+                            buyTargetPrice  = (buyPE  * currentProfit * price) / marketCap;
+                            sellTargetPrice = (sellPE * currentProfit * price) / marketCap;
+                            const premiumRatio = Number(document.getElementById('form-premium-ratio').value) || 1;
+                            buyTargetPrice  *= premiumRatio;
+                            sellTargetPrice *= premiumRatio;
+                            console.log(`💾 [保存计算-PEG] 增速: ${profitGrowthRate}%, K: ${k.toFixed(3)}, 溢价: ${premiumRatio}`);
+                        } else if (valuationModel === 'pe' && peMin > 0 && peMax > 0 && currentProfit > 0) {
+                            buyTargetPrice  = (peMin * currentProfit * price) / marketCap;
+                            sellTargetPrice = (peMax * currentProfit * price) / marketCap;
+                            console.log(`💾 [保存计算-PE分位] PE范围: ${peMin} - ${peMax}`);
+                        }
                     }
                 }
             }
@@ -2545,51 +2729,34 @@
                         console.log(`💾 [保留市值] ${name}: ${oldStock.marketCap.toFixed(2)}亿元`);
                     }
                     
+                    // 保留选股红绿灯评价（重要：编辑持仓不应清空红绿灯）
+                    if (oldStock.trafficLights) {
+                        updatedStock.trafficLights = oldStock.trafficLights;
+                    }
+                    
+                    // 保留备注
+                    if (oldStock.note) {
+                        updatedStock.note = oldStock.note;
+                    }
+                    
                     // 保存估值模型
                     updatedStock.valuationModel = valuationModel;
                     
-                    // 保存PEG计算相关数据
-                    if (profitGrowthRate > 0) {
-                        updatedStock.profitGrowthRate = profitGrowthRate;
-                    } else if (oldStock.profitGrowthRate) {
-                        // 如果用户清空了，保留原有值
-                        updatedStock.profitGrowthRate = oldStock.profitGrowthRate;
+                    // 保存当前模型对应的辅助字段（切换模型时不保留旧模型数据）
+                    if (valuationModel === 'peg') {
+                        updatedStock.profitGrowthRate = profitGrowthRate || oldStock.profitGrowthRate || 0;
+                        updatedStock.currentProfit    = currentProfit    || oldStock.currentProfit    || 0;
+                        updatedStock.premiumRatio     = parseFloat(document.getElementById('form-premium-ratio').value) || 1;
+                    } else if (valuationModel === 'pe') {
+                        updatedStock.peMin         = peMin         || oldStock.peMin         || 0;
+                        updatedStock.peMax         = peMax         || oldStock.peMax         || 0;
+                        updatedStock.currentProfit = currentProfit || oldStock.currentProfit || 0;
                     }
-                    if (currentProfit > 0) {
-                        updatedStock.currentProfit = currentProfit;
-                    } else if (oldStock.currentProfit) {
-                        // 如果用户清空了，保留原有值
-                        updatedStock.currentProfit = oldStock.currentProfit;
-                    }
+                    // manual 模式：无需任何辅助字段
                     
-                    // 保存溢价参数
-                    const premiumRatio = parseFloat(document.getElementById('form-premium-ratio').value) || 1;
-                    updatedStock.premiumRatio = premiumRatio;
-                    
-                    // 保存PE分位相关数据
-                    if (peMin > 0) {
-                        updatedStock.peMin = peMin;
-                    } else if (oldStock.peMin) {
-                        updatedStock.peMin = oldStock.peMin;
-                    }
-                    if (peMax > 0) {
-                        updatedStock.peMax = peMax;
-                    } else if (oldStock.peMax) {
-                        updatedStock.peMax = oldStock.peMax;
-                    }
-                    
-                    // 保存目标价格
-                    // 如果重新计算了目标价格，使用新值；否则保留原有值
-                    if (buyTargetPrice > 0) {
-                        updatedStock.buyTargetPrice = buyTargetPrice;
-                    } else if (oldStock.buyTargetPrice) {
-                        updatedStock.buyTargetPrice = oldStock.buyTargetPrice;
-                    }
-                    if (sellTargetPrice > 0) {
-                        updatedStock.sellTargetPrice = sellTargetPrice;
-                    } else if (oldStock.sellTargetPrice) {
-                        updatedStock.sellTargetPrice = oldStock.sellTargetPrice;
-                    }
+                    // 目标价格：当前模型算出新值就用，没有就置0（不回退旧模型的价格）
+                    updatedStock.buyTargetPrice  = buyTargetPrice  > 0 ? buyTargetPrice  : 0;
+                    updatedStock.sellTargetPrice = sellTargetPrice > 0 ? sellTargetPrice : 0;
                     
                     state.stocks[index] = updatedStock;
                 }
@@ -2728,7 +2895,7 @@
 
         // --- 5. 辅助 UI 更新 ---
         function updateSortIcons() {
-            ['strategy', 'marketValue', 'percentage', 'targetRatio'].forEach(key => {
+            ['strategy', 'marketValue', 'percentage', 'targetRatio', 'trafficLight'].forEach(key => {
                 const icon = document.getElementById(`sort-icon-${key}`);
                 if (!icon) return;
                 
