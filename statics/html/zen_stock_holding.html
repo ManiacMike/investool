@@ -1021,8 +1021,10 @@
                 // 准备导出数据
                 const exportData = {
                     stocks: state.stocks,
+                    cash: cash,
+                    cnyToHkdRate: CNY_TO_HKD_RATE,
                     exportTime: new Date().toISOString(),
-                    version: '1.0'
+                    version: '1.1'
                 };
 
                 // 转换为JSON字符串，格式化输出
@@ -1125,6 +1127,21 @@
                         alert('导入的文件中没有有效的股票数据');
                         event.target.value = ''; // 清空文件选择
                         return;
+                    }
+
+                    // 导入现金和汇率
+                    if (importData.cash !== undefined) {
+                        const newCash = parseFloat(importData.cash);
+                        if (!isNaN(newCash) && newCash >= 0) {
+                            saveCashToStorage(newCash);
+                        }
+                    }
+                    if (importData.cnyToHkdRate !== undefined) {
+                        const newRate = parseFloat(importData.cnyToHkdRate);
+                        if (!isNaN(newRate) && newRate > 0) {
+                            saveRateToStorage(newRate);
+                            updateExchangeRateDisplay();
+                        }
                     }
 
                     // 替换现有数据
