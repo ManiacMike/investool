@@ -1932,6 +1932,7 @@ function renderOperationReminders(totalAsset) {
             }
 
             let reminders = [];
+
             state.stocks.forEach(stock => {
                 if (stock.strategy === 'watch') return;
 
@@ -1947,10 +1948,9 @@ function renderOperationReminders(totalAsset) {
                 }
 
                 // 2. 计算目标仓位和当前仓位
-                // 新逻辑：基础仓位 2% (对应 25分)。每增/减 1分，仓位增/减 0.2% (0.002)
+                // 基础仓位 2% (对应 25分)。每增/减 1分，仓位增/减 0.2% (0.002)
                 let targetRatio = 0.02 + (score - 25) * 0.002;
-                // 限制最低仓位为 0%，避免极低分时出现负数仓位
-                targetRatio = Math.max(0, targetRatio);
+                targetRatio = Math.max(0, targetRatio); // 避免负数仓位
                 
                 const priceInCNY = stock.isHK ? stock.price * HKD_TO_CNY_RATE : stock.price;
                 const currentRatio = (priceInCNY * stock.count) / totalAsset;
@@ -1959,47 +1959,70 @@ function renderOperationReminders(totalAsset) {
                 const sellTarget = stock.sellTargetPrice || 0;
                 const currentPrice = stock.price || 0;
 
+                // --- 3. 核心计算：需要调整的股数 ---
+                const targetAssetValue = totalAsset * targetRatio;
+                const currentAssetValue = priceInCNY * stock.count;
+                const diffValue = targetAssetValue - currentAssetValue;
+                
+                // 按 100 股取整
+                let adjustShares = Math.round(diffValue / priceInCNY / 100) * 100;
+                
+                // 如果触发了比例差阈值，但算出来不到 100 股，强行给个 100 股的最低建议
+                if (adjustShares === 0 && Math.abs(currentRatio - targetRatio) > 0.01) {
+                    adjustShares = diffValue > 0 ? 100 : -100;
+                }
+                // ----------------------------------
+
                 // 格式化补充信息 (分数、最大仓位、仓位差)
                 const targetRatioPct = (targetRatio * 100).toFixed(1);
                 const currentRatioPct = (currentRatio * 100).toFixed(1);
                 const diffRatioPct = ((currentRatio - targetRatio) * 100).toFixed(1);
-                const diffSign = (currentRatio - targetRatio) > 0 ? '+' : ''; // 超出为正，不足为负
+                const diffSign = (currentRatio - targetRatio) > 0 ? '+' : ''; 
                 
                 const extraInfo = `<div class="text-[11px] text-[#9ca3af] mt-1 font-mono">红绿灯: <span class="text-[#6b7280] font-bold">${score}分</span> <span class="mx-1">|</span> 上限: <span class="text-[#6b7280]">${targetRatioPct}%</span> <span class="mx-1">|</span> 仓差: <span class="${(currentRatio - targetRatio) > 0 ? 'text-[#f59e0b]' : 'text-[#10b981]'}">${diffSign}${diffRatioPct}%</span></div>`;
 
-                // 3. 提示卖出逻辑：
+                // 4. 提示卖出逻辑：
                 if (sellTarget > 0 && currentPrice >= sellTarget) {
-                    // 条件 A：达止盈位 (红色)
+                    // 条件 A：达止盈位 -> 建议清仓全部持有股数
+                    const sellCount = stock.count;
                     reminders.push(`
                         <div class="flex items-start gap-3 bg-white rounded-xl p-3 border-l-4 border-l-[#ef4444] shadow-sm">
                             <div class="p-1.5 bg-[#fee2e2] rounded-md mt-0.5"><i data-lucide="trending-down" class="w-4 h-4 text-[#ef4444]"></i></div>
                             <div class="flex flex-col flex-1">
-                                <span class="text-sm text-[#374151]">建议卖出 <span class="font-bold text-[#111827]">【${stock.name}】</span>，挂单价 <span class="font-mono font-bold text-[#ef4444]">${sellTarget.toFixed(1)}</span> (达止盈位)</span>
+                                <span class="text-sm text-[#374151]">建议清仓 <span class="font-bold text-[#111827]">【${stock.name}】</span> 共 <span class="font-bold text-[#ef4444]">${sellCount}股</span>，挂单价 <span class="font-mono font-bold text-[#ef4444]">${sellTarget.toFixed(1)}</span> (达止盈位)</span>
                                 ${extraInfo}
                             </div>
                         </div>`);
                 } else if (currentRatio > targetRatio + 0.02) { 
-                    // 条件 B：未达止盈，但仓位严重超标，容忍2%的溢出 (橙色警告)
-                    reminders.push(`
-                        <div class="flex items-start gap-3 bg-white rounded-xl p-3 border-l-4 border-l-[#f59e0b] shadow-sm">
-                            <div class="p-1.5 bg-[#fef3c7] rounded-md mt-0.5"><i data-lucide="alert-triangle" class="w-4 h-4 text-[#f59e0b]"></i></div>
-                            <div class="flex flex-col flex-1">
-                                <span class="text-sm text-[#374151]">建议减仓 <span class="font-bold text-[#111827]">【${stock.name}】</span>，现价 <span class="font-mono font-bold text-[#f59e0b]">${currentPrice.toFixed(1)}</span> (仓位过重)</span>
-                                ${extraInfo}
-                            </div>
-                        </div>`);
+                    // 条件 B：未达止盈，但仓位严重超标 -> 卖出超出部分的股数
+                    let sellCount = Math.abs(adjustShares);
+                    sellCount = sellCount > stock.count ? stock.count : sellCount; // 保护机制：最多卖出全部持仓
+
+                    if (sellCount > 0) {
+                        reminders.push(`
+                            <div class="flex items-start gap-3 bg-white rounded-xl p-3 border-l-4 border-l-[#f59e0b] shadow-sm">
+                                <div class="p-1.5 bg-[#fef3c7] rounded-md mt-0.5"><i data-lucide="alert-triangle" class="w-4 h-4 text-[#f59e0b]"></i></div>
+                                <div class="flex flex-col flex-1">
+                                    <span class="text-sm text-[#374151]">建议减仓 <span class="font-bold text-[#111827]">【${stock.name}】</span> 约 <span class="font-bold text-[#f59e0b]">${sellCount}股</span>，现价 <span class="font-mono font-bold text-[#f59e0b]">${currentPrice.toFixed(1)}</span> (仓位过重)</span>
+                                    ${extraInfo}
+                                </div>
+                            </div>`);
+                    }
                 }
 
-                // 4. 提示买入逻辑：当前价低于买入目标价 且 仓位仍有空间 (绿色)
+                // 5. 提示买入逻辑：当前价低于买入目标价 且 仓位仍有空间
                 if (buyTarget > 0 && currentPrice > 0 && currentPrice <= buyTarget && currentRatio < targetRatio - 0.01) {
-                    reminders.push(`
-                        <div class="flex items-start gap-3 bg-white rounded-xl p-3 border-l-4 border-l-[#10b981] shadow-sm">
-                            <div class="p-1.5 bg-[#d1fae5] rounded-md mt-0.5"><i data-lucide="trending-up" class="w-4 h-4 text-[#10b981]"></i></div>
-                            <div class="flex flex-col flex-1">
-                                <span class="text-sm text-[#374151]">建议买入 <span class="font-bold text-[#111827]">【${stock.name}】</span>，挂单价 <span class="font-mono font-bold text-[#10b981]">${buyTarget.toFixed(1)}</span> (低估且仓位不足)</span>
-                                ${extraInfo}
-                            </div>
-                        </div>`);
+                    const buyCount = Math.abs(adjustShares);
+                    if (buyCount > 0) {
+                        reminders.push(`
+                            <div class="flex items-start gap-3 bg-white rounded-xl p-3 border-l-4 border-l-[#10b981] shadow-sm">
+                                <div class="p-1.5 bg-[#d1fae5] rounded-md mt-0.5"><i data-lucide="trending-up" class="w-4 h-4 text-[#10b981]"></i></div>
+                                <div class="flex flex-col flex-1">
+                                    <span class="text-sm text-[#374151]">建议买入 <span class="font-bold text-[#111827]">【${stock.name}】</span> 约 <span class="font-bold text-[#10b981]">${buyCount}股</span>，挂单价 <span class="font-mono font-bold text-[#10b981]">${buyTarget.toFixed(1)}</span> (低估且仓位不足)</span>
+                                    ${extraInfo}
+                                </div>
+                            </div>`);
+                    }
                 }
             });
 
@@ -2014,7 +2037,6 @@ function renderOperationReminders(totalAsset) {
         }
 
 
-  
         // ===================================
         function render() {
             const { totalAsset, strategyStats } = calculateStats();
