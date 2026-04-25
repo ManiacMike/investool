@@ -114,8 +114,18 @@
         <div class="grid grid-cols-1 lg:grid-cols-5 gap-8">
             
             <!-- 左侧：持仓列表 (占4/5宽度，80%) -->
-            <div class="lg:col-span-4">
-                <!-- 持仓明细区域：左右分栏 -->
+            <div class="lg:col-span-4 flex flex-col gap-6">
+                
+                <div id="operation-reminders" class="hidden bg-[#fffbeb] border-2 border-[#fcd34d] rounded-2xl p-5 shadow-md">
+                    <div class="flex items-center gap-2 mb-4 border-b border-[#fde68a] pb-3">
+                        <div class="p-1.5 bg-[#fef3c7] rounded-lg">
+                            <i data-lucide="bell-ring" class="w-5 h-5 text-[#d97706] animate-pulse"></i>
+                        </div>
+                        <h3 class="text-base font-bold text-[#92400e]">股票操作提醒 (基于纪律与水位)</h3>
+                    </div>
+                    <div id="reminder-list" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        </div>
+                </div>
                 <div class="grid grid-cols-1 md:grid-cols-10 gap-6">
                     
                     <!-- 投资要点 Tips（侧栏已隐藏，保留 DOM 供日后恢复） -->
@@ -1909,9 +1919,107 @@
             lucide.createIcons();
         }
 
+        // ====== 新增：计算并渲染操作提醒 ======
+// ====== 股票操作提醒模块 ======
+function renderOperationReminders(totalAsset) {
+            const container = document.getElementById('operation-reminders');
+            const listEl = document.getElementById('reminder-list');
+            if (!container || !listEl) return;
+
+            if (totalAsset <= 0 || state.stocks.length === 0) {
+                container.classList.add('hidden');
+                return;
+            }
+
+            let reminders = [];
+            state.stocks.forEach(stock => {
+                if (stock.strategy === 'watch') return;
+
+                // 1. 计算红绿灯得分 (绿+5，黄/灰+2，红+0)
+                let score = 0;
+                if (stock.trafficLights) {
+                    score = TRAFFIC_LIGHT_DIMENSIONS.reduce((sum, dim) => {
+                        const val = stock.trafficLights[dim.id] || 'none';
+                        if (val === 'green') return sum + 5;
+                        if (val === 'yellow' || val === 'none') return sum + 2;
+                        return sum;
+                    }, 0);
+                }
+
+                // 2. 计算目标仓位和当前仓位
+                // 新逻辑：基础仓位 2% (对应 25分)。每增/减 1分，仓位增/减 0.2% (0.002)
+                let targetRatio = 0.02 + (score - 25) * 0.002;
+                // 限制最低仓位为 0%，避免极低分时出现负数仓位
+                targetRatio = Math.max(0, targetRatio);
+                
+                const priceInCNY = stock.isHK ? stock.price * HKD_TO_CNY_RATE : stock.price;
+                const currentRatio = (priceInCNY * stock.count) / totalAsset;
+                
+                const buyTarget = stock.buyTargetPrice || 0;
+                const sellTarget = stock.sellTargetPrice || 0;
+                const currentPrice = stock.price || 0;
+
+                // 格式化补充信息 (分数、最大仓位、仓位差)
+                const targetRatioPct = (targetRatio * 100).toFixed(1);
+                const currentRatioPct = (currentRatio * 100).toFixed(1);
+                const diffRatioPct = ((currentRatio - targetRatio) * 100).toFixed(1);
+                const diffSign = (currentRatio - targetRatio) > 0 ? '+' : ''; // 超出为正，不足为负
+                
+                const extraInfo = `<div class="text-[11px] text-[#9ca3af] mt-1 font-mono">红绿灯: <span class="text-[#6b7280] font-bold">${score}分</span> <span class="mx-1">|</span> 上限: <span class="text-[#6b7280]">${targetRatioPct}%</span> <span class="mx-1">|</span> 仓差: <span class="${(currentRatio - targetRatio) > 0 ? 'text-[#f59e0b]' : 'text-[#10b981]'}">${diffSign}${diffRatioPct}%</span></div>`;
+
+                // 3. 提示卖出逻辑：
+                if (sellTarget > 0 && currentPrice >= sellTarget) {
+                    // 条件 A：达止盈位 (红色)
+                    reminders.push(`
+                        <div class="flex items-start gap-3 bg-white rounded-xl p-3 border-l-4 border-l-[#ef4444] shadow-sm">
+                            <div class="p-1.5 bg-[#fee2e2] rounded-md mt-0.5"><i data-lucide="trending-down" class="w-4 h-4 text-[#ef4444]"></i></div>
+                            <div class="flex flex-col flex-1">
+                                <span class="text-sm text-[#374151]">建议卖出 <span class="font-bold text-[#111827]">【${stock.name}】</span>，挂单价 <span class="font-mono font-bold text-[#ef4444]">${sellTarget.toFixed(1)}</span> (达止盈位)</span>
+                                ${extraInfo}
+                            </div>
+                        </div>`);
+                } else if (currentRatio > targetRatio + 0.02) { 
+                    // 条件 B：未达止盈，但仓位严重超标，容忍2%的溢出 (橙色警告)
+                    reminders.push(`
+                        <div class="flex items-start gap-3 bg-white rounded-xl p-3 border-l-4 border-l-[#f59e0b] shadow-sm">
+                            <div class="p-1.5 bg-[#fef3c7] rounded-md mt-0.5"><i data-lucide="alert-triangle" class="w-4 h-4 text-[#f59e0b]"></i></div>
+                            <div class="flex flex-col flex-1">
+                                <span class="text-sm text-[#374151]">建议减仓 <span class="font-bold text-[#111827]">【${stock.name}】</span>，现价 <span class="font-mono font-bold text-[#f59e0b]">${currentPrice.toFixed(1)}</span> (仓位过重)</span>
+                                ${extraInfo}
+                            </div>
+                        </div>`);
+                }
+
+                // 4. 提示买入逻辑：当前价低于买入目标价 且 仓位仍有空间 (绿色)
+                if (buyTarget > 0 && currentPrice > 0 && currentPrice <= buyTarget && currentRatio < targetRatio - 0.01) {
+                    reminders.push(`
+                        <div class="flex items-start gap-3 bg-white rounded-xl p-3 border-l-4 border-l-[#10b981] shadow-sm">
+                            <div class="p-1.5 bg-[#d1fae5] rounded-md mt-0.5"><i data-lucide="trending-up" class="w-4 h-4 text-[#10b981]"></i></div>
+                            <div class="flex flex-col flex-1">
+                                <span class="text-sm text-[#374151]">建议买入 <span class="font-bold text-[#111827]">【${stock.name}】</span>，挂单价 <span class="font-mono font-bold text-[#10b981]">${buyTarget.toFixed(1)}</span> (低估且仓位不足)</span>
+                                ${extraInfo}
+                            </div>
+                        </div>`);
+                }
+            });
+
+            if (reminders.length > 0) {
+                listEl.innerHTML = reminders.join('');
+            } else {
+                listEl.innerHTML = `<div class="col-span-full flex items-center justify-center gap-2 text-sm text-[#b45309] bg-white/50 rounded-lg p-3 italic"><i data-lucide="coffee" class="w-4 h-4"></i>未触发操作条件，水位健康，继续持有。</div>`;
+            }
+            container.classList.remove('hidden');
+            
+            if (window.lucide) lucide.createIcons();
+        }
+
+
+  
+        // ===================================
         function render() {
             const { totalAsset, strategyStats } = calculateStats();
-
+            // ====== 新增：调用提醒模块渲染 ======
+            renderOperationReminders(totalAsset);
             // 1. 更新总资产条
             document.getElementById('total-asset-display').textContent = formatTotalMoney(totalAsset);
             document.getElementById('total-count-display').textContent = state.stocks.length;
