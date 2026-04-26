@@ -717,7 +717,7 @@
                     <div class="bg-[#e0f2fe] p-2 rounded-lg text-[#0369a1]">
                         <i data-lucide="activity" class="w-4 h-4"></i>
                     </div>
-                    选股红绿灯评价 (8维度)
+                    选股红绿灯评价 (6维度)
                 </h3>
                 <button onclick="toggleTrafficLightModal(false)" class="text-[#9ca3af] hover:text-[#4b5563] hover:bg-[#e5e7eb] p-2 rounded-full transition-colors">
                     <i data-lucide="x" class="w-5 h-5"></i>
@@ -747,14 +747,12 @@
     <script>
         // --- 1. 数据与配置 ---
         const TRAFFIC_LIGHT_DIMENSIONS = [
-            { id: 'ai', name: '1. AI发展大背景', desc: '绿: 核心受益\n黄: 边缘领域\n红: 易被替代' },
-            { id: 'garp', name: '2. 优质价投基本面', desc: '绿: ROE>15%, PEG<1\n黄: 业绩稳估值略高\n红: 增收不增利' },
-            { id: 'policy', name: '3. 国家战略与政策', desc: '绿: 明确补贴/自主可控\n黄: 规划未落地/去产能\n红: 政策明确压制' },
-            { id: 'macro', name: '4. 全球宏观', desc: '绿: 海外营收>30%高毛利\n黄: 刚需属性具备定价权\n红: 纯内需陷入行业价格战' },
-            { id: 'new_energy', name: '5. 新能源进化', desc: '绿: 新质生产力\n黄: 竞争激烈待出清\n红: 技术路线被淘汰' },
-            { id: 'moat', name: '6. 行业竞争格局', desc: '绿: 集中度提升具有定价权\n黄: 细分赛道隐形冠军\n红: 门槛低毛利持续萎缩' },
-            { id: 'yield', name: '7. 股东回报与分红', desc: '绿: 股息率>3%且有回购\n黄: 分红稳定但比例一般\n红: 长期不分红/大额融资' },
-            { id: 'technical', name: '8. 市场拥挤度与技术面', desc: '绿: 机构低位/底部突破\n黄: 热门赛道/缩量盘整\n红: 基金重仓/下行破位' }
+            { id: 'fundamentals', name: '1. 公司基本面', desc: '优质基本面与行业竞争格局（财报健康+护城河逻辑）' },
+            { id: 'shareholder', name: '2. 股东回报与领导层', desc: '分红回购情况，领导层品质，历史减持分红比' },
+            { id: 'tech_revolution', name: '3. 新科技革命发展方向', desc: 'AI大模型、固态电池等新科技革命发展方向受益程度' },
+            { id: 'policy', name: '4. 国家战略与政策', desc: '明确补贴/自主可控 vs 规划未落地/政策压制' },
+            { id: 'global_macro', name: '5. 当前国际格局', desc: '出海逻辑、地缘政治受益、抗通胀/抗逆全球化能力' },
+            { id: 'technical', name: '6. 技术面和筹码结构', desc: '机构低位/底部突破 vs 热门赛道/缩量盘整/高位破位，当前减持状态、筹码集中度、未来解禁压力' }
         ];
 
         function renderTrafficLightsForm() {
@@ -769,23 +767,14 @@
                             <span class="text-xs font-extrabold text-[#374151]">${dim.name}</span>
                             <i data-lucide="info" class="w-3 h-3 text-[#9ca3af] cursor-help"></i>
                         </div>
-                        <div class="flex items-center gap-3 mt-1">
-                            <label class="cursor-pointer inline-flex items-center gap-1.5 px-2 py-1 rounded-lg hover:bg-white transition-colors group">
-                                <input type="radio" name="tl-modal-${dim.id}" value="green" class="w-3.5 h-3.5 text-[#2ecc71] focus:ring-[#2ecc71] border-[#d1d5db]">
-                                <span class="text-[11px] text-[#6b7280] group-hover:text-[#2ecc71] font-bold">绿灯</span>
-                            </label>
-                            <label class="cursor-pointer inline-flex items-center gap-1.5 px-2 py-1 rounded-lg hover:bg-white transition-colors group">
-                                <input type="radio" name="tl-modal-${dim.id}" value="yellow" class="w-3.5 h-3.5 text-[#f1c40f] focus:ring-[#f1c40f] border-[#d1d5db]">
-                                <span class="text-[11px] text-[#6b7280] group-hover:text-[#f59e0b] font-bold">黄灯</span>
-                            </label>
-                            <label class="cursor-pointer inline-flex items-center gap-1.5 px-2 py-1 rounded-lg hover:bg-white transition-colors group">
-                                <input type="radio" name="tl-modal-${dim.id}" value="red" class="w-3.5 h-3.5 text-[#e74c3c] focus:ring-[#e74c3c] border-[#d1d5db]">
-                                <span class="text-[11px] text-[#6b7280] group-hover:text-[#e74c3c] font-bold">红灯</span>
-                            </label>
-                            <label class="cursor-pointer inline-flex items-center gap-1.5 px-2 py-1 rounded-lg hover:bg-white transition-colors group ml-auto">
-                                <input type="radio" name="tl-modal-${dim.id}" value="none" checked class="w-3.5 h-3.5 text-[#9ca3af] focus:ring-[#9ca3af] border-[#d1d5db]">
-                                <span class="text-[11px] text-[#9ca3af] font-bold">未选</span>
-                            </label>
+                        <div class="flex items-center justify-between mt-1">
+                            <div class="text-[10px] text-[#9ca3af] font-medium">
+                                0-2:<span class="text-[#e74c3c]">红</span> | 3-6:<span class="text-[#f1c40f]">黄</span> | 7-9:<span class="text-[#2ecc71]">绿</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-[11px] font-bold text-[#6b7280]">打分:</span>
+                                <input type="number" name="tl-modal-${dim.id}" min="0" max="9" value="0" class="w-14 px-2 py-1 text-sm font-mono font-bold text-[#0369a1] bg-white border border-[#d1d5db] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0ea5e9] text-center transition-all shadow-sm">
+                            </div>
                         </div>
                     </div>
                 `;
@@ -1388,25 +1377,33 @@
         }
 
         function renderTrafficLightsCell(stock) {
-            const colorsMap = {
-                'green': 'bg-[#2ecc71]',
-                'yellow': 'bg-[#f1c40f]',
-                'red': 'bg-[#e74c3c]',
-                'none': 'bg-[#d1d5db]'
-            };
-            
             let dots = '';
             if (stock.trafficLights) {
                 TRAFFIC_LIGHT_DIMENSIONS.forEach(dim => {
-                    const val = stock.trafficLights[dim.id] || 'none';
-                    dots += `<div class="w-2.5 h-2.5 rounded-full shrink-0 ${colorsMap[val]}" title="${dim.name}: ${val === 'green' ? '绿' : val === 'yellow' ? '黄' : val === 'red' ? '红' : '无'}"></div>`;
+                    let val = stock.trafficLights[dim.id];
+                    
+                    // 旧数据兼容映射
+                    if (typeof val === 'string') {
+                        const oldMap = { 'green': 8, 'yellow': 4, 'red': 1, 'none': 0 };
+                        val = oldMap[val] || 0;
+                    }
+                    
+                    let colorClass = 'bg-[#d1d5db]';
+                    let colorName = '无';
+                    
+                    if (val >= 0 && val !== undefined) {
+                        if (val >= 7) { colorClass = 'bg-[#2ecc71]'; colorName = '绿'; }
+                        else if (val >= 3) { colorClass = 'bg-[#f1c40f]'; colorName = '黄'; }
+                        else { colorClass = 'bg-[#e74c3c]'; colorName = '红'; }
+                    }
+                    
+                    dots += `<div class="w-2.5 h-2.5 rounded-full shrink-0 ${colorClass}" title="${dim.name}: ${val}分 (${colorName})"></div>`;
                 });
             } else {
-                // 回退逻辑：如果还没有数据，显示灰色（或者保留原有的Mock逻辑）
-                const bgColors = mockTrafficLightEmojis(stock.id != null ? stock.id : stock.code || stock.name || 0);
+                const bgColors = mockTrafficLightEmojis();
                 dots = bgColors.map(bg => `<div class="w-2.5 h-2.5 rounded-full shrink-0 ${bg}"></div>`).join('');
             }
-            return `<div class="flex flex-nowrap items-center justify-center gap-1.5 py-0.5 select-none" title="多维度评分红绿灯">${dots}</div>`;
+            return `<div class="flex flex-nowrap items-center justify-center gap-1.5 py-0.5 select-none" title="鼠标悬停查看各维度得分">${dots}</div>`;
         }
         
         // 渲染价格滑块（参考静态页面样式）
@@ -1936,20 +1933,22 @@ function renderOperationReminders(totalAsset) {
             state.stocks.forEach(stock => {
                 if (stock.strategy === 'watch') return;
 
-                // 1. 计算红绿灯得分 (绿+5，黄/灰+2，红+0)
+                // 1. 计算红绿灯得分 (0-9分相加，满分72分)
                 let score = 0;
                 if (stock.trafficLights) {
                     score = TRAFFIC_LIGHT_DIMENSIONS.reduce((sum, dim) => {
-                        const val = stock.trafficLights[dim.id] || 'none';
-                        if (val === 'green') return sum + 5;
-                        if (val === 'yellow' || val === 'none') return sum + 2;
-                        return sum;
+                        let val = stock.trafficLights[dim.id];
+                        if (typeof val === 'string') {
+                            val = { 'green': 8, 'yellow': 4, 'red': 1, 'none': 0 }[val] || 0;
+                        }
+                        return sum + (Number(val) || 0);
                     }, 0);
                 }
 
                 // 2. 计算目标仓位和当前仓位
-                // 基础仓位 2% (对应 25分)。每增/减 1分，仓位增/减 0.2% (0.002)
-                let targetRatio = 0.02 + (score - 25) * 0.002;
+                // 由于满分变成72分，等比例平移锚点：将基础仓位 2% 的门槛设为 45 分。
+                // 每增/减 1分，仓位依然增/减 0.2% (0.002)
+                let targetRatio = 0.02 + (score - 34) * 0.002;
                 targetRatio = Math.max(0, targetRatio); // 避免负数仓位
                 
                 const priceInCNY = stock.isHK ? stock.price * HKD_TO_CNY_RATE : stock.price;
@@ -2105,14 +2104,15 @@ function renderOperationReminders(totalAsset) {
                     const order = { trend: 1, core: 2, reverse: 3, watch: 4 };
                     comparison = (order[a.strategy] || 99) - (order[b.strategy] || 99);
                 } else if (state.sortConfig.key === 'trafficLight') {
-                    // 绿灯+5分，黄灯/灰灯+2分，红灯+0分
+                    // 按0-9打分制进行总分排序
                     const calcScore = (stock) => {
                         if (!stock.trafficLights) return 0;
                         return TRAFFIC_LIGHT_DIMENSIONS.reduce((sum, dim) => {
-                            const val = stock.trafficLights[dim.id] || 'none';
-                            if (val === 'green') return sum + 5;
-                            if (val === 'yellow' || val === 'none') return sum + 2;
-                            return sum; // red: +0
+                            let val = stock.trafficLights[dim.id];
+                            if (typeof val === 'string') {
+                                val = { 'green': 8, 'yellow': 4, 'red': 1, 'none': 0 }[val] || 0;
+                            }
+                            return sum + (Number(val) || 0);
                         }, 0);
                     };
                     comparison = calcScore(a) - calcScore(b);
@@ -2161,17 +2161,43 @@ function renderOperationReminders(totalAsset) {
                             </div>
                         </td>
                     </tr>`;
-            } else {
-                tbody.innerHTML = processed.map(stock => {
+                } else {
+                    tbody.innerHTML = processed.map(stock => {
                     const strat = STRATEGIES[stock.strategy];
-                    // 港股价格换算成人民币计算市值
                     const priceInCNY = stock.isHK ? stock.price * HKD_TO_CNY_RATE : stock.price;
                     const assetVal = priceInCNY * stock.count;
-                    // 观察仓不显示百分比
-                    const percent = stock.strategy === 'watch' ? '-' : formatPercent(assetVal, totalAsset);
-                    
-                    // 货币符号和标识
                     const currencySymbol = stock.isHK ? 'HK$' : '¥';
+                    
+                    // --- 新增：计算进度条所需数据 ---
+                    const currentRatio = totalAsset > 0 ? (assetVal / totalAsset) : 0;
+                    let targetRatio = 0;
+                    
+                    if (stock.strategy !== 'watch') {
+                        // 计算打分
+                        let score = 0;
+                        if (stock.trafficLights) {
+                            score = TRAFFIC_LIGHT_DIMENSIONS.reduce((sum, dim) => {
+                                let val = stock.trafficLights[dim.id];
+                                if (typeof val === 'string') {
+                                    val = { 'green': 8, 'yellow': 4, 'red': 1, 'none': 0 }[val] || 0;
+                                }
+                                return sum + (Number(val) || 0);
+                            }, 0);
+                        }
+                        // 根据6维度54分制计算建议仓位
+                        targetRatio = Math.max(0, 0.02 + (score - 34) * 0.002);
+                    }
+
+                    // 进度条视觉参数 (这里设定 10% 仓位在视觉上占满整个进度条宽度，超出10%的条会直接填满)
+                    const visualMax = 0.10; 
+                    const currentWidth = Math.min((currentRatio / visualMax) * 100, 100);
+                    const targetLeft = Math.min((targetRatio / visualMax) * 100, 100);
+                    
+                    // 进度条颜色逻辑
+                    let barColor = 'bg-[#6366f1]'; // 正常状态：蓝色
+                    if (currentRatio > targetRatio + 0.02) barColor = 'bg-[#f59e0b]'; // 严重超标：橙色
+                    else if (currentRatio < targetRatio - 0.01) barColor = 'bg-[#10b981]'; // 仓位不足：绿色
+                    // -----------------------------
                     
                     return `
                     <tr id="stock-row-${stock.id}" class="hover:bg-[#f9fafb] transition-colors duration-150 group fade-in">
@@ -2197,10 +2223,23 @@ function renderOperationReminders(totalAsset) {
                         <td class="px-3 py-3 text-center align-middle text-sm whitespace-nowrap">
                             ${renderTrafficLightsCell(stock)}
                         </td>
+
                         <td class="px-4 py-3 text-right" data-stock-id="${stock.id}" data-cell-type="market-value">
                             <div class="flex flex-col items-end">
                                 <span class="font-bold text-[#111827] font-mono text-sm" data-value="${assetVal}">${formatMoney(assetVal)}</span>
-                                <span class="text-xs text-[#9ca3af] mt-0.5">${percent}</span>
+                                
+                                ${stock.strategy !== 'watch' ? `
+                                    <div class="w-[90px] mt-1 flex flex-col group/bar" title="当前占比: ${(currentRatio*100).toFixed(1)}% | 建议水位: ${(targetRatio*100).toFixed(1)}%">
+                                        <div class="flex justify-between text-[9px] font-mono leading-none mb-1">
+                                            <span class="text-[#9ca3af]">${(currentRatio*100).toFixed(1)}%</span>
+                                            <span class="text-[#4b5563] font-bold">目标${(targetRatio*100).toFixed(1)}%</span>
+                                        </div>
+                                        <div class="relative h-1.5 bg-[#e5e7eb] rounded-full w-full">
+                                            <div class="absolute top-0 left-0 h-full rounded-full ${barColor} transition-all duration-500" style="width: ${currentWidth}%;"></div>
+                                            <div class="absolute top-[-2px] h-2.5 w-0.5 bg-[#111827] z-10 rounded-full shadow-sm" style="left: ${targetLeft}%;"></div>
+                                        </div>
+                                    </div>
+                                ` : `<span class="text-xs text-[#9ca3af] mt-0.5">-</span>`}
                             </div>
                         </td>
                         <td class="px-4 py-3 text-right hidden" data-stock-id="${stock.id}" data-cell-type="company-market-cap">
@@ -2237,6 +2276,7 @@ function renderOperationReminders(totalAsset) {
                         </td>
                     </tr>`;
                 }).join('');
+                
             }
 
             // 更新排序图标状态
@@ -2362,11 +2402,16 @@ function renderOperationReminders(totalAsset) {
                 
                 document.getElementById('tl-stock-id').value = stockId;
                 
-                // 重置红绿灯
+                // 旧数据兼容映射
+                const oldMap = { 'green': 8, 'yellow': 4, 'red': 1, 'none': 0 };
+                
                 TRAFFIC_LIGHT_DIMENSIONS.forEach(dim => {
-                    const val = (stock.trafficLights && stock.trafficLights[dim.id]) || 'none';
-                    const radio = document.querySelector(`input[name="tl-modal-${dim.id}"][value="${val}"]`);
-                    if (radio) radio.checked = true;
+                    let val = (stock.trafficLights && stock.trafficLights[dim.id]);
+                    if (typeof val === 'string') val = oldMap[val] || 0; // 旧字符串转分数
+                    if (val === undefined) val = 0;
+                    
+                    const input = document.querySelector(`input[name="tl-modal-${dim.id}"]`);
+                    if (input) input.value = val;
                 });
                 
                 modal.classList.remove('hidden');
@@ -2384,8 +2429,8 @@ function renderOperationReminders(totalAsset) {
             
             const trafficLights = {};
             TRAFFIC_LIGHT_DIMENSIONS.forEach(dim => {
-                const checked = document.querySelector(`input[name="tl-modal-${dim.id}"]:checked`);
-                trafficLights[dim.id] = checked ? checked.value : 'none';
+                const input = document.querySelector(`input[name="tl-modal-${dim.id}"]`);
+                trafficLights[dim.id] = input ? Number(input.value) : 0;
             });
             
             state.stocks[stockIndex].trafficLights = trafficLights;
@@ -2393,8 +2438,7 @@ function renderOperationReminders(totalAsset) {
             toggleTrafficLightModal(false);
             render();
             
-            // 提示成功
-            console.log(`✅ 已更新股票 ID[${stockId}] 的红绿灯评价`);
+            console.log(`✅ 已更新股票 ID[${stockId}] 的红绿灯评价(0-9打分制)`);
         }
 
         // 计算市值调节系数K
