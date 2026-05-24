@@ -40,6 +40,10 @@ env = "localhost"
 
 ########## 静态文件相关配置
 [statics]
+    # 静态文件来源：localhost 开发时使用 disk，线上发布可改为 embed 打进二进制
+    source = "disk"
+    # source = "disk" 时使用的静态文件根目录
+    root = "statics"
     # 网页模板路径
     tmpl_path = "html/*"
     # 静态文件 URL 路径，网页中通过 /statics/js/xx.js 访问资源，

@@ -3,6 +3,7 @@ package webserver
 import (
 	"html/template"
 	"net/http"
+	"path/filepath"
 
 	"github.com/axiaoxin-com/goutils"
 	"github.com/axiaoxin-com/investool/statics"
@@ -41,16 +42,28 @@ func NewGinEngine(middlewares ...gin.HandlerFunc) *gin.Engine {
 
 	// load html template
 	tmplPath := viper.GetString("statics.tmpl_path")
+	staticsSource := viper.GetString("statics.source")
+	staticsRoot := viper.GetString("statics.root")
 	if tmplPath != "" {
 		// add temp func for template parse
 		// template func usage: {{ funcname xx }}
-		t := template.Must(template.New("").Funcs(TemplFuncs).ParseFS(&statics.Files, tmplPath))
+		tmpl := template.New("").Funcs(TemplFuncs)
+		var t *template.Template
+		if staticsSource == "disk" {
+			t = template.Must(tmpl.ParseGlob(filepath.Join(staticsRoot, tmplPath)))
+		} else {
+			t = template.Must(tmpl.ParseFS(&statics.Files, tmplPath))
+		}
 		engine.SetHTMLTemplate(t)
 	}
 	// register statics
 	staticsURL := viper.GetString("statics.url")
 	if staticsURL != "" {
-		engine.StaticFS(staticsURL, http.FS(&statics.Files))
+		if staticsSource == "disk" {
+			engine.Static(staticsURL, staticsRoot)
+		} else {
+			engine.StaticFS(staticsURL, http.FS(&statics.Files))
+		}
 	}
 
 	return engine

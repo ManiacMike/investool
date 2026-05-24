@@ -48,6 +48,9 @@ func InitWithConfigFile(configFile string) {
 	viper.SetDefault("server.mode", gin.ReleaseMode)
 	viper.SetDefault("server.pprof", true)
 
+	viper.SetDefault("statics.source", "embed")
+	viper.SetDefault("statics.root", "statics")
+
 	viper.SetDefault("apidocs.title", "pink-lady swagger apidocs")
 	viper.SetDefault("apidocs.desc", "Using pink-lady to develop gin app on fly.")
 	viper.SetDefault("apidocs.host", "localhost:4869")

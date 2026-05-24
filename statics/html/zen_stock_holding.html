@@ -89,7 +89,7 @@
 </head>
 <body class="bg-[#f9fafb] text-[#111827] min-h-screen selection:bg-[#6366f1]/20 selection:text-[#3730a3]">
 
-    <div class="max-w-[min(100%,2200px)] mx-auto p-4 md:px-12 lg:px-20 xl:px-32 py-8">
+    <div class="max-w-[min(100%,2400px)] mx-auto p-4 md:px-6 lg:px-8 xl:px-10 py-8">
         
         <!-- Header -->
         <header class="mb-8 flex flex-col items-center">
@@ -116,6 +116,7 @@
             <!-- 左侧：持仓列表 (占4/5宽度，80%) -->
             <div class="lg:col-span-4 flex flex-col gap-6">
                 
+                <!-- 股票操作提醒模块已隐藏，保留代码供日后恢复
                 <div id="operation-reminders" class="hidden bg-[#fffbeb] border-2 border-[#fcd34d] rounded-2xl p-5 shadow-md">
                     <div class="flex items-center gap-2 mb-4 border-b border-[#fde68a] pb-3">
                         <div class="p-1.5 bg-[#fef3c7] rounded-lg">
@@ -126,30 +127,33 @@
                     <div id="reminder-list" class="grid grid-cols-1 md:grid-cols-2 gap-3">
                         </div>
                 </div>
+                -->
                 <div class="grid grid-cols-1 md:grid-cols-10 gap-6">
                     
-                    <!-- 投资要点 Tips（侧栏已隐藏，保留 DOM 供日后恢复） -->
-                    <div id="investment-tips-column" class="md:col-span-3 hidden" aria-hidden="true">
+                    <!-- 投资要点 Tips -->
+                    <div id="investment-tips-column" class="md:col-span-3">
                         <div id="investment-tips" class="bg-white rounded-2xl shadow-sm border border-[#e5e7eb] overflow-hidden sticky top-4">
                             <!-- Tips内容将通过JS插入 -->
                         </div>
                     </div>
 
-                    <!-- 表格区域（原 7/10，侧栏隐藏后占满） -->
-                    <div class="md:col-span-10">
+                    <!-- 表格区域 -->
+                    <div class="md:col-span-7">
                         <div class="bg-white rounded-2xl shadow-sm border border-[#e5e7eb] overflow-hidden">
                             <div class="p-6 border-b border-[#e5e7eb] flex flex-col md:flex-row justify-between items-center gap-4 bg-[#ffffff]">
                                 <div class="flex items-center gap-4">
-                                    <h3 class="text-lg font-bold text-[#111827] flex items-center gap-2">
-                                        <span class="w-1 h-6 bg-[#6366f1] rounded-full"></span>
+                                    <h3 class="text-base font-bold text-[#111827] flex items-center gap-2 whitespace-nowrap">
+                                        <span class="w-1 h-5 bg-[#6366f1] rounded-full"></span>
                                         持仓明细
                                     </h3>
                                     <div class="flex bg-[#f3f4f6] p-1 rounded-lg" id="filter-container">
                                         <!-- 筛选按钮 -->
                                         <button onclick="setFilter('all')" class="filter-btn px-3 py-1.5 text-xs font-semibold rounded-md transition-all duration-200 bg-white text-[#6366f1] shadow-sm" data-filter="all">全部</button>
-                                        <button onclick="setFilter('trend')" class="filter-btn px-3 py-1.5 text-xs font-semibold rounded-md transition-all duration-200 text-[#6b7280] hover:text-[#111827]" data-filter="trend">进攻</button>
                                         <button onclick="setFilter('core')" class="filter-btn px-3 py-1.5 text-xs font-semibold rounded-md transition-all duration-200 text-[#6b7280] hover:text-[#111827]" data-filter="core">核心</button>
-                                        <button onclick="setFilter('reverse')" class="filter-btn px-3 py-1.5 text-xs font-semibold rounded-md transition-all duration-200 text-[#6b7280] hover:text-[#111827]" data-filter="reverse">逆向</button>
+                                        <button onclick="setFilter('reverse')" class="filter-btn px-3 py-1.5 text-xs font-semibold rounded-md transition-all duration-200 text-[#6b7280] hover:text-[#111827]" data-filter="reverse">潜伏</button>
+                                        <button onclick="setFilter('dividend')" class="filter-btn px-3 py-1.5 text-xs font-semibold rounded-md transition-all duration-200 text-[#6b7280] hover:text-[#111827]" data-filter="dividend">红利</button>
+                                        <button onclick="setFilter('cycle')" class="filter-btn px-3 py-1.5 text-xs font-semibold rounded-md transition-all duration-200 text-[#6b7280] hover:text-[#111827]" data-filter="cycle">周期</button>
+                                        <button onclick="setFilter('trend')" class="filter-btn px-3 py-1.5 text-xs font-semibold rounded-md transition-all duration-200 text-[#6b7280] hover:text-[#111827]" data-filter="trend">游资</button>
                                         <button onclick="setFilter('watch')" class="filter-btn px-3 py-1.5 text-xs font-semibold rounded-md transition-all duration-200 text-[#6b7280] hover:text-[#111827]" data-filter="watch">观察仓</button>
                                     </div>
                                     
@@ -169,17 +173,16 @@
                                     <!-- 刷新状态指示器 -->
                                     <div class="flex items-center gap-2 text-xs text-[#9ca3af]" id="refresh-indicator">
                                         <i data-lucide="activity" class="w-3.5 h-3.5"></i>
-                                        <span>实时刷新</span>
                                     </div>
                                 </div>
 
                                 <div class="flex items-center gap-2">
-                                    <button onclick="refreshStockPrices()" class="flex items-center gap-2 bg-white hover:bg-[#f9fafb] text-[#6b7280] hover:text-[#6366f1] px-4 py-2.5 rounded-lg font-medium transition-all border border-[#e5e7eb] hover:border-[#6366f1]" title="手动刷新股价">
-                                        <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                                    <button onclick="refreshStockPrices()" class="flex items-center gap-1.5 bg-white hover:bg-[#f9fafb] text-[#6b7280] hover:text-[#6366f1] px-3 py-2 rounded-lg text-sm font-medium transition-all border border-[#e5e7eb] hover:border-[#6366f1] whitespace-nowrap" title="手动刷新股价">
+                                        <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
                                         <span>刷新</span>
                                     </button>
-                                    <button onclick="toggleModal(true)" class="flex items-center gap-2 bg-[#6366f1] hover:bg-[#4f46e5] text-white px-5 py-2.5 rounded-lg font-medium transition-all shadow-lg shadow-[#6366f1]/20 hover:shadow-[#6366f1]/40 active:translate-y-0.5">
-                                        <i data-lucide="plus" class="w-4 h-4"></i>
+                                    <button onclick="toggleModal(true)" class="flex items-center gap-1.5 bg-[#6366f1] hover:bg-[#4f46e5] text-white px-3 py-2 rounded-lg text-sm font-medium transition-all shadow-lg shadow-[#6366f1]/20 hover:shadow-[#6366f1]/40 active:translate-y-0.5 whitespace-nowrap">
+                                        <i data-lucide="plus" class="w-3.5 h-3.5"></i>
                                         <span>录入新持仓</span>
                                     </button>
                                 </div>
@@ -196,12 +199,14 @@
                                                 </div>
                                             </th>
                                             <th class="px-4 py-4">股票名称</th>
+                                            <!-- 选股红绿灯模块已隐藏，保留代码供日后恢复
                                             <th class="px-3 py-4 text-center whitespace-nowrap min-w-[10rem] cursor-pointer hover:bg-[#f3f4f6] transition-colors group" onclick="handleSort('trafficLight')" title="点击按评分排序&#10;绿灯+5分，黄/灰灯+2分，红灯+0分&#10;&#10;1.AI 2.基本面 3.政策 4.宏观 5.新能源 6.护城河 7.股东回报 8.技术面">
                                                 <div class="flex items-center justify-center gap-1.5">
                                                     选股红绿灯
                                                     <i data-lucide="arrow-up-down" class="w-3.5 h-3.5 text-[#9ca3af] opacity-40 group-hover:opacity-100" id="sort-icon-trafficLight"></i>
                                                 </div>
                                             </th>
+                                            -->
                                             <th class="px-4 py-4 cursor-pointer hover:bg-[#f3f4f6] transition-colors group text-right" onclick="handleSort('marketValue')">
                                                 <div class="flex items-center justify-end gap-1.5">
                                                     <i data-lucide="arrow-up-down" class="w-3.5 h-3.5 text-[#9ca3af] opacity-40 group-hover:opacity-100" id="sort-icon-marketValue"></i>
@@ -210,12 +215,14 @@
                                             </th>
                                             <th class="px-4 py-4 text-right hidden">公司市值</th>
                                             <th class="px-4 py-4 text-right">价格/股数</th>
+                                            <!-- 目标水位模块已隐藏，保留代码供日后恢复
                                             <th class="px-4 py-4 cursor-pointer hover:bg-[#f3f4f6] transition-colors group text-center" style="min-width: 250px;" onclick="handleSort('targetRatio')">
                                                 <div class="flex items-center justify-center gap-2">
                                                     <span>目标水位 (买入 VS 卖出)</span>
                                                     <i data-lucide="arrow-up-down" class="w-3.5 h-3.5 text-[#9ca3af] opacity-40 group-hover:opacity-100" id="sort-icon-targetRatio"></i>
                                                 </div>
                                             </th>
+                                            -->
                                             <th class="px-4 py-4 text-center w-20">操作</th>
                                         </tr>
                                     </thead>
@@ -364,23 +371,25 @@
                     <input type="hidden" id="form-isHK" value="false">
                     <div>
                         <label class="block text-xs font-semibold text-[#374151] mb-1">选择策略归属</label>
-                        <div class="grid grid-cols-4 gap-1.5" id="strategy-selector">
+                        <div class="grid grid-cols-6 gap-1" id="strategy-selector">
                             <!-- 策略按钮通过JS动态增强 -->
-                            <button type="button" onclick="selectStrategy('trend')" class="strategy-btn relative flex flex-col items-center gap-0.5 py-1.5 px-1.5 rounded-lg border transition-all text-xs bg-white border-[#e5e7eb] text-[#6b7280] hover:bg-[#f9fafb]" data-value="trend">
-                                <span class="font-bold">趋势</span>
-                                <span class="text-[9px] opacity-70">进攻</span>
-                            </button>
-                            <button type="button" onclick="selectStrategy('core')" class="strategy-btn relative flex flex-col items-center gap-0.5 py-1.5 px-1.5 rounded-lg border transition-all text-xs bg-white border-[#e5e7eb] text-[#6b7280] hover:bg-[#f9fafb]" data-value="core">
+                            <button type="button" onclick="selectStrategy('core')" class="strategy-btn relative flex flex-col items-center gap-0.5 py-1.5 px-1 rounded-lg border transition-all text-[11px] bg-white border-[#e5e7eb] text-[#6b7280] hover:bg-[#f9fafb]" data-value="core">
                                 <span class="font-bold">核心</span>
-                                <span class="text-[9px] opacity-70">压舱</span>
                             </button>
-                            <button type="button" onclick="selectStrategy('reverse')" class="strategy-btn relative flex flex-col items-center gap-0.5 py-1.5 px-1.5 rounded-lg border transition-all text-xs bg-white border-[#e5e7eb] text-[#6b7280] hover:bg-[#f9fafb]" data-value="reverse">
-                                <span class="font-bold">逆向</span>
-                                <span class="text-[9px] opacity-70">反转</span>
+                            <button type="button" onclick="selectStrategy('reverse')" class="strategy-btn relative flex flex-col items-center gap-0.5 py-1.5 px-1 rounded-lg border transition-all text-[11px] bg-white border-[#e5e7eb] text-[#6b7280] hover:bg-[#f9fafb]" data-value="reverse">
+                                <span class="font-bold">潜伏</span>
                             </button>
-                            <button type="button" onclick="selectStrategy('watch')" class="strategy-btn relative flex flex-col items-center gap-0.5 py-1.5 px-1.5 rounded-lg border transition-all text-xs bg-white border-[#e5e7eb] text-[#6b7280] hover:bg-[#f9fafb]" data-value="watch">
+                            <button type="button" onclick="selectStrategy('dividend')" class="strategy-btn relative flex flex-col items-center gap-0.5 py-1.5 px-1 rounded-lg border transition-all text-[11px] bg-white border-[#e5e7eb] text-[#6b7280] hover:bg-[#f9fafb]" data-value="dividend">
+                                <span class="font-bold">红利</span>
+                            </button>
+                            <button type="button" onclick="selectStrategy('cycle')" class="strategy-btn relative flex flex-col items-center gap-0.5 py-1.5 px-1 rounded-lg border transition-all text-[11px] bg-white border-[#e5e7eb] text-[#6b7280] hover:bg-[#f9fafb]" data-value="cycle">
+                                <span class="font-bold">周期</span>
+                            </button>
+                            <button type="button" onclick="selectStrategy('trend')" class="strategy-btn relative flex flex-col items-center gap-0.5 py-1.5 px-1 rounded-lg border transition-all text-[11px] bg-white border-[#e5e7eb] text-[#6b7280] hover:bg-[#f9fafb]" data-value="trend">
+                                <span class="font-bold">游资</span>
+                            </button>
+                            <button type="button" onclick="selectStrategy('watch')" class="strategy-btn relative flex flex-col items-center gap-0.5 py-1.5 px-1 rounded-lg border transition-all text-[11px] bg-white border-[#e5e7eb] text-[#6b7280] hover:bg-[#f9fafb]" data-value="watch">
                                 <span class="font-bold">观察</span>
-                                <span class="text-[9px] opacity-70">观察仓</span>
                             </button>
                         </div>
                         <input type="hidden" id="form-strategy" value="trend">
@@ -797,112 +806,172 @@
         const STRATEGIES = {
             trend: {
                 id: 'trend',
-                name: '趋势投资仓 (进攻)',
+                name: '游资微盘仓 (情绪博弈/妖股)',
                 gradient: 'from-[#ec4899] to-[#be185d]', 
                 bgLight: 'bg-[#fce7f3]',
                 text: 'text-[#be185d]',
                 border: 'border-[#ec4899]/20',
                 icon: 'zap',
-                desc: '焦点 · 动量 · 止损',
-                allocation: '25%',
-                thinking: '顺势而为，杀伐果断。不谈估值，只看资金与强度。',
+                desc: '情绪 · 妖股 · 快进快出',
+                allocation: '游资/微盘',
+                thinking: '避风港与超额刺客。在地缘危机、主线不明或资金博弈时活跃。',
                 tips: {
                     selection: [
-                        '题材热度：必须是当前市场最关注的主线（新闻联播、政策热点、技术突破）',
-                        '资金强度：成交量明显放大，板块内有涨停梯队效应',
-                        '形态要求：均线多头排列，突破关键压力位，无套牢盘压力'
+                        '形态与热度：盘子小（流通市值 < 50 亿最佳），题材极度性感或契合当下最新热点（脱离基本面）。',
+                        '资金印记：龙虎榜游资活跃，换手率极高，有明显的涨停梯队（龙头属性）。'
                     ],
                     buying: [
-                        '右侧交易：不买跌，只买涨。确认趋势形成后再介入',
-                        '打板/半路：在情绪发酵初期果断介入龙头股',
-                        '仓位控制：单只个股不宜过重，随时准备切向更强的标的'
+                        '右侧交易：绝对不左侧潜伏。在题材发酵的第一/二时间节点打板或半路追击突破口。'
                     ],
                     holding: [
-                        '不补仓：亏损意味着判断错误，趋势仓绝对禁止补仓摊低成本',
-                        '跟随趋势：只要股价运行在5日线/10日线之上，忽略分时波动'
+                        '快进快出：持股周期按“天”计算。',
+                        '绝对不补仓：买入即代表博弈情绪，被套说明判断错误，严禁摊平拉低成本。'
                     ],
                     selling: [
-                        '硬止损（铁律）：买入后亏损 -5% 无条件止损，防止深套',
-                        '移动止盈：股价跌破 5日线 减半，跌破 10日线 清仓',
-                        '情绪退潮：板块内高标股出现批量跌停或大阴线时，不论盈亏全部离场'
+                        '硬止损：跌破买入价 -5% 或 -7% 无条件砍仓。',
+                        '移动止盈：跌破 5 日均线减半，跌破 10 日均线或板块出现批量跌停时清仓。'
                     ],
                     events: [
-                        '每日龙虎榜资金动向',
-                        '监管层的"异动公告"或"停牌核查"',
-                        '市场成交量的变化（量缩则趋势可能终结）'
+                        '监管层异动停牌公告',
+                        '每日连板情绪温度',
+                        '宏观无聊期/资金缩量期'
                     ]
                 }
             },
             core: {
                 id: 'core',
-                name: '核心投资仓 (压舱)',
+                name: '核心景气仓 (机构抱团/主升)',
                 gradient: 'from-[#6366f1] to-[#4338ca]', 
                 bgLight: 'bg-[#eef2ff]',
                 text: 'text-[#3730a3]',
                 border: 'border-[#6366f1]/20',
                 icon: 'anchor',
-                desc: '成长 · 护城河 · 双击',
-                allocation: '60%',
-                thinking: '戴维斯双击，做时间的朋友。赚企业成长的钱。',
+                desc: '机构 · 主升 · 戴维斯双击',
+                allocation: '核心景气',
+                thinking: '牛市主引擎。赚取时代红利与产业爆发的钱。',
                 tips: {
                     selection: [
-                        '商业模式：自己心底认可的"好生意"，护城河深（品牌、技术、转换成本）',
-                        '景气周期：行业处于渗透率快速提升阶段，或供需紧平衡',
-                        '估值匹配：PEG 在 0.8 - 1.2 之间，业绩增速能消化当前估值'
+                        '行业地位：赛道龙头，拥有极强的护城河和定价权。',
+                        '戴维斯双击：行业处于渗透率陡峭提升期，业绩高增长能完美消化高估值（PEG 合理）。'
                     ],
                     buying: [
-                        '回调低吸：在上升趋势中的回调阶段买入（如回踩20日、60日均线）',
-                        '分批建仓：不要一次性买满，分 3-4 笔买入，验证逻辑正确后再加仓'
+                        '趋势低吸：在明确的上升通道中，利用缩量回踩关键均线（如 20 日/60 日均线）时分批建仓。'
                     ],
                     holding: [
-                        '忽略噪音：忽略短期 20% 以内的技术性波动',
-                        '紧密跟踪：重点跟踪高频数据（如产品价格、排产数据、月度销量）'
+                        '过滤噪音：做时间的朋友，忽略 20% 以内的短期技术性回撤。',
+                        '信仰业绩：只要产业逻辑和公司财报依然强劲，死拿不放。'
                     ],
                     selling: [
-                        '逻辑证伪：行业景气度见顶（库存积压、杀价竞争）或市占率下滑',
-                        '严重高估：情绪极度狂热，透支未来 3 年业绩（如 PEG > 2.0）',
-                        '换马：发现性价比更高、确定性更强的同赛道标的'
+                        '逻辑证伪：行业景气度见顶（如库存爆满、恶性价格战），或核心财报数据连续两次不及预期。',
+                        '极度狂热：估值被炒到透支未来 3-5 年业绩，全网都在讨论时分批减仓。'
                     ],
                     events: [
-                        '季度财报（营收/净利增速是否符合预期）',
-                        '行业竞争格局变化（是否有新进入者搅局）',
-                        '宏观流动性变化（加息/降息对成长股估值的影响）'
+                        '季度财报披露',
+                        '产业链上下游高频数据（排产/销量）',
+                        '关键技术突破'
                     ]
                 }
             },
             reverse: {
                 id: 'reverse',
-                name: '逆向投资仓 (反转)',
+                name: '潜伏轮动仓 (预期差/埋伏)',
                 gradient: 'from-[#a855f7] to-[#7e22ce]', 
                 bgLight: 'bg-[#f3e8ff]',
                 text: 'text-[#6b21a8]',
                 border: 'border-[#a855f7]/20',
                 icon: 'diamond',
-                desc: '潜伏 · 回归 · 赔率',
-                allocation: '15%',
-                thinking: '均值回归，在绝望中播种。用耐心换取高赔率。',
+                desc: '预期差 · 高低切 · 困境反转',
+                allocation: '潜伏轮动',
+                thinking: '替补队员。赚取资金“高低切”和困境反转预期差的钱。',
                 tips: {
                     selection: [
-                        '好公司遇难：质地优良的白马股，因政策误伤、周期底部或一次性利空导致暴跌',
-                        '安全边际：PB（市净率）处于历史 5% 分位以下，甚至破净',
-                        '生存能力：账上现金充足，没有退市风险，不是造假雷'
+                        '基本面拐点：行业最坏的时候已过，出现微小拐点，但因缺乏话题性被市场冷落。',
+                        '安全边际：估值处于历史低位（PB/PE 低），向下空间极其有限。'
                     ],
                     buying: [
-                        '左侧交易：在下跌趋势中开始关注，无人问津时买入',
-                        '网格/定投：没人知道底在哪里，必须分批买入（如：每跌 10% 买一份）'
+                        '左侧/网格建仓：越跌越买，或者在长期横盘震荡区间的下轨分批吸纳。'
                     ],
                     holding: [
-                        '极度耐心：做好被套 20% 甚至横盘 1 年的心理准备',
-                        '装死：除非基本面逻辑彻底崩塌（如行业消失），否则不动如山'
+                        '极度耐心：做好等待 3 个月至 1 年的心理准备，忍受资金冷落的煎熬。',
+                        '不见兔子不撒鹰：没有放量突破前，绝不轻易交出廉价筹码。'
                     ],
                     selling: [
-                        '逻辑兑现：困境反转确认，股价回到合理估值区间（此时可转为核心仓持有）',
-                        '基本面恶化：发现所谓的"困境"是永久性的（如柯达胶卷被数码取代），必须认错离场'
+                        '止盈晋升：当它成为市场主线并暴涨时，逐步止盈；或将其转移入“核心景气仓”按主升浪逻辑操作。',
+                        '逻辑破灭：所谓的“拐点”被证明是假象，公司现金流断裂，坚决止损。'
                     ],
                     events: [
-                        '政策转向信号（如行业整顿结束）',
-                        '公司回购股份或高管增持',
-                        '产品涨价函或去库存结束的信号'
+                        '主线赛道高位滞涨（预示资金可能溢出）',
+                        '行业去库存结束信号'
+                    ]
+                }
+            },
+            dividend: {
+                id: 'dividend',
+                name: '红利收息仓 (类固收/攒股)',
+                gradient: 'from-[#10b981] to-[#047857]',
+                bgLight: 'bg-[#d1fae5]',
+                text: 'text-[#047857]',
+                border: 'border-[#10b981]/20',
+                icon: 'landmark',
+                desc: '红利 · 现金流 · 复利',
+                allocation: '红利收息',
+                thinking: '压舱石与复利机器。追求绝对的安全和稳定的现金流。',
+                tips: {
+                    selection: [
+                        '商业模式：极度稳定、具有垄断性（如水电、高速、大行、煤炭）。',
+                        '财务指标：长期股息率 > 5%，且现金流极其充沛，资本开支极小。'
+                    ],
+                    buying: [
+                        '利差买入法：当股息率显著高于十年期国债收益率（如高出 3%）时闭眼买入。',
+                        '大跌大买：趁市场极度恐慌、泥沙俱下时捡便宜筹码。'
+                    ],
+                    holding: [
+                        '股息复利：拿到分红后，在股价低位继续买入该股票（红利再投资）。',
+                        '无视涨跌：把它当成存款或房产收租，只要不停止分红，就不看股价。'
+                    ],
+                    selling: [
+                        '基本面恶化：公司修改分红政策，或者盈利能力出现永久性受损。',
+                        '股息率失效：股价被爆炒导致股息率降至 3% 以下，失去收息价值，此时卖出赚取资本利得。'
+                    ],
+                    events: [
+                        '公司年度分红预案',
+                        '无风险利率（十年期国债收益率）走势'
+                    ]
+                }
+            },
+            cycle: {
+                id: 'cycle',
+                name: '周期抗通胀仓 (宏观对冲)',
+                gradient: 'from-[#f59e0b] to-[#d97706]',
+                bgLight: 'bg-[#fef3c7]',
+                text: 'text-[#92400e]',
+                border: 'border-[#f59e0b]/20',
+                icon: 'globe-2',
+                desc: '资源 · 通胀 · 宏观对冲',
+                allocation: '周期抗通胀',
+                thinking: '购买力保卫者。对冲法币贬值、地缘冲突和经济滞胀的风险。',
+                tips: {
+                    selection: [
+                        '硬通货属性：黄金、铜、原油等不可再生的上游核心资源品，以及对应的 A 股矿业/能源巨头。',
+                        '供给约束：全球产能扩张受限，难以快速增加供给的品种。'
+                    ],
+                    buying: [
+                        '宏观驱动：在全球央行放水初期、地缘摩擦加剧或通胀抬头时买入。',
+                        '周期底部：趁商品价格处于周期低谷时布局。'
+                    ],
+                    holding: [
+                        '对冲思维：认识到它与科技/成长股往往呈现跷跷板效应，涨跌同源。',
+                        '顺周期持股：只要大宗商品处于上行大周期，就坚定持有。'
+                    ],
+                    selling: [
+                        '衰退确认：全球宏观经济进入深度硬着陆/大衰退（需求彻底崩塌）。',
+                        '美元强周期：美联储超预期大幅连续加息，导致大宗商品暴跌。'
+                    ],
+                    events: [
+                        '美联储议息会议',
+                        '中东/俄乌等地缘局势',
+                        '美元指数走势',
+                        '全球 PMI 数据'
                     ]
                 }
             },
@@ -941,6 +1010,7 @@
                 }
             }
         };
+        const STRATEGY_ORDER = ['core', 'reverse', 'dividend', 'cycle', 'trend', 'watch'];
 
         // --- LocalStorage 管理 ---
         const STORAGE_KEY = 'zen_stock_holdings';
@@ -1350,6 +1420,7 @@
         const formatTotalMoney = (num) => new Intl.NumberFormat('zh-CN', { style: 'currency', currency: 'CNY', maximumFractionDigits: 0 }).format(num+cash);
         const formatMoney = (num) => new Intl.NumberFormat('zh-CN', { style: 'currency', currency: 'CNY', maximumFractionDigits: 0 }).format(num);
         const formatPercent = (val, total) => total === 0 ? '0.0%' : ((val / total) * 100).toFixed(1) + '%';
+        const getPortfolioTotal = (holdingTotal) => holdingTotal + cash;
         
         // 格式化资产差值（总资产 - 150万）
         const formatAssetDiff = (totalAsset) => {
@@ -1598,7 +1669,7 @@
                             <div class="space-y-2 text-xs text-[#4b5563] leading-relaxed">
                                 <p class="flex items-start gap-2">
                                     <span class="inline-block w-1.5 h-1.5 rounded-full bg-[#6366f1] mt-1.5 flex-shrink-0"></span>
-                                    <span><strong>哑铃型配置</strong> + 核心卫星策略</span>
+                                    <span><strong>五仓策略</strong>：情绪博弈、景气主升、潜伏轮动、红利收息、周期对冲</span>
                                 </p>
                                 <p class="flex items-start gap-2">
                                     <span class="inline-block w-1.5 h-1.5 rounded-full bg-[#6366f1] mt-1.5 flex-shrink-0"></span>
@@ -1619,23 +1690,37 @@
                                 <div class="bg-[#fce7f3] border border-[#ec4899]/20 rounded-lg p-3">
                                     <div class="flex items-center gap-2 mb-1">
                                         <i data-lucide="zap" class="w-3.5 h-3.5 text-[#be185d]"></i>
-                                        <span class="font-bold text-[#be185d] text-xs">进攻端 25%</span>
+                                        <span class="font-bold text-[#be185d] text-xs">游资微盘仓</span>
                                     </div>
-                                    <p class="text-xs text-[#4b5563]">50万，负责捕捉超额收益，保持市场敏感度</p>
+                                    <p class="text-xs text-[#4b5563]">情绪博弈/妖股，快进快出，负责超额刺客属性</p>
                                 </div>
                                 <div class="bg-[#eef2ff] border border-[#6366f1]/20 rounded-lg p-3">
                                     <div class="flex items-center gap-2 mb-1">
                                         <i data-lucide="anchor" class="w-3.5 h-3.5 text-[#3730a3]"></i>
-                                        <span class="font-bold text-[#3730a3] text-xs">稳健端 60%</span>
+                                        <span class="font-bold text-[#3730a3] text-xs">核心景气仓</span>
                                     </div>
-                                    <p class="text-xs text-[#4b5563]">120万，负责资产稳健增值，提供安全垫</p>
+                                    <p class="text-xs text-[#4b5563]">机构抱团/主升，赚产业爆发和时代红利的钱</p>
                                 </div>
                                 <div class="bg-[#f3e8ff] border border-[#a855f7]/20 rounded-lg p-3">
                                     <div class="flex items-center gap-2 mb-1">
                                         <i data-lucide="diamond" class="w-3.5 h-3.5 text-[#6b21a8]"></i>
-                                        <span class="font-bold text-[#6b21a8] text-xs">潜力端 15%</span>
+                                        <span class="font-bold text-[#6b21a8] text-xs">潜伏轮动仓</span>
                                     </div>
-                                    <p class="text-xs text-[#4b5563]">30万，负责布局未来，等待周期反转</p>
+                                    <p class="text-xs text-[#4b5563]">预期差/埋伏，赚高低切和困境反转的钱</p>
+                                </div>
+                                <div class="bg-[#d1fae5] border border-[#10b981]/20 rounded-lg p-3">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <i data-lucide="landmark" class="w-3.5 h-3.5 text-[#047857]"></i>
+                                        <span class="font-bold text-[#047857] text-xs">红利收息仓</span>
+                                    </div>
+                                    <p class="text-xs text-[#4b5563]">类固收/攒股，追求稳定现金流与股息复利</p>
+                                </div>
+                                <div class="bg-[#fef3c7] border border-[#f59e0b]/20 rounded-lg p-3">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <i data-lucide="globe-2" class="w-3.5 h-3.5 text-[#92400e]"></i>
+                                        <span class="font-bold text-[#92400e] text-xs">周期抗通胀仓</span>
+                                    </div>
+                                    <p class="text-xs text-[#4b5563]">宏观对冲，保卫购买力并应对地缘/通胀风险</p>
                                 </div>
                             </div>
                         </div>
@@ -1651,15 +1736,15 @@
                             <ul class="space-y-2">
                                 <li class="flex items-start gap-2 text-xs text-[#4b5563] leading-relaxed">
                                     <span class="inline-block w-1.5 h-1.5 rounded-full bg-[#10b981] mt-1.5 flex-shrink-0"></span>
-                                    <span><strong>止盈流动</strong>（进攻→防守）：趋势仓大赚时，将盈利部分强行划转至核心仓或逆向仓</span>
+                                    <span><strong>止盈流动</strong>（游资微盘→核心/红利）：情绪仓大赚时，将盈利部分划转至核心景气或红利收息</span>
                                 </li>
                                 <li class="flex items-start gap-2 text-xs text-[#4b5563] leading-relaxed">
                                     <span class="inline-block w-1.5 h-1.5 rounded-full bg-[#f59e0b] mt-1.5 flex-shrink-0"></span>
-                                    <span><strong>避险流动</strong>（核心→现金/逆向）：核心仓全线高估时，减仓转为现金或投入底部逆向仓</span>
+                                    <span><strong>避险流动</strong>（核心景气→现金/红利/周期）：主升过热时，减仓转入现金、红利或周期对冲</span>
                                 </li>
                                 <li class="flex items-start gap-2 text-xs text-[#4b5563] leading-relaxed">
                                     <span class="inline-block w-1.5 h-1.5 rounded-full bg-[#8b5cf6] mt-1.5 flex-shrink-0"></span>
-                                    <span><strong>晋升流动</strong>（逆向→核心）：逆向仓逻辑兑现后，自动晋升为核心仓</span>
+                                    <span><strong>晋升流动</strong>（潜伏轮动→核心景气）：预期差兑现并成为主线后，按核心景气仓逻辑管理</span>
                                 </li>
                             </ul>
                         </div>
@@ -1675,7 +1760,7 @@
                             <ul class="space-y-2">
                                 <li class="flex items-start gap-2 text-xs text-[#4b5563] leading-relaxed">
                                     <span class="inline-block w-1.5 h-1.5 rounded-full bg-[#6366f1] mt-1.5 flex-shrink-0"></span>
-                                    <span><strong>专款专用</strong>：严禁混淆策略。不能用做趋势的心态拿长线，也不能用做长线的心态追热点</span>
+                                    <span><strong>专款专用</strong>：严禁混淆策略。不能用游资微盘的心态拿红利，也不能用红利收息的心态追妖股</span>
                                 </li>
                                 <li class="flex items-start gap-2 text-xs text-[#4b5563] leading-relaxed">
                                     <span class="inline-block w-1.5 h-1.5 rounded-full bg-[#6366f1] mt-1.5 flex-shrink-0"></span>
@@ -1824,12 +1909,10 @@
                 return acc + (stock.count * priceInCNY);
             }, 0);
             
-            const strategyStats = {
-                trend: { total: 0, count: 0 },
-                core: { total: 0, count: 0 },
-                reverse: { total: 0, count: 0 },
-                watch: { total: 0, count: 0 }
-            };
+            const strategyStats = STRATEGY_ORDER.reduce((acc, key) => {
+                acc[key] = { total: 0, count: 0 };
+                return acc;
+            }, {});
 
             state.stocks.forEach(stock => {
                 const priceInCNY = stock.isHK ? stock.price * HKD_TO_CNY_RATE : stock.price;
@@ -1841,6 +1924,75 @@
             });
 
             return { totalAsset, strategyStats };
+        }
+
+        function renderStrategyDashboard(strategyStats, holdingTotal) {
+            const dashboard = document.getElementById('strategy-dashboard');
+            if (!dashboard) return;
+
+            const portfolioTotal = getPortfolioTotal(holdingTotal);
+            const strategyCards = STRATEGY_ORDER.map(key => STRATEGIES[key]).map(strat => {
+                const stratTotal = strategyStats[strat.id].total;
+                // 观察仓不显示百分比，显示"-"
+                const percentage = strat.id === 'watch' ? '-' : (portfolioTotal > 0 ? (stratTotal / portfolioTotal) * 100 : 0);
+                
+                return `
+                <div class="bg-white rounded-xl p-5 shadow-sm border border-[#e5e7eb] hover:shadow-md transition-all duration-200 relative overflow-hidden">
+                    <div class="absolute top-0 left-0 w-1 h-full bg-gradient-to-b ${strat.gradient}"></div>
+                    <div class="pl-3">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="flex items-center gap-2">
+                                <div class="p-2 rounded-lg ${strat.bgLight} ${strat.text}">
+                                    <i data-lucide="${strat.icon}" class="w-4 h-4"></i>
+                                </div>
+                                <div>
+                                    <h3 class="font-bold text-[#111827] text-sm">${strat.name.split(' ')[0]}</h3>
+                                    <p class="text-[10px] text-[#6b7280]">${strat.desc}</p>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-2xl font-bold ${strat.text}">${percentage === '-' ? '-' : percentage.toFixed(0)}</span>
+                                ${percentage !== '-' ? '<span class="text-xs text-[#9ca3af] font-medium">%</span>' : ''}
+                            </div>
+                        </div>
+                        <div class="flex items-baseline justify-between pt-3 border-t border-[#f3f4f6]">
+                            <span class="text-xs text-[#9ca3af] uppercase tracking-wider">资产</span>
+                            <span class="text-lg font-bold text-[#111827]">${formatMoney(stratTotal)}</span>
+                        </div>
+                    </div>
+                </div>
+                `;
+            }).join('');
+
+            const cashPercentage = portfolioTotal > 0 ? (cash / portfolioTotal) * 100 : 0;
+            const cashCard = `
+                <div class="bg-white rounded-xl p-5 shadow-sm border border-[#e5e7eb] hover:shadow-md transition-all duration-200 relative overflow-hidden">
+                    <div class="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-[#10b981] to-[#059669]"></div>
+                    <div class="pl-3">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="flex items-center gap-2">
+                                <div class="p-2 rounded-lg bg-[#d1fae5] text-[#047857]">
+                                    <i data-lucide="wallet" class="w-4 h-4"></i>
+                                </div>
+                                <div>
+                                    <h3 class="font-bold text-[#111827] text-sm">现金</h3>
+                                    <p class="text-[10px] text-[#6b7280]">可用 · 防守 · 机动</p>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-2xl font-bold text-[#047857]">${cashPercentage.toFixed(0)}</span>
+                                <span class="text-xs text-[#9ca3af] font-medium">%</span>
+                            </div>
+                        </div>
+                        <div class="flex items-baseline justify-between pt-3 border-t border-[#f3f4f6]">
+                            <span class="text-xs text-[#9ca3af] uppercase tracking-wider">资产</span>
+                            <span class="text-lg font-bold text-[#111827]">${formatMoney(cash)}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            dashboard.innerHTML = strategyCards + cashCard;
         }
 
         // 渲染标签统计
@@ -2039,8 +2191,8 @@ function renderOperationReminders(totalAsset) {
         // ===================================
         function render() {
             const { totalAsset, strategyStats } = calculateStats();
-            // ====== 新增：调用提醒模块渲染 ======
-            renderOperationReminders(totalAsset);
+            // ====== 股票操作提醒模块已隐藏，保留代码供日后恢复 ======
+            // renderOperationReminders(totalAsset);
             // 1. 更新总资产条
             document.getElementById('total-asset-display').textContent = formatTotalMoney(totalAsset);
             document.getElementById('total-count-display').textContent = state.stocks.length;
@@ -2054,39 +2206,7 @@ function renderOperationReminders(totalAsset) {
             }
 
             // 2. 渲染策略仪表盘（右侧垂直布局）
-            const dashboard = document.getElementById('strategy-dashboard');
-            dashboard.innerHTML = Object.values(STRATEGIES).map(strat => {
-                const stratTotal = strategyStats[strat.id].total;
-                // 观察仓不显示百分比，显示"-"
-                const percentage = strat.id === 'watch' ? '-' : (totalAsset > 0 ? (stratTotal / totalAsset) * 100 : 0);
-                
-                return `
-                <div class="bg-white rounded-xl p-5 shadow-sm border border-[#e5e7eb] hover:shadow-md transition-all duration-200 relative overflow-hidden">
-                    <div class="absolute top-0 left-0 w-1 h-full bg-gradient-to-b ${strat.gradient}"></div>
-                    <div class="pl-3">
-                        <div class="flex items-center justify-between mb-3">
-                            <div class="flex items-center gap-2">
-                                <div class="p-2 rounded-lg ${strat.bgLight} ${strat.text}">
-                                    <i data-lucide="${strat.icon}" class="w-4 h-4"></i>
-                                </div>
-                                <div>
-                                    <h3 class="font-bold text-[#111827] text-sm">${strat.name.split(' ')[0]}</h3>
-                                    <p class="text-[10px] text-[#6b7280]">${strat.desc}</p>
-                                </div>
-                            </div>
-                            <div class="text-right">
-                                <span class="text-2xl font-bold ${strat.text}">${percentage === '-' ? '-' : percentage.toFixed(0)}</span>
-                                ${percentage !== '-' ? '<span class="text-xs text-[#9ca3af] font-medium">%</span>' : ''}
-                            </div>
-                        </div>
-                        <div class="flex items-baseline justify-between pt-3 border-t border-[#f3f4f6]">
-                            <span class="text-xs text-[#9ca3af] uppercase tracking-wider">资产</span>
-                            <span class="text-lg font-bold text-[#111827]">${formatMoney(stratTotal)}</span>
-                        </div>
-                    </div>
-                </div>
-                `;
-            }).join('');
+            renderStrategyDashboard(strategyStats, totalAsset);
 
             // 3. 渲染标签统计
             renderTagsStatistics(totalAsset);
@@ -2101,7 +2221,7 @@ function renderOperationReminders(totalAsset) {
             processed.sort((a, b) => {
                 let comparison = 0;
                 if (state.sortConfig.key === 'strategy') {
-                    const order = { trend: 1, core: 2, reverse: 3, watch: 4 };
+                    const order = { core: 1, reverse: 2, dividend: 3, cycle: 4, trend: 5, watch: 6 };
                     comparison = (order[a.strategy] || 99) - (order[b.strategy] || 99);
                 } else if (state.sortConfig.key === 'trafficLight') {
                     // 按0-9打分制进行总分排序
@@ -2152,7 +2272,7 @@ function renderOperationReminders(totalAsset) {
             if (processed.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="8" class="px-6 py-20 text-center">
+                        <td colspan="6" class="px-6 py-20 text-center">
                             <div class="flex flex-col items-center justify-center text-[#9ca3af]">
                                 <div class="bg-[#f3f4f6] p-4 rounded-full mb-3">
                                     <i data-lucide="sparkles" class="w-8 h-8 text-[#d1d5db]"></i>
@@ -2220,15 +2340,20 @@ function renderOperationReminders(totalAsset) {
                                 <span class="text-xs text-[#9ca3af] font-mono mt-0.5">${stock.code}</span>
                             </div>
                         </td>
-                        <td class="px-3 py-3 text-center align-middle text-sm whitespace-nowrap">
+                        ${/*
+                        选股红绿灯模块已隐藏，保留代码供日后恢复
+                        `<td class="px-3 py-3 text-center align-middle text-sm whitespace-nowrap">
                             ${renderTrafficLightsCell(stock)}
-                        </td>
+                        </td>`
+                        */''}
 
                         <td class="px-4 py-3 text-right" data-stock-id="${stock.id}" data-cell-type="market-value">
                             <div class="flex flex-col items-end">
                                 <span class="font-bold text-[#111827] font-mono text-sm" data-value="${assetVal}">${formatMoney(assetVal)}</span>
                                 
-                                ${stock.strategy !== 'watch' ? `
+                                ${/*
+                                持仓市值中的仓位进度已隐藏，保留代码供日后恢复
+                                stock.strategy !== 'watch' ? `
                                     <div class="w-[90px] mt-1 flex flex-col group/bar" title="当前占比: ${(currentRatio*100).toFixed(1)}% | 建议水位: ${(targetRatio*100).toFixed(1)}%">
                                         <div class="flex justify-between text-[9px] font-mono leading-none mb-1">
                                             <span class="text-[#9ca3af]">${(currentRatio*100).toFixed(1)}%</span>
@@ -2239,7 +2364,8 @@ function renderOperationReminders(totalAsset) {
                                             <div class="absolute top-[-2px] h-2.5 w-0.5 bg-[#111827] z-10 rounded-full shadow-sm" style="left: ${targetLeft}%;"></div>
                                         </div>
                                     </div>
-                                ` : `<span class="text-xs text-[#9ca3af] mt-0.5">-</span>`}
+                                ` : `<span class="text-xs text-[#9ca3af] mt-0.5">-</span>`
+                                */''}
                             </div>
                         </td>
                         <td class="px-4 py-3 text-right hidden" data-stock-id="${stock.id}" data-cell-type="company-market-cap">
@@ -2255,9 +2381,12 @@ function renderOperationReminders(totalAsset) {
                                 <span class="text-xs text-[#9ca3af] mt-0.5">${stock.count}股</span>
                             </div>
                         </td>
-                        <td class="px-4 py-3 text-center" data-stock-id="${stock.id}" data-cell-type="price-targets">
+                        ${/*
+                        目标水位模块已隐藏，保留代码供日后恢复
+                        `<td class="px-4 py-3 text-center" data-stock-id="${stock.id}" data-cell-type="price-targets">
                             ${renderPriceSlider(stock)}
-                        </td>
+                        </td>`
+                        */''}
                         <td class="px-4 py-3 text-center">
                             <div class="flex items-center justify-center gap-1">
                                 <a href="/invest/zen-note?code=${stock.code}&name=${encodeURIComponent(stock.name)}" target="_blank" class="text-[#d1d5db] hover:text-[#10b981] transition-colors p-1.5 rounded-lg hover:bg-[#d1fae5]" title="笔记">
@@ -2266,9 +2395,12 @@ function renderOperationReminders(totalAsset) {
                                 <button onclick="handleEdit(${stock.id})" class="text-[#d1d5db] hover:text-[#6366f1] transition-colors p-1.5 rounded-lg hover:bg-[#eef2ff]" title="编辑基本信息">
                                     <i data-lucide="edit-2" class="w-3.5 h-3.5"></i>
                                 </button>
-                                <button onclick="toggleTrafficLightModal(true, ${stock.id})" class="text-[#d1d5db] hover:text-[#0ea5e9] transition-colors p-1.5 rounded-lg hover:bg-[#f0f9ff]" title="红绿灯评价">
+                                ${/*
+                                选股红绿灯模块已隐藏，保留代码供日后恢复
+                                `<button onclick="toggleTrafficLightModal(true, ${stock.id})" class="text-[#d1d5db] hover:text-[#0ea5e9] transition-colors p-1.5 rounded-lg hover:bg-[#f0f9ff]" title="红绿灯评价">
                                     <i data-lucide="activity" class="w-3.5 h-3.5"></i>
-                                </button>
+                                </button>`
+                                */''}
                                 <button onclick="handleDelete(${stock.id})" class="text-[#d1d5db] hover:text-[#ef4444] transition-colors p-1.5 rounded-lg hover:bg-[#fee2e2]" title="删除">
                                     <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
                                 </button>
@@ -2688,8 +2820,8 @@ function renderOperationReminders(totalAsset) {
                 const val = btn.dataset.value;
                 const s = STRATEGIES[val];
                 
-                // 重置样式
-                btn.className = `strategy-btn relative flex flex-col items-center gap-2 py-4 px-2 rounded-xl border transition-all text-sm relative overflow-hidden`;
+                // 重置样式：保持策略选择器为单行紧凑形态
+                btn.className = `strategy-btn relative flex flex-col items-center gap-0.5 py-1.5 px-1 rounded-lg border transition-all text-[11px] overflow-hidden`;
                 
                 if (val === selectedId) {
                     // 选中状态
@@ -3304,38 +3436,7 @@ function renderOperationReminders(totalAsset) {
                         }
                         
                         // 更新策略仪表盘
-                        const dashboard = document.getElementById('strategy-dashboard');
-                        dashboard.innerHTML = Object.values(STRATEGIES).map(strat => {
-                            const stratTotal = strategyStats[strat.id].total;
-                            const percentage = newTotalAsset > 0 ? (stratTotal / newTotalAsset) * 100 : 0;
-                            
-                            return `
-                            <div class="bg-white rounded-xl p-5 shadow-sm border border-[#e5e7eb] hover:shadow-md transition-all duration-200 relative overflow-hidden">
-                                <div class="absolute top-0 left-0 w-1 h-full bg-gradient-to-b ${strat.gradient}"></div>
-                                <div class="pl-3">
-                                    <div class="flex items-center justify-between mb-3">
-                                        <div class="flex items-center gap-2">
-                                            <div class="p-2 rounded-lg ${strat.bgLight} ${strat.text}">
-                                                <i data-lucide="${strat.icon}" class="w-4 h-4"></i>
-                                            </div>
-                                            <div>
-                                                <h3 class="font-bold text-[#111827] text-sm">${strat.name.split(' ')[0]}</h3>
-                                                <p class="text-[10px] text-[#6b7280]">${strat.desc}</p>
-                                            </div>
-                                        </div>
-                                        <div class="text-right">
-                                            <span class="text-2xl font-bold ${strat.text}">${percentage.toFixed(0)}</span>
-                                            <span class="text-xs text-[#9ca3af] font-medium">%</span>
-                                        </div>
-                                    </div>
-                                    <div class="flex items-baseline justify-between pt-3 border-t border-[#f3f4f6]">
-                                        <span class="text-xs text-[#9ca3af] uppercase tracking-wider">资产</span>
-                                        <span class="text-lg font-bold text-[#111827]">${formatMoney(stratTotal)}</span>
-                                    </div>
-                                </div>
-                            </div>
-                            `;
-                        }).join('');
+                        renderStrategyDashboard(strategyStats, newTotalAsset);
                         
                         lucide.createIcons();
                         
@@ -3356,7 +3457,6 @@ function renderOperationReminders(totalAsset) {
                             setTimeout(() => {
                                 indicator.innerHTML = `
                                     <i data-lucide="activity" class="w-3.5 h-3.5"></i>
-                                    <span>实时刷新</span>
                                 `;
                                 lucide.createIcons();
                             }, 2000);
@@ -3366,7 +3466,6 @@ function renderOperationReminders(totalAsset) {
                         if (indicator) {
                             indicator.innerHTML = `
                                 <i data-lucide="activity" class="w-3.5 h-3.5"></i>
-                                <span>实时刷新</span>
                             `;
                             lucide.createIcons();
                         }
@@ -3387,7 +3486,6 @@ function renderOperationReminders(totalAsset) {
                     setTimeout(() => {
                         indicator.innerHTML = `
                             <i data-lucide="activity" class="w-3.5 h-3.5"></i>
-                            <span>实时刷新</span>
                         `;
                         lucide.createIcons();
                     }, 3000);
