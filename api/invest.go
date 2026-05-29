@@ -731,3 +731,15 @@ func BatchQueryStockPricesHandler(c *gin.Context) {
 		"data":    results,
 	})
 }
+
+// ZenResearchReportHandler 研报数据页面
+func ZenResearchReportHandler(c *gin.Context) {
+	data := gin.H{
+		"Env":       viper.GetString("env"),
+		"HostURL":   viper.GetString("server.host_url"),
+		"Version":   version.Version,
+		"PageTitle": "研报管理",
+		"Error":     "",
+	}
+	c.HTML(http.StatusOK, "zen_research_report.html", data)
+}

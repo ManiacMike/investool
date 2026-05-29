@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.PageTitle}}</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        
+        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .modal-enter { animation: modalIn 0.2s ease-out forwards; }
+        @keyframes modalIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-[#f9fafb] text-[#111827] min-h-screen selection:bg-[#6366f1]/20 selection:text-[#3730a3]">
+
+    <div class="max-w-[min(100%,2400px)] mx-auto p-4 md:px-6 lg:px-8 xl:px-10 py-8">
+        
+        <!-- Header -->
+        <header class="mb-8 flex flex-col items-center">
+            <div class="max-w-2xl mx-auto bg-white border border-[#e5e7eb] rounded-full px-6 py-2.5 flex items-center justify-center gap-3 shadow-sm hover:shadow-md transition-shadow">
+                <i data-lucide="book-open" class="w-4 h-4 text-[#6366f1] fill-current opacity-70"></i>
+                <p class="text-sm text-[#4b5563] italic">
+                    深度研究，创造价值
+                </p>
+            </div>
+        </header>
+
+        <!-- 主内容区 -->
+        <div class="flex flex-col gap-6">
+            <div class="bg-white rounded-2xl shadow-sm border border-[#e5e7eb] overflow-hidden">
+                <div class="p-6 border-b border-[#e5e7eb] flex flex-col md:flex-row justify-between items-center gap-4 bg-[#ffffff]">
+                    <div class="flex items-center gap-4">
+                        <h3 class="text-base font-bold text-[#111827] flex items-center gap-2 whitespace-nowrap">
+                            <span class="w-1 h-5 bg-[#6366f1] rounded-full"></span>
+                            研报数据
+                        </h3>
+                        <span class="text-sm text-[#6b7280] bg-[#f3f4f6] px-3 py-1 rounded-full font-medium" id="report-count">共 0 篇</span>
+                    </div>
+
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <button onclick="togglePasteModal(true)" class="flex items-center gap-1.5 bg-white hover:bg-[#f9fafb] text-[#6b7280] hover:text-[#6366f1] px-3 py-2 rounded-lg text-sm font-medium transition-all border border-[#e5e7eb] hover:border-[#6366f1] whitespace-nowrap">
+                            <i data-lucide="clipboard" class="w-3.5 h-3.5"></i>
+                            <span>粘贴JSON</span>
+                        </button>
+                        <button onclick="document.getElementById('import-file-input').click()" class="flex items-center gap-1.5 bg-white hover:bg-[#f9fafb] text-[#6b7280] hover:text-[#6366f1] px-3 py-2 rounded-lg text-sm font-medium transition-all border border-[#e5e7eb] hover:border-[#6366f1] whitespace-nowrap">
+                            <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+                            <span>导入JSON文件</span>
+                        </button>
+                        <input type="file" id="import-file-input" accept=".json" style="display: none;" onchange="importFromJSONFile(event)">
+                        <button onclick="exportToJSON()" class="flex items-center gap-1.5 bg-white hover:bg-[#f9fafb] text-[#6b7280] hover:text-[#6366f1] px-3 py-2 rounded-lg text-sm font-medium transition-all border border-[#e5e7eb] hover:border-[#6366f1] whitespace-nowrap">
+                            <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                            <span>导出JSON</span>
+                        </button>
+                        <button onclick="toggleModal(true)" class="flex items-center gap-1.5 bg-[#6366f1] hover:bg-[#4f46e5] text-white px-3 py-2 rounded-lg text-sm font-medium transition-all shadow-lg shadow-[#6366f1]/20 hover:shadow-[#6366f1]/40 active:translate-y-0.5 whitespace-nowrap">
+                            <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                            <span>录入新研报</span>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead>
+                            <tr class="bg-[#f9fafb] text-left text-xs font-semibold text-[#6b7280] uppercase tracking-wider select-none border-b border-[#e5e7eb]">
+                                <th class="px-4 py-4 min-w-[100px]">研报时间</th>
+                                <th class="px-4 py-4 min-w-[100px]">行业分类</th>
+                                <th class="px-4 py-4 min-w-[120px]">机构名称</th>
+                                <th class="px-4 py-4 min-w-[120px]">调研目标</th>
+                                <th class="px-4 py-4 min-w-[100px]">研报类型</th>
+                                <th class="px-4 py-4 min-w-[200px]">核心内容</th>
+                                <th class="px-4 py-4 min-w-[80px] text-right">目标价</th>
+                                <th class="px-4 py-4 min-w-[100px] text-center">投资评级</th>
+                                <th class="px-4 py-4 min-w-[100px] text-center">评级变动</th>
+                                <th class="px-4 py-4 min-w-[120px] text-center">盈利预测调整</th>
+                                <th class="px-4 py-4 min-w-[150px]">核心催化剂</th>
+                                <th class="px-4 py-4 min-w-[150px]">核心风险提示</th>
+                                <th class="px-4 py-4 min-w-[100px]">作者</th>
+                                <th class="px-4 py-4 text-center w-24">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="report-table-body" class="divide-y divide-[#e5e7eb]">
+                            <!-- 表格内容将通过JS插入 -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: 录入/编辑研报 -->
+    <div id="add-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-[#1f2937]/70 backdrop-blur-sm transition-opacity" onclick="toggleModal(false)"></div>
+        
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto relative z-10 modal-enter border border-[#e5e7eb] no-scrollbar">
+            <div class="p-4 border-b border-[#e5e7eb] flex justify-between items-center bg-[#f9fafb] sticky top-0 z-20">
+                <h3 id="modal-title" class="text-base font-bold text-[#111827] flex items-center gap-2">
+                    <div class="bg-[#eef2ff] p-1.5 rounded-lg text-[#6366f1]">
+                        <i data-lucide="edit" class="w-3.5 h-3.5"></i>
+                    </div>
+                    录入新研报
+                </h3>
+                <button onclick="toggleModal(false)" class="text-[#9ca3af] hover:text-[#4b5563] hover:bg-[#e5e7eb] p-1.5 rounded-full transition-colors">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+            
+            <div class="p-6">
+                <form id="report-form" onsubmit="handleSaveReport(event)" class="space-y-4">
+                    <input type="hidden" id="form-id" value="">
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="space-y-1">
+                            <label class="block text-xs font-bold text-[#6b7280] uppercase tracking-wider">研报时间 <span class="text-[#ef4444]">*</span></label>
+                            <input type="date" id="f-publish_time" required class="w-full px-3 py-2 bg-white border border-[#d1d5db] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6366f1] transition-all text-sm font-medium text-[#111827]">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="block text-xs font-bold text-[#6b7280] uppercase tracking-wider">行业分类</label>
+                            <input type="text" id="f-industry_category" placeholder="如：计算机" class="w-full px-3 py-2 bg-white border border-[#d1d5db] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6366f1] transition-all text-sm font-medium text-[#111827]">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="block text-xs font-bold text-[#6b7280] uppercase tracking-wider">机构名称 <span class="text-[#ef4444]">*</span></label>
+                            <input type="text" id="f-institution_name" required placeholder="如：中信证券" class="w-full px-3 py-2 bg-white border border-[#d1d5db] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6366f1] transition-all text-sm font-medium text-[#111827]">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="space-y-1">
+                            <label class="block text-xs font-bold text-[#6b7280] uppercase tracking-wider">调研目标 <span class="text-[#ef4444]">*</span></label>
+                            <input type="text" id="f-research_target" required placeholder="如：腾讯控股" class="w-full px-3 py-2 bg-white border border-[#d1d5db] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6366f1] transition-all text-sm font-medium text-[#111827]">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="block text-xs font-bold text-[#6b7280] uppercase tracking-wider">研报类型</label>
+                            <input type="text" id="f-report_type" placeholder="如：深度报告" class="w-full px-3 py-2 bg-white border border-[#d1d5db] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6366f1] transition-all text-sm font-medium text-[#111827]">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="block text-xs font-bold text-[#6b7280] uppercase tracking-wider">作者</label>
+                            <input type="text" id="f-author" placeholder="如：张三" class="w-full px-3 py-2 bg-white border border-[#d1d5db] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6366f1] transition-all text-sm font-medium text-[#111827]">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div class="space-y-1">
+                            <label class="block text-xs font-bold text-[#6b7280] uppercase tracking-wider">目标价</label>
+                            <input type="text" id="f-target_price" placeholder="如：400港元" class="w-full px-3 py-2 bg-white border border-[#d1d5db] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6366f1] transition-all text-sm font-medium text-[#111827]">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="block text-xs font-bold text-[#6b7280] uppercase tracking-wider">投资评级</label>
+                            <select id="f-investment_rating" class="w-full px-3 py-2 bg-white border border-[#d1d5db] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6366f1] transition-all text-sm font-medium text-[#111827]">
+                                <option value="">选择评级</option>
+                                <option value="买入">买入</option>
+                                <option value="增持">增持</option>
+                                <option value="中性">中性</option>
+                                <option value="减持">减持</option>
+                                <option value="卖出">卖出</option>
+                            </select>
+                        </div>
+                        <div class="space-y-1">
+                            <label class="block text-xs font-bold text-[#6b7280] uppercase tracking-wider">评级变动</label>
+                            <select id="f-rating_change" class="w-full px-3 py-2 bg-white border border-[#d1d5db] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6366f1] transition-all text-sm font-medium text-[#111827]">
+                                <option value="">选择变动</option>
+                                <option value="维持">维持</option>
+                                <option value="上调">上调</option>
+                                <option value="下调">下调</option>
+                                <option value="首次">首次</option>
+                            </select>
+                        </div>
+                        <div class="space-y-1">
+                            <label class="block text-xs font-bold text-[#6b7280] uppercase tracking-wider">盈利预测调整</label>
+                            <select id="f-earnings_forecast_adjustment" class="w-full px-3 py-2 bg-white border border-[#d1d5db] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6366f1] transition-all text-sm font-medium text-[#111827]">
+                                <option value="">选择调整</option>
+                                <option value="无">无</option>
+                                <option value="上调">上调</option>
+                                <option value="下调">下调</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="space-y-1">
+                        <label class="block text-xs font-bold text-[#6b7280] uppercase tracking-wider">核心内容</label>
+                        <textarea id="f-core_content" rows="3" class="w-full px-3 py-2 bg-white border border-[#d1d5db] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6366f1] transition-all text-sm font-medium text-[#111827] resize-y"></textarea>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="space-y-1">
+                            <label class="block text-xs font-bold text-[#6b7280] uppercase tracking-wider">核心催化剂</label>
+                            <textarea id="f-core_catalyst" rows="3" class="w-full px-3 py-2 bg-white border border-[#d1d5db] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6366f1] transition-all text-sm font-medium text-[#111827] resize-y"></textarea>
+                        </div>
+                        <div class="space-y-1">
+                            <label class="block text-xs font-bold text-[#6b7280] uppercase tracking-wider">核心风险提示</label>
+                            <textarea id="f-core_risk_warning" rows="3" class="w-full px-3 py-2 bg-white border border-[#d1d5db] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6366f1] transition-all text-sm font-medium text-[#111827] resize-y"></textarea>
+                        </div>
+                    </div>
+                    
+                    <div class="pt-4 border-t border-[#e5e7eb] flex justify-end gap-3 sticky bottom-0 bg-white z-20">
+                        <button type="button" onclick="toggleModal(false)" class="px-4 py-2 text-sm font-semibold text-[#4b5563] bg-white border border-[#d1d5db] rounded-lg hover:bg-[#f3f4f6] transition-all">
+                            取消
+                        </button>
+                        <button type="submit" class="px-5 py-2 text-sm font-semibold text-white bg-[#6366f1] rounded-lg hover:bg-[#4f46e5] shadow-md shadow-[#6366f1]/20 transition-all flex items-center gap-2">
+                            <i data-lucide="check" class="w-4 h-4"></i>
+                            保存研报
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: 粘贴JSON -->
+    <div id="paste-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-[#1f2937]/70 backdrop-blur-sm transition-opacity" onclick="togglePasteModal(false)"></div>
+        
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl relative z-10 modal-enter border border-[#e5e7eb]">
+            <div class="p-4 border-b border-[#e5e7eb] flex justify-between items-center bg-[#f9fafb]">
+                <h3 class="text-base font-bold text-[#111827] flex items-center gap-2">
+                    <div class="bg-[#eef2ff] p-1.5 rounded-lg text-[#6366f1]">
+                        <i data-lucide="clipboard" class="w-3.5 h-3.5"></i>
+                    </div>
+                    粘贴JSON数据
+                </h3>
+                <button onclick="togglePasteModal(false)" class="text-[#9ca3af] hover:text-[#4b5563] hover:bg-[#e5e7eb] p-1.5 rounded-full transition-colors">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+            
+            <div class="p-6">
+                <div class="space-y-4">
+                    <div class="bg-[#eff6ff] border border-[#bfdbfe] rounded-lg p-3 flex items-start gap-2">
+                        <i data-lucide="info" class="w-4 h-4 text-[#3b82f6] mt-0.5 flex-shrink-0"></i>
+                        <p class="text-xs text-[#1e40af] leading-relaxed">
+                            支持粘贴单个研报JSON对象，或包含多个研报对象的JSON数组。导入的数据将直接追加到现有列表中。
+                        </p>
+                    </div>
+                    
+                    <textarea id="paste-json-content" rows="10" placeholder="[{&quot;publish_time&quot;:&quot;2023-10-01&quot;,...}]" class="w-full px-3 py-2 bg-white border border-[#d1d5db] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6366f1] transition-all text-sm font-mono text-[#111827] resize-y"></textarea>
+                    
+                    <div class="pt-2 flex justify-end gap-3">
+                        <button type="button" onclick="togglePasteModal(false)" class="px-4 py-2 text-sm font-semibold text-[#4b5563] bg-white border border-[#d1d5db] rounded-lg hover:bg-[#f3f4f6] transition-all">
+                            取消
+                        </button>
+                        <button type="button" onclick="handlePasteJSON()" class="px-5 py-2 text-sm font-semibold text-white bg-[#6366f1] rounded-lg hover:bg-[#4f46e5] shadow-md shadow-[#6366f1]/20 transition-all flex items-center gap-2">
+                            <i data-lucide="upload" class="w-4 h-4"></i>
+                            导入
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast 提示 -->
+    <div id="toast" class="fixed top-4 left-1/2 -translate-x-1/2 z-[60] bg-[#111827] text-white px-4 py-2.5 rounded-lg shadow-lg flex items-center gap-2 transition-all duration-300 opacity-0 translate-y-[-20px] pointer-events-none">
+        <i data-lucide="check-circle" class="w-4 h-4 text-[#10b981]" id="toast-icon"></i>
+        <span class="text-sm font-medium" id="toast-message">操作成功</span>
+    </div>
+
+    <script>
+        // 初始化 Lucide Icons
+        lucide.createIcons();
+
+        // 存储研报数据
+        let reports = [];
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            loadReports();
+            renderTable();
+        });
+
+        // 提示信息
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toast-message');
+            const toastIcon = document.getElementById('toast-icon');
+            
+            toastMessage.textContent = message;
+            
+            if (type === 'success') {
+                toastIcon.setAttribute('data-lucide', 'check-circle');
+                toastIcon.className = 'w-4 h-4 text-[#10b981]';
+            } else if (type === 'error') {
+                toastIcon.setAttribute('data-lucide', 'x-circle');
+                toastIcon.className = 'w-4 h-4 text-[#ef4444]';
+            } else {
+                toastIcon.setAttribute('data-lucide', 'info');
+                toastIcon.className = 'w-4 h-4 text-[#3b82f6]';
+            }
+            lucide.createIcons();
+            
+            toast.classList.remove('opacity-0', 'translate-y-[-20px]');
+            
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-[-20px]');
+            }, 3000);
+        }
+
+        // 本地存储读写
+        function loadReports() {
+            const saved = localStorage.getItem('zen_research_reports');
+            if (saved) {
+                try {
+                    reports = JSON.parse(saved);
+                } catch (e) {
+                    console.error('Failed to parse saved reports:', e);
+                    reports = [];
+                }
+            }
+        }
+
+        function saveReports() {
+            localStorage.setItem('zen_research_reports', JSON.stringify(reports));
+        }
+
+        // 生成唯一ID
+        function generateId() {
+            return Date.now().toString(36) + Math.random().toString(36).substr(2);
+        }
+
+        // 渲染表格
+        function renderTable() {
+            const tbody = document.getElementById('report-table-body');
+            document.getElementById('report-count').textContent = `共 ${reports.length} 篇`;
+            
+            if (reports.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="14" class="px-4 py-12 text-center text-[#6b7280] text-sm">
+                            <div class="flex flex-col items-center justify-center gap-3">
+                                <div class="p-3 bg-[#f3f4f6] rounded-full">
+                                    <i data-lucide="inbox" class="w-6 h-6 text-[#9ca3af]"></i>
+                                </div>
+                                暂无研报数据，请点击上方按钮录入或导入
+                            </div>
+                        </td>
+                    </tr>
+                `;
+                lucide.createIcons();
+                return;
+            }
+
+            // 按时间倒序排序
+            const sortedReports = [...reports].sort((a, b) => new Date(b.publish_time) - new Date(a.publish_time));
+
+            tbody.innerHTML = sortedReports.map(report => `
+                <tr class="hover:bg-[#f9fafb] transition-colors group">
+                    <td class="px-4 py-3 text-sm text-[#4b5563] whitespace-nowrap">${report.publish_time || '-'}</td>
+                    <td class="px-4 py-3 text-sm text-[#4b5563]">${report.industry_category || '-'}</td>
+                    <td class="px-4 py-3 text-sm font-semibold text-[#111827]">${report.institution_name || '-'}</td>
+                    <td class="px-4 py-3 text-sm font-bold text-[#6366f1]">${report.research_target || '-'}</td>
+                    <td class="px-4 py-3 text-sm text-[#4b5563]"><span class="px-2 py-1 bg-gray-100 rounded text-xs">${report.report_type || '-'}</span></td>
+                    <td class="px-4 py-3 text-sm text-[#4b5563]">
+                        <div class="line-clamp-2 title="${report.core_content || ''}">${report.core_content || '-'}</div>
+                    </td>
+                    <td class="px-4 py-3 text-sm font-mono text-[#111827] text-right">${report.target_price || '-'}</td>
+                    <td class="px-4 py-3 text-sm text-center">${renderRating(report.investment_rating)}</td>
+                    <td class="px-4 py-3 text-sm text-center">${renderChange(report.rating_change)}</td>
+                    <td class="px-4 py-3 text-sm text-center">${renderChange(report.earnings_forecast_adjustment)}</td>
+                    <td class="px-4 py-3 text-sm text-[#4b5563]"><div class="line-clamp-2" title="${report.core_catalyst || ''}">${report.core_catalyst || '-'}</div></td>
+                    <td class="px-4 py-3 text-sm text-[#4b5563]"><div class="line-clamp-2" title="${report.core_risk_warning || ''}">${report.core_risk_warning || '-'}</div></td>
+                    <td class="px-4 py-3 text-sm text-[#4b5563]">${report.author || '-'}</td>
+                    <td class="px-4 py-3 text-center">
+                        <div class="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onclick="editReport('${report.id}')" class="p-1.5 text-[#6366f1] hover:bg-[#eef2ff] rounded transition-colors" title="编辑">
+                                <i data-lucide="edit-2" class="w-4 h-4"></i>
+                            </button>
+                            <button onclick="deleteReport('${report.id}')" class="p-1.5 text-[#ef4444] hover:bg-[#fef2f2] rounded transition-colors" title="删除">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+
+            lucide.createIcons();
+        }
+
+        function renderRating(rating) {
+            if (!rating) return '-';
+            let colorClass = 'bg-gray-100 text-gray-800';
+            if (['买入', '强烈推荐', '优于大市'].includes(rating)) colorClass = 'bg-red-100 text-red-800';
+            else if (['增持', '推荐'].includes(rating)) colorClass = 'bg-orange-100 text-orange-800';
+            else if (['卖出', '减持'].includes(rating)) colorClass = 'bg-green-100 text-green-800';
+            
+            return `<span class="px-2 py-1 rounded text-xs font-medium ${colorClass}">${rating}</span>`;
+        }
+
+        function renderChange(change) {
+            if (!change || change === '无') return '-';
+            let icon = '';
+            let color = 'text-gray-500';
+            
+            if (change === '上调') {
+                icon = '<i data-lucide="arrow-up" class="w-3 h-3 inline"></i>';
+                color = 'text-red-500';
+            } else if (change === '下调') {
+                icon = '<i data-lucide="arrow-down" class="w-3 h-3 inline"></i>';
+                color = 'text-green-500';
+            } else if (change === '首次') {
+                icon = '<i data-lucide="star" class="w-3 h-3 inline"></i>';
+                color = 'text-orange-500';
+            } else if (change === '维持') {
+                icon = '<i data-lucide="minus" class="w-3 h-3 inline"></i>';
+                color = 'text-blue-500';
+            }
+
+            return `<span class="flex items-center justify-center gap-1 text-xs font-medium ${color}">${icon}${change}</span>`;
+        }
+
+        // 弹窗控制
+        function toggleModal(show) {
+            const modal = document.getElementById('add-modal');
+            if (show) {
+                document.getElementById('report-form').reset();
+                document.getElementById('form-id').value = '';
+                document.getElementById('modal-title').innerHTML = `
+                    <div class="bg-[#eef2ff] p-1.5 rounded-lg text-[#6366f1]">
+                        <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                    </div>
+                    录入新研报
+                `;
+                // 设置默认时间为今天
+                document.getElementById('f-publish_time').value = new Date().toISOString().split('T')[0];
+                modal.classList.remove('hidden');
+                lucide.createIcons();
+            } else {
+                modal.classList.add('hidden');
+            }
+        }
+
+        function togglePasteModal(show) {
+            const modal = document.getElementById('paste-modal');
+            if (show) {
+                document.getElementById('paste-json-content').value = '';
+                modal.classList.remove('hidden');
+            } else {
+                modal.classList.add('hidden');
+            }
+        }
+
+        // 保存研报
+        function handleSaveReport(e) {
+            e.preventDefault();
+            
+            const id = document.getElementById('form-id').value || generateId();
+            const report = {
+                id,
+                publish_time: document.getElementById('f-publish_time').value,
+                industry_category: document.getElementById('f-industry_category').value,
+                institution_name: document.getElementById('f-institution_name').value,
+                research_target: document.getElementById('f-research_target').value,
+                report_type: document.getElementById('f-report_type').value,
+                core_content: document.getElementById('f-core_content').value,
+                target_price: document.getElementById('f-target_price').value,
+                investment_rating: document.getElementById('f-investment_rating').value,
+                rating_change: document.getElementById('f-rating_change').value,
+                earnings_forecast_adjustment: document.getElementById('f-earnings_forecast_adjustment').value,
+                core_catalyst: document.getElementById('f-core_catalyst').value,
+                core_risk_warning: document.getElementById('f-core_risk_warning').value,
+                author: document.getElementById('f-author').value
+            };
+
+            const index = reports.findIndex(r => r.id === id);
+            if (index > -1) {
+                reports[index] = report;
+                showToast('研报已更新');
+            } else {
+                reports.push(report);
+                showToast('研报已录入');
+            }
+
+            saveReports();
+            renderTable();
+            toggleModal(false);
+        }
+
+        // 编辑研报
+        function editReport(id) {
+            const report = reports.find(r => r.id === id);
+            if (!report) return;
+
+            document.getElementById('form-id').value = report.id;
+            document.getElementById('f-publish_time').value = report.publish_time || '';
+            document.getElementById('f-industry_category').value = report.industry_category || '';
+            document.getElementById('f-institution_name').value = report.institution_name || '';
+            document.getElementById('f-research_target').value = report.research_target || '';
+            document.getElementById('f-report_type').value = report.report_type || '';
+            document.getElementById('f-core_content').value = report.core_content || '';
+            document.getElementById('f-target_price').value = report.target_price || '';
+            document.getElementById('f-investment_rating').value = report.investment_rating || '';
+            document.getElementById('f-rating_change').value = report.rating_change || '';
+            document.getElementById('f-earnings_forecast_adjustment').value = report.earnings_forecast_adjustment || '';
+            document.getElementById('f-core_catalyst').value = report.core_catalyst || '';
+            document.getElementById('f-core_risk_warning').value = report.core_risk_warning || '';
+            document.getElementById('f-author').value = report.author || '';
+
+            document.getElementById('modal-title').innerHTML = `
+                <div class="bg-[#eef2ff] p-1.5 rounded-lg text-[#6366f1]">
+                    <i data-lucide="edit" class="w-3.5 h-3.5"></i>
+                </div>
+                编辑研报
+            `;
+
+            document.getElementById('add-modal').classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        // 删除研报
+        function deleteReport(id) {
+            if (confirm('确定要删除这条研报记录吗？')) {
+                reports = reports.filter(r => r.id !== id);
+                saveReports();
+                renderTable();
+                showToast('研报已删除');
+            }
+        }
+
+        // 导入粘贴的JSON
+        function handlePasteJSON() {
+            const content = document.getElementById('paste-json-content').value.trim();
+            if (!content) {
+                showToast('请输入JSON数据', 'error');
+                return;
+            }
+
+            try {
+                let data = JSON.parse(content);
+                if (!Array.isArray(data)) {
+                    data = [data]; // 支持单个对象
+                }
+
+                let addedCount = 0;
+                data.forEach(item => {
+                    if (item && typeof item === 'object') {
+                        const report = {
+                            id: item.id || generateId(),
+                            publish_time: item.publish_time || '',
+                            industry_category: item.industry_category || '',
+                            institution_name: item.institution_name || '',
+                            research_target: item.research_target || '',
+                            report_type: item.report_type || '',
+                            core_content: item.core_content || '',
+                            target_price: item.target_price || '',
+                            investment_rating: item.investment_rating || '',
+                            rating_change: item.rating_change || '',
+                            earnings_forecast_adjustment: item.earnings_forecast_adjustment || '',
+                            core_catalyst: item.core_catalyst || '',
+                            core_risk_warning: item.core_risk_warning || '',
+                            author: item.author || ''
+                        };
+                        
+                        // 简单查重：同目标、同时间、同机构
+                        const exists = reports.some(r => 
+                            r.research_target === report.research_target && 
+                            r.publish_time === report.publish_time &&
+                            r.institution_name === report.institution_name
+                        );
+                        
+                        if (!exists) {
+                            reports.push(report);
+                            addedCount++;
+                        }
+                    }
+                });
+
+                if (addedCount > 0) {
+                    saveReports();
+                    renderTable();
+                    showToast(`成功导入 ${addedCount} 条记录`);
+                    togglePasteModal(false);
+                } else {
+                    showToast('未导入任何新记录（可能已存在或格式不对）', 'error');
+                }
+
+            } catch (e) {
+                showToast('JSON格式错误', 'error');
+                console.error(e);
+            }
+        }
+
+        // 导入JSON文件
+        function importFromJSONFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    let data = JSON.parse(e.target.result);
+                    if (!Array.isArray(data)) {
+                        data = [data];
+                    }
+
+                    let addedCount = 0;
+                    data.forEach(item => {
+                        if (item && typeof item === 'object') {
+                            const report = {
+                                id: item.id || generateId(),
+                                publish_time: item.publish_time || '',
+                                industry_category: item.industry_category || '',
+                                institution_name: item.institution_name || '',
+                                research_target: item.research_target || '',
+                                report_type: item.report_type || '',
+                                core_content: item.core_content || '',
+                                target_price: item.target_price || '',
+                                investment_rating: item.investment_rating || '',
+                                rating_change: item.rating_change || '',
+                                earnings_forecast_adjustment: item.earnings_forecast_adjustment || '',
+                                core_catalyst: item.core_catalyst || '',
+                                core_risk_warning: item.core_risk_warning || '',
+                                author: item.author || ''
+                            };
+                            
+                            const exists = reports.some(r => 
+                                r.research_target === report.research_target && 
+                                r.publish_time === report.publish_time &&
+                                r.institution_name === report.institution_name
+                            );
+                            
+                            if (!exists) {
+                                reports.push(report);
+                                addedCount++;
+                            }
+                        }
+                    });
+
+                    if (addedCount > 0) {
+                        saveReports();
+                        renderTable();
+                        showToast(`成功导入 ${addedCount} 条记录`);
+                    } else {
+                        showToast('未导入任何新记录', 'error');
+                    }
+                } catch (err) {
+                    showToast('文件解析失败，请确保是合法的JSON', 'error');
+                }
+                event.target.value = ''; // reset
+            };
+            reader.readAsText(file);
+        }
+
+        // 导出JSON
+        function exportToJSON() {
+            if (reports.length === 0) {
+                showToast('没有数据可导出', 'error');
+                return;
+            }
+            
+            // 移除内部生成的ID再导出
+            const exportData = reports.map(({id, ...rest}) => rest);
+            
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportData, null, 2));
+            const downloadAnchorNode = document.createElement('a');
+            downloadAnchorNode.setAttribute("href", dataStr);
+            downloadAnchorNode.setAttribute("download", `研报数据_${new Date().toISOString().split('T')[0]}.json`);
+            document.body.appendChild(downloadAnchorNode); // required for firefox
+            downloadAnchorNode.click();
+            downloadAnchorNode.remove();
+            
+            showToast('数据导出成功');
+        }
+    </script>
+</body>
+</html>
