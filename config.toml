@@ -44,8 +44,8 @@ env = "localhost"
     source = "disk"
     # source = "disk" 时使用的静态文件根目录
     root = "statics"
-    # 网页模板路径
-    tmpl_path = "html/*"
+    # 网页模板路径（限定 .html，避免 .DS_Store 等非模板文件被 ParseGlob 当模板解析）
+    tmpl_path = "html/*.html"
     # 静态文件 URL 路径，网页中通过 /statics/js/xx.js 访问资源，
     url = "/statics"
 

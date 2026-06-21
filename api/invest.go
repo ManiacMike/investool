@@ -4,7 +4,6 @@ package api
 
 import (
 	"encoding/json"
-	"fmt"
 	"math"
 	"net/http"
 	"strings"
@@ -14,6 +13,7 @@ import (
 	"github.com/axiaoxin-com/investool/datacenter/eastmoney"
 	"github.com/axiaoxin-com/investool/models"
 	"github.com/axiaoxin-com/investool/version"
+	"github.com/axiaoxin-com/logging"
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"
 )
@@ -537,7 +537,7 @@ func BatchQueryStockPricesHandler(c *gin.Context) {
 	var hkStockMap = make(map[string]string) // 纯数字代码 -> 完整代码的映射
 	var codeMap = make(map[string]string)    // 大写代码 -> 原始代码的映射（用于匹配）
 
-	fmt.Printf("🔍 [批量查询] 收到 %d 只股票\n", len(req.Stocks))
+	logging.Debugf(c, "BatchQueryStockPrices received %d stocks", len(req.Stocks))
 
 	for _, stock := range req.Stocks {
 		// 统一转换为大写用于匹配
@@ -605,7 +605,7 @@ func BatchQueryStockPricesHandler(c *gin.Context) {
 			}
 
 			hkStockMap[pureCode] = upperCode // 使用大写代码
-			fmt.Printf("📊 [港股] 完整代码: %s, 大写: %s, 纯数字: %s\n", stock.Code, upperCode, pureCode)
+			logging.Debugf(c, "BatchQueryStockPrices HK code=%s upper=%s pure=%s", stock.Code, upperCode, pureCode)
 		} else {
 			// A股代码，提取纯数字部分
 			code := upperCode
@@ -613,27 +613,28 @@ func BatchQueryStockPricesHandler(c *gin.Context) {
 				code = code[:6] // 提取前6位，如 "300308"
 			}
 			aStockCodes = append(aStockCodes, code)
-			fmt.Printf("📊 [A股] 完整代码: %s, 大写: %s, 纯数字: %s\n", stock.Code, upperCode, code)
+			logging.Debugf(c, "BatchQueryStockPrices A code=%s upper=%s pure=%s", stock.Code, upperCode, code)
 		}
 	}
 
 	prices := make(map[string]float64)
 	marketCaps := make(map[string]float64) // 存储市值（单位：亿元）
+	// fundamentals 保存每只 A 股的基本面指标，键为大写 Secucode
+	fundamentals := make(map[string]gin.H)
 
-	// 批量查询A股价格和市值
+	// 批量查询A股价格、市值及基本面指标
 	if len(aStockCodes) > 0 {
-		fmt.Printf("🔍 [A股批量查询] 查询 %d 只股票: %v\n", len(aStockCodes), aStockCodes)
+		logging.Debugf(c, "BatchQueryStockPrices querying %d A stocks: %v", len(aStockCodes), aStockCodes)
 		filter := eastmoney.Filter{
 			SpecialSecurityCodeList: aStockCodes,
 		}
 		stocks, err := datacenter.EastMoney.QuerySelectedStocksWithFilter(c, filter)
 		if err != nil {
-			fmt.Printf("❌ [A股查询失败] %v\n", err)
+			logging.Errorf(c, "BatchQueryStockPrices query A stocks err:%v", err)
 		} else {
-			fmt.Printf("✅ [A股查询成功] 返回 %d 只股票\n", len(stocks))
+			logging.Debugf(c, "BatchQueryStockPrices A stocks returned %d", len(stocks))
 			for _, stock := range stocks {
-				fmt.Printf("📊 [股票信息] Secucode: %s, SecurityCode: %s, Name: %s, NewPrice: %v (type: %T), MarketCap: %.2f\n",
-					stock.Secucode, stock.SecurityCode, stock.SecurityNameAbbr, stock.NewPrice, stock.NewPrice, stock.TotalMarketCap)
+				secucodeUpper := strings.ToUpper(stock.Secucode)
 
 				// 处理 NewPrice，可能是 float64 或 string
 				var price float64
@@ -641,29 +642,32 @@ func BatchQueryStockPricesHandler(c *gin.Context) {
 				case float64:
 					price = v
 				case string:
-					// 如果是字符串 "-" 或其他，跳过
+					// 如果是字符串 "-" 或其他，跳过价格但仍可保留基本面
 					if v != "-" {
-						fmt.Printf("⚠️ [价格是字符串] %s: %s\n", stock.Secucode, v)
+						logging.Debugf(c, "BatchQueryStockPrices %s price is string:%s", stock.Secucode, v)
 					}
-					continue
 				default:
-					fmt.Printf("⚠️ [未知价格类型] %s: %v (type: %T)\n", stock.Secucode, stock.NewPrice, stock.NewPrice)
-					continue
+					logging.Debugf(c, "BatchQueryStockPrices %s unknown price type:%T", stock.Secucode, stock.NewPrice)
 				}
 
 				if price > 0 {
-					prices[stock.Secucode] = price
-					fmt.Printf("💰 [A股价格] %s: %.2f\n", stock.Secucode, price)
+					prices[secucodeUpper] = price
 				}
 
 				// 保存市值（TotalMarketCap单位是元，转换为亿元）
 				if stock.TotalMarketCap > 0 {
-					// 使用大写格式存储，确保与查找时一致
-					secucodeUpper := strings.ToUpper(stock.Secucode)
 					marketCaps[secucodeUpper] = stock.TotalMarketCap / 100000000 // 转换为亿元
-					fmt.Printf("📈 [A股市值] Secucode: %s, 大写: %s, 市值: %.2f亿元\n", stock.Secucode, secucodeUpper, marketCaps[secucodeUpper])
-				} else {
-					fmt.Printf("⚠️ [A股市值为0] Secucode: %s, TotalMarketCap: %.2f\n", stock.Secucode, stock.TotalMarketCap)
+				}
+
+				// 保存基本面指标（来自同一次选股接口调用，无额外请求成本）
+				fundamentals[secucodeUpper] = gin.H{
+					"industry":              stock.Industry,
+					"pe":                    stock.PE,
+					"pb":                    stock.PBNewMRQ,
+					"roe":                   stock.RoeWeight,
+					"dividendYield":         stock.Zxgxl,
+					"netprofitYoyRatio":     stock.NetprofitYoyRatio,
+					"predictNetprofitRatio": stock.PredictNetprofitRatio,
 				}
 			}
 		}
@@ -671,7 +675,7 @@ func BatchQueryStockPricesHandler(c *gin.Context) {
 
 	// 批量查询港股价格
 	if len(hkStockMap) > 0 {
-		fmt.Printf("🔍 [港股批量查询] 准备查询 %d 只港股\n", len(hkStockMap))
+		logging.Debugf(c, "BatchQueryStockPrices querying %d HK stocks", len(hkStockMap))
 		pureCodes := make([]string, 0, len(hkStockMap))
 		for pc := range hkStockMap {
 			pureCodes = append(pureCodes, pc)
@@ -690,41 +694,31 @@ func BatchQueryStockPricesHandler(c *gin.Context) {
 	for i, stock := range req.Stocks {
 		// 使用大写代码匹配价格
 		upperCode := strings.ToUpper(stock.Code)
-		price, exists := prices[upperCode]
-		if !exists {
-			price = 0.0
-			fmt.Printf("⚠️ [未找到价格] 原始: %s, 大写: %s\n", stock.Code, upperCode)
-		} else {
-			fmt.Printf("✅ [找到价格] 原始: %s, 大写: %s, 价格: %.2f\n", stock.Code, upperCode, price)
-		}
+		price := prices[upperCode]
 
 		// 获取市值（A股有数据，港股暂时为0）
 		marketCap := 0.0
 		if !stock.IsHK {
-			// A股市值
-			if cap, exists := marketCaps[upperCode]; exists {
-				marketCap = cap
-				fmt.Printf("✅ [找到市值] 原始: %s, 大写: %s, 市值: %.2f亿元\n", stock.Code, upperCode, marketCap)
-			} else {
-				// 调试：打印所有可用的市值keys
-				keys := make([]string, 0, len(marketCaps))
-				for k := range marketCaps {
-					keys = append(keys, k)
-				}
-				fmt.Printf("⚠️ [未找到市值] 原始: %s, 大写: %s, 可用的市值keys: %v\n", stock.Code, upperCode, keys)
-			}
+			marketCap = marketCaps[upperCode]
 		}
 		// 港股市值暂时不获取，后续可以优化
 
-		results[i] = gin.H{
+		result := gin.H{
 			"code":      stock.Code, // 返回原始代码（保持前端格式）
 			"price":     price,
 			"isHK":      stock.IsHK,
 			"marketCap": marketCap, // 市值（单位：亿元）
 		}
+		// 合并基本面指标（A股，来自同一次接口调用）
+		if f, ok := fundamentals[upperCode]; ok {
+			for k, v := range f {
+				result[k] = v
+			}
+		}
+		results[i] = result
 	}
 
-	fmt.Printf("✅ [批量查询完成] 返回 %d 条结果\n", len(results))
+	logging.Debugf(c, "BatchQueryStockPrices done, returning %d results", len(results))
 
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
@@ -742,4 +736,16 @@ func ZenResearchReportHandler(c *gin.Context) {
 		"Error":     "",
 	}
 	c.HTML(http.StatusOK, "zen_research_report.html", data)
+}
+
+// MarketClockHandler 市场风格时钟页面
+func MarketClockHandler(c *gin.Context) {
+	data := gin.H{
+		"Env":       viper.GetString("env"),
+		"HostURL":   viper.GetString("server.host_url"),
+		"Version":   version.Version,
+		"PageTitle": "市场风格时钟",
+		"Error":     "",
+	}
+	c.HTML(http.StatusOK, "market_clock.html", data)
 }

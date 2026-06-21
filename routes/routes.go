@@ -30,6 +30,7 @@ func Routes(app *gin.Engine) {
 	app.GET("/invest/zen-holding", api.ZenStockHoldingHandler)
 	app.GET("/invest/zen-note", api.ZenStockNoteHandler)
 	app.GET("/invest/zen-research-report", api.ZenResearchReportHandler)
+	app.GET("/invest/market-clock", api.MarketClockHandler)
 	app.GET("/api/stock/query", api.QueryStockInfoHandler)
 	app.POST("/api/stock/batch-prices", api.BatchQueryStockPricesHandler)
 }

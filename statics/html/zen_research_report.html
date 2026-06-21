@@ -97,6 +97,7 @@
                                 <th class="px-4 py-4 min-w-[150px]">核心催化剂</th>
                                 <th class="px-4 py-4 min-w-[150px]">核心风险提示</th>
                                 <th class="px-4 py-4 min-w-[100px]">作者</th>
+                                <th class="px-4 py-4 min-w-[120px]">视频ID</th>
                                 <th class="px-4 py-4 text-center w-24">操作</th>
                             </tr>
                         </thead>
@@ -129,7 +130,13 @@
             <div class="p-6">
                 <form id="report-form" onsubmit="handleSaveReport(event)" class="space-y-4">
                     <input type="hidden" id="form-id" value="">
-                    
+                    <input type="hidden" id="f-source_url" value="">
+
+                    <div class="space-y-1">
+                        <label class="block text-xs font-bold text-[#6b7280] uppercase tracking-wider">视频ID <span class="text-[#9ca3af] normal-case font-medium">（抖音视频唯一标识，用于自动去重；留空则按 目标+时间+机构 查重）</span></label>
+                        <input type="text" id="f-video_id" placeholder="如：7652965352200031538" class="w-full px-3 py-2 bg-white border border-[#d1d5db] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6366f1] transition-all text-sm font-mono text-[#111827]">
+                    </div>
+
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div class="space-y-1">
                             <label class="block text-xs font-bold text-[#6b7280] uppercase tracking-wider">研报时间 <span class="text-[#ef4444]">*</span></label>
@@ -337,6 +344,66 @@
             return Date.now().toString(36) + Math.random().toString(36).substr(2);
         }
 
+        // 研报字段
+        const REPORT_FIELDS = ['publish_time','industry_category','institution_name','research_target',
+            'report_type','core_content','target_price','investment_rating','rating_change',
+            'earnings_forecast_adjustment','core_catalyst','core_risk_warning','author'];
+
+        // 规范化一条记录（含 video_id / source_url）
+        function normalizeReport(item) {
+            const r = { id: item.id || generateId(), video_id: item.video_id || '', source_url: item.source_url || '' };
+            REPORT_FIELDS.forEach(f => { r[f] = item[f] || ''; });
+            return r;
+        }
+
+        // 以 video_id 为唯一 key 的 upsert：有 video_id 时存在即更新，否则回退到（目标+时间+机构）查重。
+        // 返回 'added' | 'updated' | 'skipped'
+        function upsertReport(report) {
+            if (report.video_id) {
+                const idx = reports.findIndex(r => r.video_id === report.video_id);
+                if (idx > -1) {
+                    report.id = reports[idx].id; // 保留原 id
+                    reports[idx] = report;
+                    return 'updated';
+                }
+                reports.push(report);
+                return 'added';
+            }
+            const exists = reports.some(r =>
+                r.research_target === report.research_target &&
+                r.publish_time === report.publish_time &&
+                r.institution_name === report.institution_name
+            );
+            if (exists) return 'skipped';
+            reports.push(report);
+            return 'added';
+        }
+
+        // 批量导入：返回 {added, updated}
+        function importReports(data) {
+            if (!Array.isArray(data)) data = [data];
+            let added = 0, updated = 0;
+            data.forEach(item => {
+                if (item && typeof item === 'object') {
+                    const res = upsertReport(normalizeReport(item));
+                    if (res === 'added') added++;
+                    else if (res === 'updated') updated++;
+                }
+            });
+            return { added, updated };
+        }
+
+        // HTML 转义，防止导入/录入的数据造成 XSS 或破坏表格结构
+        function escapeHtml(value) {
+            if (value === undefined || value === null) return '';
+            return String(value)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
         // 渲染表格
         function renderTable() {
             const tbody = document.getElementById('report-table-body');
@@ -345,7 +412,7 @@
             if (reports.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="14" class="px-4 py-12 text-center text-[#6b7280] text-sm">
+                        <td colspan="15" class="px-4 py-12 text-center text-[#6b7280] text-sm">
                             <div class="flex flex-col items-center justify-center gap-3">
                                 <div class="p-3 bg-[#f3f4f6] rounded-full">
                                     <i data-lucide="inbox" class="w-6 h-6 text-[#9ca3af]"></i>
@@ -364,27 +431,28 @@
 
             tbody.innerHTML = sortedReports.map(report => `
                 <tr class="hover:bg-[#f9fafb] transition-colors group">
-                    <td class="px-4 py-3 text-sm text-[#4b5563] whitespace-nowrap">${report.publish_time || '-'}</td>
-                    <td class="px-4 py-3 text-sm text-[#4b5563]">${report.industry_category || '-'}</td>
-                    <td class="px-4 py-3 text-sm font-semibold text-[#111827]">${report.institution_name || '-'}</td>
-                    <td class="px-4 py-3 text-sm font-bold text-[#6366f1]">${report.research_target || '-'}</td>
-                    <td class="px-4 py-3 text-sm text-[#4b5563]"><span class="px-2 py-1 bg-gray-100 rounded text-xs">${report.report_type || '-'}</span></td>
+                    <td class="px-4 py-3 text-sm text-[#4b5563] whitespace-nowrap">${escapeHtml(report.publish_time) || '-'}</td>
+                    <td class="px-4 py-3 text-sm text-[#4b5563]">${escapeHtml(report.industry_category) || '-'}</td>
+                    <td class="px-4 py-3 text-sm font-semibold text-[#111827]">${escapeHtml(report.institution_name) || '-'}</td>
+                    <td class="px-4 py-3 text-sm font-bold text-[#6366f1]">${escapeHtml(report.research_target) || '-'}</td>
+                    <td class="px-4 py-3 text-sm text-[#4b5563]"><span class="px-2 py-1 bg-gray-100 rounded text-xs">${escapeHtml(report.report_type) || '-'}</span></td>
                     <td class="px-4 py-3 text-sm text-[#4b5563]">
-                        <div class="line-clamp-2 title="${report.core_content || ''}">${report.core_content || '-'}</div>
+                        <div class="line-clamp-2" title="${escapeHtml(report.core_content)}">${escapeHtml(report.core_content) || '-'}</div>
                     </td>
-                    <td class="px-4 py-3 text-sm font-mono text-[#111827] text-right">${report.target_price || '-'}</td>
+                    <td class="px-4 py-3 text-sm font-mono text-[#111827] text-right">${escapeHtml(report.target_price) || '-'}</td>
                     <td class="px-4 py-3 text-sm text-center">${renderRating(report.investment_rating)}</td>
                     <td class="px-4 py-3 text-sm text-center">${renderChange(report.rating_change)}</td>
                     <td class="px-4 py-3 text-sm text-center">${renderChange(report.earnings_forecast_adjustment)}</td>
-                    <td class="px-4 py-3 text-sm text-[#4b5563]"><div class="line-clamp-2" title="${report.core_catalyst || ''}">${report.core_catalyst || '-'}</div></td>
-                    <td class="px-4 py-3 text-sm text-[#4b5563]"><div class="line-clamp-2" title="${report.core_risk_warning || ''}">${report.core_risk_warning || '-'}</div></td>
-                    <td class="px-4 py-3 text-sm text-[#4b5563]">${report.author || '-'}</td>
+                    <td class="px-4 py-3 text-sm text-[#4b5563]"><div class="line-clamp-2" title="${escapeHtml(report.core_catalyst)}">${escapeHtml(report.core_catalyst) || '-'}</div></td>
+                    <td class="px-4 py-3 text-sm text-[#4b5563]"><div class="line-clamp-2" title="${escapeHtml(report.core_risk_warning)}">${escapeHtml(report.core_risk_warning) || '-'}</div></td>
+                    <td class="px-4 py-3 text-sm text-[#4b5563]">${escapeHtml(report.author) || '-'}</td>
+                    <td class="px-4 py-3 text-sm text-[#4b5563]">${report.video_id ? `<a href="https://www.douyin.com/video/${escapeHtml(report.video_id)}" target="_blank" rel="noopener" class="font-mono text-xs text-[#6366f1] hover:underline">${escapeHtml(report.video_id)}</a>` : '-'}</td>
                     <td class="px-4 py-3 text-center">
                         <div class="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onclick="editReport('${report.id}')" class="p-1.5 text-[#6366f1] hover:bg-[#eef2ff] rounded transition-colors" title="编辑">
+                            <button onclick="editReport('${escapeHtml(report.id)}')" class="p-1.5 text-[#6366f1] hover:bg-[#eef2ff] rounded transition-colors" title="编辑">
                                 <i data-lucide="edit-2" class="w-4 h-4"></i>
                             </button>
-                            <button onclick="deleteReport('${report.id}')" class="p-1.5 text-[#ef4444] hover:bg-[#fef2f2] rounded transition-colors" title="删除">
+                            <button onclick="deleteReport('${escapeHtml(report.id)}')" class="p-1.5 text-[#ef4444] hover:bg-[#fef2f2] rounded transition-colors" title="删除">
                                 <i data-lucide="trash-2" class="w-4 h-4"></i>
                             </button>
                         </div>
@@ -402,7 +470,7 @@
             else if (['增持', '推荐'].includes(rating)) colorClass = 'bg-orange-100 text-orange-800';
             else if (['卖出', '减持'].includes(rating)) colorClass = 'bg-green-100 text-green-800';
             
-            return `<span class="px-2 py-1 rounded text-xs font-medium ${colorClass}">${rating}</span>`;
+            return `<span class="px-2 py-1 rounded text-xs font-medium ${colorClass}">${escapeHtml(rating)}</span>`;
         }
 
         function renderChange(change) {
@@ -424,7 +492,7 @@
                 color = 'text-blue-500';
             }
 
-            return `<span class="flex items-center justify-center gap-1 text-xs font-medium ${color}">${icon}${change}</span>`;
+            return `<span class="flex items-center justify-center gap-1 text-xs font-medium ${color}">${icon}${escapeHtml(change)}</span>`;
         }
 
         // 弹窗控制
@@ -463,8 +531,10 @@
             e.preventDefault();
             
             const id = document.getElementById('form-id').value || generateId();
-            const report = {
+            const report = normalizeReport({
                 id,
+                video_id: document.getElementById('f-video_id').value.trim(),
+                source_url: document.getElementById('f-source_url').value,
                 publish_time: document.getElementById('f-publish_time').value,
                 industry_category: document.getElementById('f-industry_category').value,
                 institution_name: document.getElementById('f-institution_name').value,
@@ -478,7 +548,7 @@
                 core_catalyst: document.getElementById('f-core_catalyst').value,
                 core_risk_warning: document.getElementById('f-core_risk_warning').value,
                 author: document.getElementById('f-author').value
-            };
+            });
 
             const index = reports.findIndex(r => r.id === id);
             if (index > -1) {
@@ -500,6 +570,8 @@
             if (!report) return;
 
             document.getElementById('form-id').value = report.id;
+            document.getElementById('f-source_url').value = report.source_url || '';
+            document.getElementById('f-video_id').value = report.video_id || '';
             document.getElementById('f-publish_time').value = report.publish_time || '';
             document.getElementById('f-industry_category').value = report.industry_category || '';
             document.getElementById('f-institution_name').value = report.institution_name || '';
@@ -544,52 +616,16 @@
             }
 
             try {
-                let data = JSON.parse(content);
-                if (!Array.isArray(data)) {
-                    data = [data]; // 支持单个对象
-                }
+                const data = JSON.parse(content);
+                const { added, updated } = importReports(data);
 
-                let addedCount = 0;
-                data.forEach(item => {
-                    if (item && typeof item === 'object') {
-                        const report = {
-                            id: item.id || generateId(),
-                            publish_time: item.publish_time || '',
-                            industry_category: item.industry_category || '',
-                            institution_name: item.institution_name || '',
-                            research_target: item.research_target || '',
-                            report_type: item.report_type || '',
-                            core_content: item.core_content || '',
-                            target_price: item.target_price || '',
-                            investment_rating: item.investment_rating || '',
-                            rating_change: item.rating_change || '',
-                            earnings_forecast_adjustment: item.earnings_forecast_adjustment || '',
-                            core_catalyst: item.core_catalyst || '',
-                            core_risk_warning: item.core_risk_warning || '',
-                            author: item.author || ''
-                        };
-                        
-                        // 简单查重：同目标、同时间、同机构
-                        const exists = reports.some(r => 
-                            r.research_target === report.research_target && 
-                            r.publish_time === report.publish_time &&
-                            r.institution_name === report.institution_name
-                        );
-                        
-                        if (!exists) {
-                            reports.push(report);
-                            addedCount++;
-                        }
-                    }
-                });
-
-                if (addedCount > 0) {
+                if (added > 0 || updated > 0) {
                     saveReports();
                     renderTable();
-                    showToast(`成功导入 ${addedCount} 条记录`);
+                    showToast(`成功导入：新增 ${added} 条，更新 ${updated} 条`);
                     togglePasteModal(false);
                 } else {
-                    showToast('未导入任何新记录（可能已存在或格式不对）', 'error');
+                    showToast('未导入任何记录（可能已存在或格式不对）', 'error');
                 }
 
             } catch (e) {
@@ -606,50 +642,15 @@
             const reader = new FileReader();
             reader.onload = function(e) {
                 try {
-                    let data = JSON.parse(e.target.result);
-                    if (!Array.isArray(data)) {
-                        data = [data];
-                    }
+                    const data = JSON.parse(e.target.result);
+                    const { added, updated } = importReports(data);
 
-                    let addedCount = 0;
-                    data.forEach(item => {
-                        if (item && typeof item === 'object') {
-                            const report = {
-                                id: item.id || generateId(),
-                                publish_time: item.publish_time || '',
-                                industry_category: item.industry_category || '',
-                                institution_name: item.institution_name || '',
-                                research_target: item.research_target || '',
-                                report_type: item.report_type || '',
-                                core_content: item.core_content || '',
-                                target_price: item.target_price || '',
-                                investment_rating: item.investment_rating || '',
-                                rating_change: item.rating_change || '',
-                                earnings_forecast_adjustment: item.earnings_forecast_adjustment || '',
-                                core_catalyst: item.core_catalyst || '',
-                                core_risk_warning: item.core_risk_warning || '',
-                                author: item.author || ''
-                            };
-                            
-                            const exists = reports.some(r => 
-                                r.research_target === report.research_target && 
-                                r.publish_time === report.publish_time &&
-                                r.institution_name === report.institution_name
-                            );
-                            
-                            if (!exists) {
-                                reports.push(report);
-                                addedCount++;
-                            }
-                        }
-                    });
-
-                    if (addedCount > 0) {
+                    if (added > 0 || updated > 0) {
                         saveReports();
                         renderTable();
-                        showToast(`成功导入 ${addedCount} 条记录`);
+                        showToast(`成功导入：新增 ${added} 条，更新 ${updated} 条`);
                     } else {
-                        showToast('未导入任何新记录', 'error');
+                        showToast('未导入任何记录', 'error');
                     }
                 } catch (err) {
                     showToast('文件解析失败，请确保是合法的JSON', 'error');

@@ -108,6 +108,23 @@
                     <!-- 格言将通过JS插入 -->
                 </p>
             </div>
+
+            <!-- 市场风格时钟入口（当前阶段值与 market_clock.html 的 CURRENT 保持同步） -->
+            <a href="/invest/market-clock" target="_blank"
+               class="group mt-4 flex items-center gap-3 bg-white border border-[#e5e7eb] rounded-2xl pl-3 pr-4 py-2 shadow-sm hover:shadow-md hover:border-[#f59e0b]/50 transition-all">
+                <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[#fbbf24] to-[#ef4444] shadow-sm">
+                    <i data-lucide="clock" class="w-[18px] h-[18px] text-white"></i>
+                </span>
+                <span class="flex flex-col text-left leading-tight">
+                    <span class="text-[10px] font-semibold text-[#9ca3af] uppercase tracking-[0.12em]">市场风格时钟 · 当前阶段</span>
+                    <span class="flex items-center gap-2 mt-0.5">
+                        <span class="inline-flex h-2 w-2 rounded-full bg-[#f59e0b] animate-pulse"></span>
+                        <span class="text-sm font-bold text-[#111827]">主升后期 · 加速初段</span>
+                        <span class="text-[10px] font-semibold text-[#b45309] bg-[#fffbeb] border border-[#fde68a] px-2 py-0.5 rounded-full">黄色预警 · 温度 72</span>
+                    </span>
+                </span>
+                <i data-lucide="arrow-up-right" class="w-4 h-4 text-[#d1d5db] group-hover:text-[#f59e0b] transition-colors"></i>
+            </a>
         </header>
 
         <!-- 左右分栏布局 -->
@@ -1477,6 +1494,34 @@
             return `<div class="flex flex-nowrap items-center justify-center gap-1.5 py-0.5 select-none" title="鼠标悬停查看各维度得分">${dots}</div>`;
         }
         
+        // 构建基本面 hover 提示文本（公司市值 + PE/PB/ROE/股息率/净利增速）
+        // 数据来自批量价格接口随价格一并返回的字段（仅 A 股）
+        function buildFundamentalsTooltip(stock) {
+            const lines = [];
+            lines.push(stock.marketCap && stock.marketCap > 0 ? `公司总市值: ${stock.marketCap.toFixed(2)}亿元` : '公司总市值: 暂无数据');
+            const fmt = (v, unit = '') => (v !== undefined && v !== null && v !== '' && !isNaN(v)) ? `${Number(v).toFixed(2)}${unit}` : '-';
+            if (stock.pe !== undefined) lines.push(`市盈率 PE: ${fmt(stock.pe)}`);
+            if (stock.pb !== undefined) lines.push(`市净率 PB: ${fmt(stock.pb)}`);
+            if (stock.roe !== undefined) lines.push(`ROE: ${fmt(stock.roe, '%')}`);
+            if (stock.dividendYield !== undefined) lines.push(`股息率: ${fmt(stock.dividendYield, '%')}`);
+            if (stock.netprofitYoyRatio !== undefined) lines.push(`净利同比: ${fmt(stock.netprofitYoyRatio, '%')}`);
+            if (stock.industry) lines.push(`行业: ${stock.industry}`);
+            return lines.join('\n');
+        }
+
+        // 价格单元格下方的紧凑基本面行（PE / 股息率），无数据则返回空串
+        function buildFundamentalsLine(stock) {
+            const parts = [];
+            if (stock.pe !== undefined && stock.pe !== null && !isNaN(stock.pe) && stock.pe > 0) {
+                parts.push(`PE ${Number(stock.pe).toFixed(1)}`);
+            }
+            if (stock.dividendYield !== undefined && stock.dividendYield !== null && !isNaN(stock.dividendYield) && stock.dividendYield > 0) {
+                parts.push(`股息 ${Number(stock.dividendYield).toFixed(1)}%`);
+            }
+            if (parts.length === 0) return '';
+            return `<span class="text-[10px] text-[#9ca3af] mt-0.5 whitespace-nowrap">${parts.join(' · ')}</span>`;
+        }
+
         // 渲染价格滑块（参考静态页面样式）
         function renderPriceSlider(stock) {
             const currentPrice = stock.price || 0;
@@ -2375,10 +2420,11 @@ function renderOperationReminders(totalAsset) {
                                 </span>
                             </div>
                         </td>
-                        <td class="px-4 py-3 text-right" data-stock-id="${stock.id}" data-cell-type="price" title="${stock.marketCap && stock.marketCap > 0 ? '公司总市值: ' + stock.marketCap.toFixed(2) + '亿元' : '公司总市值: 暂无数据'}">
+                        <td class="px-4 py-3 text-right" data-stock-id="${stock.id}" data-cell-type="price" title="${buildFundamentalsTooltip(stock)}">
                             <div class="flex flex-col items-end">
                                 <span class="text-sm text-[#4b5563] font-mono" data-price="${stock.price}">${currencySymbol}${stock.price}</span>
                                 <span class="text-xs text-[#9ca3af] mt-0.5">${stock.count}股</span>
+                                ${buildFundamentalsLine(stock)}
                             </div>
                         </td>
                         ${/*
@@ -3295,7 +3341,18 @@ function renderOperationReminders(totalAsset) {
                     result.data.forEach(priceData => {
                         const stock = state.stocks.find(s => s.code === priceData.code);
                         if (!stock) return;
-                        
+
+                        // 合并基本面指标（A股由后端随价格一并返回，无额外请求）
+                        const FUNDAMENTAL_KEYS = ['pe', 'pb', 'roe', 'dividendYield', 'netprofitYoyRatio', 'predictNetprofitRatio', 'industry'];
+                        FUNDAMENTAL_KEYS.forEach(k => {
+                            if (priceData[k] !== undefined && priceData[k] !== null && priceData[k] !== '') {
+                                if (stock[k] !== priceData[k]) {
+                                    stock[k] = priceData[k];
+                                    hasUpdate = true;
+                                }
+                            }
+                        });
+
                         // 更新公司市值（无论价格是否为0，只要有市值数据就更新）
                         if (priceData.marketCap !== undefined && priceData.marketCap > 0) {
                             const oldMarketCap = stock.marketCap || 0;
@@ -3319,10 +3376,10 @@ function renderOperationReminders(totalAsset) {
                                 }
                             }
                             
-                            // 更新价格单元格的hover提示（显示公司市值）
+                            // 更新价格单元格的hover提示（公司市值 + 基本面指标）
                             const priceCell = document.querySelector(`td[data-stock-id="${stock.id}"][data-cell-type="price"]`);
                             if (priceCell) {
-                                priceCell.setAttribute('title', `公司总市值: ${priceData.marketCap.toFixed(2)}亿元`);
+                                priceCell.setAttribute('title', buildFundamentalsTooltip(stock));
                             }
                             
                             // 如果表单正在编辑该股票，更新表单中的市值显示

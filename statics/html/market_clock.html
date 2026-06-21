@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>市场风格时钟 · Market Style Clock</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,600&family=Noto+Serif+SC:wght@500;600;700;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#f6f1e7;
+    --card:#ffffff;
+    --txt:#2a2433;            /* 深墨字 */
+    --txt-soft:#6a6377;
+    --mut:#8b8498;
+    --dim:#b1aabb;
+    --gold:#b8902f;           /* 深金(浅底高对比) */
+    --gold-l:#d8b25a;
+    --gold-bg:rgba(184,144,47,.08);
+    --line:rgba(42,36,51,.11);
+    --line-soft:rgba(42,36,51,.06);
+    /* 情绪相位色 */
+    --c-top:#ee4c61; --c-fall:#9a68ef; --c-bear:#6e7c98; --c-bottom:#3f74e6; --c-recov:#10b492; --c-rise:#e6a019;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:'Inter','Noto Sans SC',sans-serif;color:var(--txt);
+    background:
+      radial-gradient(1100px 720px at 80% -10%, #fce7d6 0%, transparent 55%),
+      radial-gradient(880px 680px at 6% 110%, #dfe8f4 0%, transparent 52%),
+      linear-gradient(160deg,#fbf7ef,#f1ebdd 62%);
+    background-attachment:fixed;min-height:100vh;
+    padding:34px clamp(16px,4vw,64px) 48px;position:relative;overflow-x:hidden;
+  }
+  /* 纸张细颗粒 */
+  body::after{content:"";position:fixed;inset:0;pointer-events:none;opacity:.035;mix-blend-mode:multiply;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='.9'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+
+  /* ---------- 页眉 ---------- */
+  .head{max-width:1280px;margin:0 auto 26px;position:relative;z-index:2}
+  .eyebrow{display:flex;align-items:center;gap:12px;color:var(--gold);font-size:12px;letter-spacing:4px;font-weight:600;text-transform:uppercase;margin-bottom:10px}
+  .eyebrow .ln{height:1px;width:54px;background:linear-gradient(90deg,var(--gold),transparent)}
+  .head h1{font-family:'Noto Serif SC',serif;font-weight:900;font-size:clamp(28px,4vw,46px);line-height:1.1;letter-spacing:1px;color:#241f2e}
+  .head h1 .en{font-family:'Cormorant Garamond',serif;font-weight:600;font-style:italic;color:var(--gold);font-size:.62em;margin-left:12px;letter-spacing:0}
+  .head p{margin-top:14px;color:var(--txt-soft);font-size:14px;line-height:1.85;max-width:920px}
+  .head p b{color:var(--txt);font-weight:600}
+  .rule{max-width:1280px;margin:0 auto 30px;height:1px;background:linear-gradient(90deg,transparent,var(--line) 12%,var(--line) 88%,transparent)}
+
+  .wrap{max-width:1280px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) 384px;gap:42px;align-items:start;position:relative;z-index:2}
+  @media(max-width:1060px){.wrap{grid-template-columns:1fr;gap:32px}}
+
+  /* ---------- 表盘 ---------- */
+  .stage{position:relative;width:100%;aspect-ratio:1/1;max-width:800px;margin:0 auto}
+  .glow{position:absolute;left:50%;top:50%;width:84%;height:84%;transform:translate(-50%,-50%);border-radius:50%;
+    background:conic-gradient(from 0deg,var(--c-top),var(--c-fall) 60deg,var(--c-bear) 120deg,var(--c-bottom) 180deg,var(--c-recov) 240deg,var(--c-rise) 300deg,var(--c-top));
+    filter:blur(48px);opacity:.20;animation:spin 60s linear infinite}
+  @keyframes spin{to{transform:translate(-50%,-50%) rotate(360deg)}}
+  .ring{position:absolute;left:50%;top:50%;width:80.5%;height:80.5%;transform:translate(-50%,-50%);border-radius:50%;
+    background:conic-gradient(from 0deg,var(--c-top),var(--c-fall) 60deg,var(--c-bear) 120deg,var(--c-bottom) 180deg,var(--c-recov) 240deg,var(--c-rise) 300deg,var(--c-top));
+    -webkit-mask:radial-gradient(circle,transparent 0 95.5%,#000 96% 100%);mask:radial-gradient(circle,transparent 0 95.5%,#000 96% 100%);
+    box-shadow:0 0 30px rgba(0,0,0,.08)}
+  .face{position:absolute;left:50%;top:50%;width:76%;height:76%;transform:translate(-50%,-50%);border-radius:50%;
+    background:radial-gradient(circle at 50% 36%, #fffdf8 0%, #f5efe3 66%, #ece3d2 100%);
+    box-shadow:inset 0 2px 22px rgba(120,100,60,.10), inset 0 0 0 1px rgba(184,144,47,.14), 0 26px 60px rgba(80,66,40,.14)}
+  .stage svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible;z-index:3}
+
+  /* 相位卡 */
+  .node{position:absolute;width:118px;transform:translate(-50%,-50%);text-align:center;z-index:4;cursor:pointer;
+    background:linear-gradient(165deg,#ffffff,#fbf8f2);border:1px solid var(--line);border-radius:18px;padding:11px 10px 12px;
+    box-shadow:0 10px 28px rgba(74,60,36,.10);transition:width .32s cubic-bezier(.2,.8,.2,1),padding .32s cubic-bezier(.2,.8,.2,1),box-shadow .3s,border-color .3s}
+  .node::before{content:"";position:absolute;left:50%;top:-1px;transform:translateX(-50%);width:46px;height:3px;border-radius:3px;background:var(--ac);box-shadow:0 0 12px var(--ac)}
+
+  /* 默认折叠:只显示策略(tag)+代表头像;悬停表盘 → 全部展开完整卡片 */
+  .node .tt,.node .ds{display:none}
+  .node .avatars{margin-bottom:0}
+  .node .avatars .av:not(:first-child){display:none}
+  .node .av .nm{display:none}
+  .stage:hover .node{width:176px;padding:14px 13px 15px;box-shadow:0 16px 40px rgba(74,60,36,.15)}
+  .stage:hover .node .tt,.stage:hover .node .ds{display:block}
+  .stage:hover .node .avatars{margin-bottom:11px}
+  .stage:hover .node .avatars .av:not(:first-child){display:flex}
+  .stage:hover .node .av .nm{display:block}
+  .stage:hover .node:hover{border-color:color-mix(in srgb,var(--ac) 50%,transparent);box-shadow:0 22px 48px rgba(74,60,36,.20)}
+  .node .hr{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:16px;color:var(--ac);font-weight:700;letter-spacing:.5px}
+  .node .tt{font-family:'Noto Serif SC',serif;font-size:16px;font-weight:700;margin:1px 0 8px;letter-spacing:.5px;color:#241f2e}
+  .node .tag{display:inline-block;font-size:11px;font-weight:600;letter-spacing:.5px;padding:3px 10px;border-radius:999px;margin-bottom:10px;color:var(--ac);background:color-mix(in srgb,var(--ac) 12%,#fff);border:1px solid color-mix(in srgb,var(--ac) 28%,transparent)}
+  .node .ds{font-size:11.5px;color:var(--mut);line-height:1.6}
+  .avatars{display:flex;justify-content:center;gap:9px;margin-bottom:11px;flex-wrap:wrap}
+  .av{display:flex;flex-direction:column;align-items:center;gap:4px;width:50px}
+  .av .pic{width:46px;height:46px;border-radius:50%;overflow:hidden;position:relative;
+    background:linear-gradient(160deg,#efe9dd,#e2dac9);box-shadow:0 0 0 2px var(--ac),0 0 12px -3px var(--ac),inset 0 0 10px rgba(120,100,60,.14)}
+  .av .pic img{width:100%;height:100%;object-fit:cover;display:block;position:relative;z-index:2}
+  .av .pic .sil{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#b3a98f;z-index:1}
+  .av .nm{font-size:10.5px;color:var(--txt-soft);white-space:nowrap;font-weight:600;letter-spacing:.3px}
+
+  /* 中心徽章 */
+  .hub{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:30.5%;aspect-ratio:1;border-radius:50%;z-index:4;
+    background:radial-gradient(circle at 50% 32%,#fffdf8,#efe6d4 74%);
+    box-shadow:0 0 0 1px rgba(184,144,47,.28),0 0 0 7px rgba(255,253,248,.6),0 16px 40px rgba(80,66,40,.18),inset 0 0 30px rgba(184,144,47,.06);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:7%}
+  .hub .k{font-size:9.5px;letter-spacing:3px;color:var(--gold);font-weight:700;text-transform:uppercase}
+  .hub .v{font-family:'Noto Serif SC',serif;font-size:13px;font-weight:700;margin:4px 0 2px;line-height:1.4;color:#241f2e}
+  .hub .s{font-size:11px;color:var(--mut);font-style:italic;font-family:'Cormorant Garamond',serif;letter-spacing:.3px}
+  .hub .mk{margin-top:8px;padding-top:8px;border-top:1px solid var(--line);font-size:10px;color:var(--txt-soft);line-height:1.5}
+  .hub .mk b{color:var(--gold);font-weight:700}
+
+  /* 当前宝石标记 */
+  .cur{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;z-index:7;pointer-events:none}
+  .cur .gem{width:16px;height:16px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff,var(--gold-l) 42%,var(--gold) 78%);
+    box-shadow:0 0 0 5px rgba(184,144,47,.16),0 0 20px 4px rgba(216,178,90,.65);animation:beat 1.9s ease-in-out infinite}
+  .cur .lab{margin-top:7px;font-family:'Noto Serif SC',serif;font-weight:700;font-size:11px;color:#fff;background:linear-gradient(180deg,var(--gold-l),var(--gold));padding:3px 11px;border-radius:999px;white-space:nowrap;box-shadow:0 4px 14px rgba(184,144,47,.35)}
+  @keyframes beat{0%,100%{box-shadow:0 0 0 5px rgba(184,144,47,.16),0 0 20px 4px rgba(216,178,90,.55)}50%{box-shadow:0 0 0 10px rgba(184,144,47,.04),0 0 28px 8px rgba(216,178,90,.8)}}
+
+  /* ---------- 右栏 ---------- */
+  .panel{display:flex;flex-direction:column;gap:20px}
+  .box{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:20px 20px 22px;box-shadow:0 10px 30px rgba(74,60,36,.08)}
+  .box .lbl{display:flex;align-items:center;gap:9px;font-size:11px;font-weight:700;letter-spacing:2.5px;color:var(--gold);text-transform:uppercase;margin-bottom:14px}
+  .box .lbl::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--line),transparent)}
+  .cur-card{background:linear-gradient(165deg,#fff6f0,#fffaf0);border-color:rgba(230,160,25,.30)}
+  .cur-card .big{font-family:'Noto Serif SC',serif;font-size:22px;font-weight:900;color:#241f2e;line-height:1.25}
+  .cur-card .arrow{font-size:12.5px;color:var(--mut);margin:8px 0 12px}
+  .cur-card .arrow b{color:#e0445a}
+  .cur-card p{font-size:12.5px;color:var(--txt-soft);line-height:1.8}
+  .thermo{margin-top:16px}
+  .thermo .num{font-family:'Cormorant Garamond',serif;font-size:32px;font-weight:700;color:var(--gold);line-height:1}
+  .thermo .num small{font-size:14px;color:var(--mut);font-family:'Inter'}
+  .bar{height:8px;border-radius:999px;margin:10px 0 6px;background:linear-gradient(90deg,var(--c-recov),var(--c-rise) 55%,var(--c-top));position:relative;box-shadow:inset 0 0 5px rgba(120,90,40,.18)}
+  .bar .pin{position:absolute;top:50%;width:14px;height:14px;border-radius:50%;transform:translate(-50%,-50%);
+    background:radial-gradient(circle at 35% 30%,#fff,var(--gold) 82%);box-shadow:0 0 10px rgba(184,144,47,.6),0 0 0 3px #fff}
+  .bar-l{display:flex;justify-content:space-between;font-size:10px;color:var(--dim);letter-spacing:.5px}
+  .split-title{font-size:10px;letter-spacing:1.6px;color:var(--gold);font-weight:700;text-transform:uppercase;margin-top:18px;margin-bottom:7px}
+  .split{display:flex;height:11px;border-radius:999px;overflow:hidden;box-shadow:inset 0 0 4px rgba(120,90,40,.22)}
+  .split i{display:block;height:100%;transition:width .4s}
+  .split-l{display:flex;flex-wrap:wrap;gap:7px 14px;font-size:11px;color:var(--txt-soft);margin-top:9px}
+  .split-l span{display:inline-flex;align-items:center;gap:6px;font-weight:600}
+  .split-l span::before{content:"";width:9px;height:9px;border-radius:3px;background:var(--sc)}
+  .cur-card .arrow b{color:#c77a1e}
+  .watch-sub b{color:#2a2433}
+
+  /* 下一阶段关注清单 */
+  .watch-card{border-color:rgba(154,104,239,.32);background:linear-gradient(165deg,#faf7ff,#fdf6f6)}
+  .watch-next{display:inline-flex;align-items:center;gap:8px;font-family:'Noto Serif SC',serif;font-weight:700;font-size:14px;color:#241f2e;margin-bottom:3px}
+  .watch-next::before{content:"";width:9px;height:9px;border-radius:50%;background:var(--c-fall);box-shadow:0 0 10px var(--c-fall)}
+  .watch-sub{font-size:11px;color:var(--mut);line-height:1.5;margin-bottom:14px}
+  .watch{list-style:none;display:flex;flex-direction:column;gap:12px}
+  .watch li{display:flex;gap:11px;align-items:flex-start}
+  .watch li .ix{flex:0 0 20px;height:20px;border-radius:7px;background:var(--gold-bg);color:var(--gold);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;margin-top:1px;font-family:'Cormorant Garamond',serif}
+  .watch li .wt{min-width:0}
+  .watch li .ws{font-size:12.5px;font-weight:700;color:#2a2433;display:block;margin-bottom:1px}
+  .watch li .wm{font-size:11.5px;color:var(--mut);line-height:1.55}
+
+  .leg{display:flex;flex-direction:column}
+  .leg .row{display:flex;align-items:center;gap:13px;padding:11px 0;border-bottom:1px solid var(--line-soft)}
+  .leg .row:last-child{border-bottom:0;padding-bottom:0}
+  .leg .row:first-child{padding-top:0}
+  .leg .pic{width:42px;height:42px;border-radius:50%;overflow:hidden;position:relative;flex:0 0 42px;
+    background:linear-gradient(160deg,#efe9dd,#e2dac9);box-shadow:0 0 0 2px var(--ac,rgba(184,144,47,.55)),inset 0 0 8px rgba(120,100,60,.14)}
+  .leg .pic img{width:100%;height:100%;object-fit:cover;display:block;position:relative;z-index:2}
+  .leg .pic .sil{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#b3a98f;z-index:1}
+  .leg .meta{min-width:0}
+  .leg .meta .n{font-family:'Noto Serif SC',serif;font-size:14px;font-weight:700;color:#241f2e}
+  .leg .meta .n span{font-family:'Cormorant Garamond',serif;font-style:italic;color:var(--dim);font-weight:600;font-size:12px;margin-left:5px}
+  .leg .meta .r{font-size:11px;color:var(--mut);margin-top:1px}
+
+  .note{font-size:11.5px;color:var(--txt-soft);line-height:1.85}
+  .note .t{color:var(--gold);font-weight:700;letter-spacing:1.5px;font-size:10.5px;text-transform:uppercase;margin-bottom:8px}
+  .note code{color:#8a6a18;background:var(--gold-bg);border:1px solid rgba(184,144,47,.18);padding:1px 6px;border-radius:6px;font-size:11px}
+  .foot{max-width:1280px;margin:34px auto 0;color:var(--dim);font-size:12px;line-height:1.7;text-align:center;font-style:italic;font-family:'Cormorant Garamond',serif;letter-spacing:.3px;position:relative;z-index:2}
+</style>
+</head>
+<body>
+  <header class="head">
+    <div class="eyebrow"><span class="ln"></span>A股 · 风格轮换罗盘</div>
+    <h1>市场风格时钟<span class="en">The Market Style Clock</span></h1>
+    <p>把巴菲特、林奇、欧奈尔的自下而上选股,与索罗斯的反身性、马克斯的周期定位、达里奥与美林时钟的宏观"表芯"拼成一整圈。表圈的<b>情绪色环</b>从谷底的冷蓝,流向主升的暖金、顶部的绯红;金针指向<b>当前位置</b>。表盘只回答"几点该用谁"——真正转动指针的,是圆心的宏观流动性、信用与政策周期。<b>悬停表盘即可展开每个相位的完整策略。</b></p>
+  </header>
+  <div class="rule"></div>
+
+  <div class="wrap">
+    <!-- 表盘 -->
+    <div class="stage" id="stage">
+      <div class="glow"></div>
+      <div class="ring"></div>
+      <div class="face"></div>
+      <svg viewBox="0 0 800 800" id="svg">
+        <defs>
+          <linearGradient id="hand" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="rgba(184,144,47,.12)"/>
+            <stop offset="55%" stop-color="#c79a32"/>
+            <stop offset="100%" stop-color="#e6c576"/>
+          </linearGradient>
+          <filter id="soft" x="-50%" y="-50%" width="200%" height="200%">
+            <feDropShadow dx="0" dy="1" stdDeviation="3" flood-color="#8a6a18" flood-opacity="0.35"/>
+          </filter>
+        </defs>
+        <g id="guilloche"></g>
+        <g id="ticks"></g>
+        <g id="handG" filter="url(#soft)"></g>
+      </svg>
+      <div class="hub">
+        <div class="k">表芯 · 发动机</div>
+        <div class="v">宏观流动性<br>信用 · 政策周期</div>
+        <div class="s">美林时钟 · 达里奥</div>
+        <div class="mk">读表人 · <b>霍华德·马克斯</b><br>周期定位 / 风险温度</div>
+      </div>
+    </div>
+
+    <!-- 右栏 -->
+    <aside class="panel">
+      <div class="box cur-card">
+        <div class="lbl">当前位置 · Now</div>
+        <div class="big" id="cur-title"></div>
+        <div class="arrow" id="cur-arrow"></div>
+        <p id="cur-desc"></p>
+        <div class="thermo">
+          <div class="num" id="risk-num">82<small>/100</small></div>
+          <div class="bar"><div class="pin" id="risk-pin"></div></div>
+          <div class="bar-l"><span>风险温度 低</span><span id="risk-label">偏高</span><span>过热</span></div>
+        </div>
+        <div class="split-title">证据强弱归类</div>
+        <div class="split" id="evidence-split"></div>
+        <div class="split-l" id="evidence-legend"></div>
+      </div>
+
+      <div class="box watch-card">
+        <div class="lbl">下一阶段 · 密切关注 — Watchlist</div>
+        <div class="watch-next" id="watch-next"></div>
+        <div class="watch-sub">真正跳到「抱团瓦解」需三者同现:<b>盈利下修 + 龙头 50 日线破位反抽失败 + 整条 AI 硬件链资金同步撤离</b>。当前未到,但这几条是从加速段切入见顶的扳机。</div>
+        <ul class="watch" id="watch-list"></ul>
+      </div>
+
+      <div class="box">
+        <div class="lbl">全部角色 · Cast</div>
+        <div class="leg" id="legend"></div>
+      </div>
+
+      <div class="box note">
+        <div class="t">补充照片</div>
+        把照片放入 <code>statics/html/photos/</code>,按 <code>id.png</code> 命名即可自动显示(缺图显示剪影占位)。<br><br>
+        <code>graham</code> <code>buffett</code> <code>templeton</code> <code>lynch</code> <code>oneil</code> <code>livermore</code> <code>soros</code> <code>druckenmiller</code> <code>marks</code> <code>dalio</code>
+      </div>
+    </aside>
+  </div>
+
+  <div class="foot">概念可视化 · 非投资建议 — 指针位置、文案、风险值可在源码 CURRENT 变量内调整</div>
+
+<script>
+  const M = {
+    graham:{cn:'格雷厄姆',en:'Graham',role:'深度价值 · 安全边际 · 清算价值',ac:'#3f74e6'},
+    buffett:{cn:'巴菲特',en:'Buffett',role:'质量复利 · 别人恐惧我贪婪',ac:'#3f74e6'},
+    templeton:{cn:'邓普顿',en:'Templeton',role:'极度悲观点抄底',ac:'#3f74e6'},
+    lynch:{cn:'林奇',en:'Lynch',role:'GARP · 成长扩散 · PEG',ac:'#10b492'},
+    oneil:{cn:'欧奈尔',en:"O'Neil",role:'CANSLIM · 动量 · 领涨龙头',ac:'#e6a019'},
+    livermore:{cn:'利弗莫尔',en:'Livermore',role:'趋势投机 · 关键点突破 · 顶部反手做空(1907/1929)',ac:'#9a68ef'},
+    soros:{cn:'索罗斯',en:'Soros',role:'反身性 · 骑泡沫并反手做空',ac:'#ee4c61'},
+    druckenmiller:{cn:'德鲁肯米勒',en:'Druckenmiller',role:'宏观 · 下行降杠杆',ac:'#9a68ef'},
+    marks:{cn:'霍华德·马克斯',en:'Marks',role:'周期定位 · 风险温度计',ac:'#b8902f'},
+    dalio:{cn:'达里奥',en:'Dalio',role:'债务/流动性范式 · 表芯',ac:'#b8902f'},
+  };
+  const SIL = '<span class="sil"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12a5 5 0 100-10 5 5 0 000 10zm0 2c-5 0-9 2.7-9 6v2h18v-2c0-3.3-4-6-9-6z"/></svg></span>';
+  const PHOTO_BASE = location.protocol.indexOf('http')===0 ? '/statics/html/photos/' : 'photos/';
+  const avatar = id => `<div class="pic" style="--ac:${M[id].ac}">${SIL}<img alt="${M[id].cn}" src="${PHOTO_BASE}${id}.png" onerror="this.remove()"></div>`;
+
+  const PHASES = [
+    {hr:'XII',angle:0,  tt:'顶部 · 极致抱团',tag:'反身性 / 见顶',ac:'var(--c-top)',   ds:'叙事自我强化、宽度恶化。骑泡沫并准备反手。',who:['soros']},
+    {hr:'II', angle:60, tt:'回落 · 抱团瓦解',tag:'做空 / 降杠杆',ac:'var(--c-fall)',  ds:'杀估值、流动性退潮,现金与空头占优。',who:['livermore','soros','druckenmiller']},
+    {hr:'IV', angle:120,tt:'熊市 · 磨底等待',tag:'现金为王',    ac:'var(--c-bear)',  ds:'持币等待,等估值与情绪重回谷底。',who:['buffett','graham']},
+    {hr:'VI', angle:180,tt:'谷底 · 极度悲观',tag:'深度价值',    ac:'var(--c-bottom)',ds:'估值最低、政策转向前夜。别人恐惧我贪婪。',who:['graham','templeton']},
+    {hr:'VIII',angle:240,tt:'复苏 · 成长扩散',tag:'GARP',       ac:'var(--c-recov)', ds:'盈利触底回升、宽度改善,买便宜的成长。',who:['lynch']},
+    {hr:'X',  angle:300,tt:'主升 · 景气兑现',tag:'CANSLIM 动量',ac:'var(--c-rise)',  ds:'趋势、相对强度、领涨龙头,创新高即买点。',who:['oneil']},
+  ];
+
+  const CURRENT = {
+    angle: 330,
+    title: '主升后期 · 加速初段',
+    arrow: '欧奈尔(主升纪律,仍在场) →&nbsp; <b>高潮加速段</b>',
+    desc: '截至 2026.6.18:AI硬件 / CPO / PCB / 国产GPU / 半导体设备放量上涨,创业板与科创50创新高,中际旭创、寒武纪等龙头续创新高,两市成交约 3.31 万亿——增量资金仍在进场。龙头未破位、基本面预期仍上修、资金在 AI 链内部扩散(CPO→PCB→设备材料),所以仍属主升而非瓦解。但集中度极高(中际旭创市值超茅台)、当日逾 3300 只下跌、主线由核心向外围补涨,均是晚期信号:<b>容错率已明显低于一个月前。黄色预警,尚未进入橙色确认。</b>',
+    risk: 72, riskLabel:'偏高 · 黄色预警',
+    split: [
+      {label:'主升仍在',v:65,c:'#e6a019'},
+      {label:'高位震荡 / 顶部构筑',v:25,c:'#ee8a3c'},
+      {label:'系统性瓦解',v:10,c:'#ee4c61'},
+    ],
+    next: '高潮加速 → 高潮顶 · 宽度恶化',
+    watch: [
+      {s:'龙头巨量后能否再新高', m:'核心龙头(中际旭创 / 寒武纪等)首次放历史巨量并反转后,若数日内无法重新创新高 → 高潮顶信号。'},
+      {s:'利好是否钝化',         m:'订单、涨价、上调盈利预测公布后,核心股反而冲高回落 → 多头动能衰竭。'},
+      {s:'全链是否同步破位',     m:'光模块 / PCB / 国产GPU / 设备材料同时跌破中期趋势(而非彼此轮动)→ 资金真正撤离 AI 链。'},
+      {s:'龙头 50 日线',         m:'多只龙头跌破 20 日线无法收回、进而失守 50 日线、反抽形成更低高点 → 趋势反转确认。'},
+      {s:'盈利预期转向',         m:'卖方从上修转为下修(光模块 / PCB 空间、AI 芯片采购)→ 基本面"盈利腿"断裂。'},
+      {s:'流动性 / 成交',        m:'增量资金停止进场、成交持续萎缩、两融与北向转为净流出 → 圆心"表芯"发动机熄火。'},
+    ],
+  };
+
+  const CX=400, CY=400, R_NODE=330, STAGE=800;
+  const xy=(angle,r)=>{const a=angle*Math.PI/180;return{x:CX+r*Math.sin(a),y:CY-r*Math.cos(a)};};
+  const pct=v=>(v/STAGE*100)+'%';
+
+  let g='';
+  for(let r=150;r<=300;r+=11){g+=`<circle cx="${CX}" cy="${CY}" r="${r}" fill="none" stroke="rgba(120,95,45,.05)" stroke-width="1"/>`;}
+  document.getElementById('guilloche').innerHTML=g;
+
+  let ticks='';
+  for(let i=0;i<60;i++){const a=i*6,big=(i%5===0);const p1=xy(a,big?288:294),p2=xy(a,302);
+    ticks+=`<line x1="${p1.x}" y1="${p1.y}" x2="${p2.x}" y2="${p2.y}" stroke="rgba(150,116,40,${big?.6:.2})" stroke-width="${big?2:1}" stroke-linecap="round"/>`;}
+  document.getElementById('ticks').innerHTML=ticks;
+
+  const stage=document.getElementById('stage');
+  PHASES.forEach(p=>{const pos=xy(p.angle,R_NODE);const el=document.createElement('div');
+    el.className='node';el.style.cssText=`left:${pct(pos.x)};top:${pct(pos.y)};--ac:${p.ac}`;
+    el.innerHTML=`<div class="hr">${p.hr}</div><div class="tt">${p.tt}</div>
+      <div class="tag">${p.tag}</div>
+      <div class="avatars">${p.who.map(id=>`<div class="av">${avatar(id)}<span class="nm">${M[id].cn}</span></div>`).join('')}</div>
+      <div class="ds">${p.ds}</div>`;
+    stage.appendChild(el);});
+
+  const tip=xy(CURRENT.angle,262), bl=xy(CURRENT.angle-1.4,150), br=xy(CURRENT.angle+1.4,150);
+  const cwl=xy(CURRENT.angle+180,52), cwr1=xy(CURRENT.angle+176,40), cwr2=xy(CURRENT.angle-176,40);
+  document.getElementById('handG').innerHTML=`
+    <polygon points="${tip.x},${tip.y} ${bl.x},${bl.y} ${br.x},${br.y}" fill="url(#hand)"/>
+    <polygon points="${cwl.x},${cwl.y} ${cwr1.x},${cwr1.y} ${cwr2.x},${cwr2.y}" fill="#caa24a"/>
+    <circle cx="${CX}" cy="${CY}" r="11" fill="#fffdf8" stroke="#c79a32" stroke-width="2"/>
+    <circle cx="${CX}" cy="${CY}" r="4.5" fill="#c79a32"/>`;
+
+  const mk=xy(CURRENT.angle,322);const cur=document.createElement('div');
+  cur.className='cur';cur.style.cssText=`left:${pct(mk.x)};top:${pct(mk.y)}`;
+  cur.innerHTML=`<div class="gem"></div><div class="lab">当前</div>`;
+  stage.appendChild(cur);
+
+  document.getElementById('cur-title').innerHTML=CURRENT.title;
+  document.getElementById('cur-arrow').innerHTML=CURRENT.arrow;
+  document.getElementById('cur-desc').innerHTML=CURRENT.desc;
+  document.getElementById('risk-num').innerHTML=CURRENT.risk+'<small>/100</small>';
+  document.getElementById('risk-pin').style.left=CURRENT.risk+'%';
+  document.getElementById('risk-label').textContent=CURRENT.riskLabel;
+
+  document.getElementById('evidence-split').innerHTML=CURRENT.split.map(s=>`<i style="width:${s.v}%;background:${s.c}"></i>`).join('');
+  document.getElementById('evidence-legend').innerHTML=CURRENT.split.map(s=>`<span style="--sc:${s.c}">${s.label} ${s.v}%</span>`).join('');
+
+  document.getElementById('watch-next').textContent='下一站 · '+CURRENT.next;
+  document.getElementById('watch-list').innerHTML=CURRENT.watch.map((w,i)=>
+    `<li><span class="ix">${i+1}</span><span class="wt"><span class="ws">${w.s}</span><span class="wm">${w.m}</span></span></li>`).join('');
+
+  document.getElementById('legend').innerHTML=Object.keys(M).map(id=>`
+    <div class="row"><div class="pic" style="--ac:${M[id].ac}">${SIL}<img alt="${M[id].cn}" src="${PHOTO_BASE}${id}.png" onerror="this.remove()"></div>
+    <div class="meta"><div class="n">${M[id].cn}<span>${M[id].en}</span></div><div class="r">${M[id].role}</div></div></div>`).join('');
+</script>
+</body>
+</html>
