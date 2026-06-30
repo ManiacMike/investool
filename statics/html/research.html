@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.PageTitle}}</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <script src="/statics/js/periphera-api.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = { theme: { extend: {
+            colors: { page:'#F4F0E8', cream:'#E0D7C7', card:'#FBF9F5', sand:'#E7A265', terra:'#D0643E', ink:'#3D362A' },
+            fontFamily: { display:['Fraunces','serif'], sans:['Inter','system-ui','sans-serif'], mono:['JetBrains Mono','monospace'] },
+            boxShadow: { block:'6px 6px 0 #3D362A', blockSm:'4px 4px 0 #3D362A', blockHover:'9px 9px 0 #3D362A' },
+        } } }
+    </script>
+    <style>
+        body { font-family:'Inter',system-ui,sans-serif; background:#F4F0E8; color:#3D362A; }
+        .font-display { font-family:'Fraunces',serif; } .mono { font-family:'JetBrains Mono',monospace; font-variant-numeric: tabular-nums; }
+        .widget { border:2px solid #3D362A; background:#FBF9F5; box-shadow:4px 4px 0 #3D362A; transition: box-shadow .16s ease, transform .16s ease; }
+        .card-hover:hover { box-shadow:7px 7px 0 #3D362A; transform:translate(-2px,-2px); }
+        .pulse::after { content:''; position:absolute; inset:-4px; border-radius:9999px; border:2px solid #D0643E; opacity:0; animation: pulse 1.8s ease-out infinite; }
+        @keyframes pulse { 0%{ transform:scale(.6); opacity:.8 } 100%{ transform:scale(1.7); opacity:0 } }
+        .flash-new { animation: flashNew 2.6s ease-out; } @keyframes flashNew { 0%{ background:rgba(231,162,101,.5) } 100%{ background:#FBF9F5 } }
+        [v-cloak]{ display:none; } .reveal{ opacity:0; transform:translateY(12px); animation:rv .5s ease-out forwards; } @keyframes rv{ to{ opacity:1; transform:none } }
+        .thin-scroll::-webkit-scrollbar { width:6px; } .thin-scroll::-webkit-scrollbar-thumb { background:#3D362A33; border-radius:6px; }
+    </style>
+</head>
+<body class="antialiased selection:bg-terra/25">
+<div id="app" v-cloak>
+
+    <!-- top bar -->
+    <header class="sticky top-0 z-20 bg-page/90 backdrop-blur border-b-2 border-ink">
+        <div class="max-w-[1280px] mx-auto px-4 md:px-6 h-14 flex items-center justify-between gap-4">
+            <div class="flex items-center gap-3 min-w-0">
+                <a href="/portal" class="inline-flex items-center gap-1.5 text-sm font-bold text-ink/60 hover:text-terra transition-colors">← 指挥中心</a>
+                <span class="w-px h-5 bg-ink/20"></span>
+                <h1 class="font-display font-bold text-lg flex items-center gap-2">📑 外资研报
+                    <span class="inline-flex items-center gap-1 text-[11px] font-bold text-terra border-2 border-terra/30 bg-terra/10 rounded-full px-2 py-0.5">
+                        <span class="relative w-1.5 h-1.5"><span class="absolute inset-0 rounded-full bg-terra pulse"></span><span class="absolute inset-0 rounded-full bg-terra"></span></span>最新
+                    </span>
+                </h1>
+            </div>
+            <div class="flex items-center gap-3">
+                <a href="/news" class="hidden sm:inline-flex text-sm font-bold text-ink/60 hover:text-terra transition-colors">实时新闻 →</a>
+                <a href="/invest/zen-research-report" class="inline-flex items-center gap-1.5 h-9 px-3 rounded-md border-2 border-ink bg-ink text-page hover:bg-terra transition-colors text-sm font-bold">＋ 录入 / 管理</a>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-[1280px] mx-auto px-4 md:px-6 py-5">
+        <div v-if="lastError" class="mb-5 rounded-xl border-2 border-terra/30 bg-terra/10 px-4 py-2 text-[12px] font-bold text-terra">
+            数据接口暂不可用，已保留上一帧数据：[[ lastError ]]
+        </div>
+
+        <!-- summary strip -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-5">
+            <div v-for="s in summary" :key="s.label" class="widget rounded-xl p-4 reveal">
+                <div class="font-display font-bold text-3xl text-terra mono">[[ s.value ]]</div>
+                <div class="text-[12px] font-semibold text-ink/55 mt-1">[[ s.label ]]</div>
+            </div>
+        </div>
+
+        <!-- filters -->
+        <div class="widget rounded-xl p-3 mb-5 flex flex-wrap items-center gap-3">
+            <div class="flex flex-wrap gap-1.5">
+                <button v-for="r in ratings" :key="r" @click="ratingFilter=r"
+                        class="text-[12px] font-bold px-3 py-1.5 rounded-full border-2 transition-colors"
+                        :class="ratingFilter===r?'border-ink bg-ink text-page':'border-ink/20 text-ink/55 hover:border-ink'">[[ r ]]</button>
+            </div>
+            <span class="w-px h-6 bg-ink/15 hidden sm:block"></span>
+            <select v-model="instFilter" class="text-[12px] font-bold bg-card border-2 border-ink/20 rounded-md px-2.5 py-1.5 focus:outline-none focus:border-ink">
+                <option value="全部机构">全部机构</option>
+                <option v-for="i in institutions" :key="i" :value="i">[[ i ]]</option>
+            </select>
+            <div class="ml-auto flex items-center gap-2 flex-1 sm:flex-none min-w-[160px]">
+                <input v-model="q" type="text" placeholder="搜索标的 / 关键词…"
+                       class="w-full text-[13px] bg-card border-2 border-ink/20 rounded-md px-3 py-1.5 focus:outline-none focus:border-ink font-medium">
+            </div>
+        </div>
+
+        <!-- cards -->
+        <div class="grid md:grid-cols-2 xl:grid-cols-3 gap-5">
+            <article v-if="loading && reports.length===0" v-for="i in 6" :key="'skel-'+i" class="widget rounded-2xl p-5 reveal">
+                <div class="h-5 w-28 rounded bg-cream/60 animate-pulse mb-4"></div>
+                <div class="h-7 w-40 rounded bg-cream/60 animate-pulse mb-3"></div>
+                <div class="space-y-2">
+                    <div class="h-3 rounded bg-cream/50 animate-pulse"></div>
+                    <div class="h-3 rounded bg-cream/50 animate-pulse"></div>
+                    <div class="h-3 w-2/3 rounded bg-cream/50 animate-pulse"></div>
+                </div>
+            </article>
+            <article v-for="r in filtered" :key="r.uid" class="widget card-hover rounded-2xl p-5 flex flex-col reveal" :class="r._new?'flash-new':''">
+                <div class="flex items-center justify-between mb-3">
+                    <span class="text-[12px] font-bold text-ink/60 border-2 border-ink/15 rounded px-2 py-0.5">[[ r.institution_name ]]</span>
+                    <div class="flex items-center gap-2">
+                        <span v-if="r._new" class="text-[10px] font-bold text-page bg-terra rounded px-1.5 py-0.5">NEW</span>
+                        <span class="mono text-[12px] font-semibold text-ink/40">[[ r.publish_time ]]</span>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2 mb-1">
+                    <h3 class="font-display font-bold text-xl">[[ r.research_target ]]</h3>
+                    <span class="text-[10px] font-bold rounded-full px-2 py-0.5 border-2" :style="ratingStyle(r.investment_rating)">[[ r.investment_rating ]]</span>
+                </div>
+                <div class="text-[11px] font-semibold text-ink/45 mb-3">[[ r.industry_category ]] · [[ r.report_type ]]</div>
+                <p class="text-[13.5px] text-ink/75 leading-relaxed flex-1">[[ r.core_content ]]</p>
+
+                <div class="mt-3 grid grid-cols-2 gap-2 text-[12px]">
+                    <div class="rounded-lg border-2 border-terra/20 bg-terra/5 p-2">
+                        <div class="font-bold text-terra/80 mb-0.5">催化剂</div>
+                        <div class="text-ink/70 leading-snug line-clamp-2">[[ r.core_catalyst ]]</div>
+                    </div>
+                    <div class="rounded-lg border-2 border-ink/15 bg-ink/5 p-2">
+                        <div class="font-bold text-ink/60 mb-0.5">风险提示</div>
+                        <div class="text-ink/70 leading-snug line-clamp-2">[[ r.core_risk_warning ]]</div>
+                    </div>
+                </div>
+
+                <div class="mt-4 pt-3 border-t-2 border-ink/10 flex items-center justify-between">
+                    <div>
+                        <div class="text-[10px] font-semibold text-ink/45 uppercase tracking-wide">目标价</div>
+                        <div class="font-display font-bold text-lg text-terra mono">[[ r.target_price || '—' ]]</div>
+                    </div>
+                    <span class="text-[12px] font-bold inline-flex items-center gap-1"
+                          :class="r.rating_change==='上调'?'text-terra':r.rating_change==='下调'?'text-ink/50':'text-ink/45'">
+                        [[ r.rating_change==='上调'?'▲':r.rating_change==='下调'?'▼':'—' ]] 评级[[ r.rating_change ]]
+                    </span>
+                </div>
+            </article>
+        </div>
+        <div v-if="!loading && filtered.length===0" class="widget rounded-2xl p-12 text-center text-ink/45 font-semibold">未找到匹配的研报</div>
+
+        <footer class="mt-6 text-center text-[12px] font-semibold text-ink/40">PERIPHERA · [[ USE_BACKEND ? '实时接口数据' : '模拟数据' ]]，仅供产品演示，非投资建议 · {{.Version}}</footer>
+    </main>
+</div>
+
+<script>
+const { createApp } = Vue;
+const PAPI = window.PeripheraAPI;
+const PALETTE = { ink:'#3D362A', terra:'#D0643E' };
+function pad(x){ return (x<10?'0':'')+x; }
+const POOL = [
+    { institution_name:'高盛 GS', industry_category:'能源', report_type:'行业深度', research_target:'能源板块', investment_rating:'增持', target_price:'—', rating_change:'上调', core_content:'地缘风险溢价回归，上调原油全年中枢至 85 美元，看好上游勘探与油服设备。', core_catalyst:'霍尔木兹局势 + OPEC+ 减产纪律', core_risk_warning:'需求走弱、地缘缓和导致溢价回吐' },
+    { institution_name:'摩根士丹利', industry_category:'贵金属', report_type:'公司+商品', research_target:'黄金', investment_rating:'买入', target_price:'$2480', rating_change:'上调', core_content:'实际利率见顶 + 全球央行持续购金，上调金价 12 个月目标价。', core_catalyst:'降息周期开启、央行购金延续', core_risk_warning:'美元超预期走强、实际利率反弹' },
+    { institution_name:'摩根大通', industry_category:'半导体', report_type:'公司点评', research_target:'台积电', investment_rating:'买入', target_price:'NT$1180', rating_change:'维持', core_content:'AI 加速卡需求强劲，先进制程产能利用率维持高位，毛利率有望上修。', core_catalyst:'CoWoS 扩产、N2 量产节点', core_risk_warning:'消费电子复苏不及预期' },
+    { institution_name:'瑞银 UBS', industry_category:'工业金属', report_type:'商品策略', research_target:'铜', investment_rating:'中性', target_price:'$4.6', rating_change:'下调', core_content:'短期需求走弱，下调铜价预期，但长期电气化与电网投资逻辑不变。', core_catalyst:'电网投资、新能源装机', core_risk_warning:'地产链拖累、库存累积' },
+    { institution_name:'美银 BofA', industry_category:'科技', report_type:'策略', research_target:'美股科技', investment_rating:'增持', target_price:'—', rating_change:'维持', core_content:'盈利上修推动估值消化，AI 资本开支周期仍处早中期，龙头集中度提升。', core_catalyst:'AI 资本开支、盈利上修', core_risk_warning:'利率高企压制成长估值' },
+    { institution_name:'花旗 Citi', industry_category:'海外股指', report_type:'策略', research_target:'日经225', investment_rating:'增持', target_price:'42000', rating_change:'上调', core_content:'公司治理改革叠加弱日元支撑出口企业盈利，上调指数目标位。', core_catalyst:'治理改革、股东回报提升', core_risk_warning:'日元快速升值、外需转弱' },
+    { institution_name:'巴克莱 Barclays', industry_category:'原油', report_type:'商品策略', research_target:'布伦特原油', investment_rating:'买入', target_price:'$92', rating_change:'上调', core_content:'供给端纪律性增强，下半年去库加速，上调布伦特目标价。', core_catalyst:'OPEC+ 减产、地缘风险', core_risk_warning:'美国页岩增产超预期' },
+    { institution_name:'野村 Nomura', industry_category:'海外股指', report_type:'策略', research_target:'韩国KOSPI', investment_rating:'中性', target_price:'2900', rating_change:'维持', core_content:'半导体出口回暖支撑盈利，但估值已部分反映，维持中性。', core_catalyst:'存储芯片涨价周期', core_risk_warning:'全球需求二次走弱' },
+    { institution_name:'德银 DB', industry_category:'新能源', report_type:'行业深度', research_target:'储能板块', investment_rating:'增持', target_price:'—', rating_change:'上调', core_content:'电网级储能需求爆发，Megapack 类产品订单能见度提升，上调板块评级。', core_catalyst:'电网投资、AI 数据中心用电', core_risk_warning:'锂价反弹、并网政策变化' },
+];
+let UID = 3000;
+
+createApp({
+    delimiters: ['[[', ']]'],
+    data() {
+        return {
+            ratingFilter: '全部', instFilter: '全部机构', q: '', timers: [], disposers: [],
+            latestTs: 0, lastError: '', loading: true, backendSummary: null, USE_BACKEND: window.USE_BACKEND,
+            ratings: ['全部','买入','增持','中性','减持'],
+            reports: [],
+        };
+    },
+    computed: {
+        institutions() { return [...new Set(this.reports.map(r => r.institution_name))]; },
+        filtered() {
+            const q = this.q.trim();
+            return this.reports.filter(r => {
+                if (this.ratingFilter!=='全部' && r.investment_rating!==this.ratingFilter) return false;
+                if (this.instFilter!=='全部机构' && r.institution_name!==this.instFilter) return false;
+                if (q && !(r.research_target+r.core_content+r.industry_category).includes(q)) return false;
+                return true;
+            });
+        },
+        summary() {
+            if (this.backendSummary) {
+                return [
+                    { label:'今日研报', value:this.backendSummary.total || 0 },
+                    { label:'上调评级', value:this.backendSummary.upgrades || 0 },
+                    { label:'买入/增持', value:this.backendSummary.buy || 0 },
+                    { label:'覆盖标的', value:this.backendSummary.targets || 0 },
+                ];
+            }
+            const up = this.reports.filter(r => r.rating_change==='上调').length;
+            const buy = this.reports.filter(r => ['买入','增持'].includes(r.investment_rating)).length;
+            const targets = new Set(this.reports.map(r => r.research_target)).size;
+            return [
+                { label:'今日研报', value:this.reports.length },
+                { label:'上调评级', value:up },
+                { label:'买入/增持', value:buy },
+                { label:'覆盖标的', value:targets },
+            ];
+        },
+    },
+    methods: {
+        ratingStyle(r) {
+            if (['买入','强烈推荐','增持'].includes(r)) return { borderColor:PALETTE.terra, color:PALETTE.terra };
+            if (['中性','维持'].includes(r)) return { borderColor:'rgba(61,54,42,.25)', color:'rgba(61,54,42,.7)' };
+            return { borderColor:'rgba(61,54,42,.2)', color:'rgba(61,54,42,.55)' };
+        },
+        make(t, time, isNew) { return Object.assign({ uid:++UID, publish_time:time, _new:!!isNew }, t); },
+        normalizeReport(r) {
+            return Object.assign({ uid:r.id || ('r_'+r.created_at+'_'+r.research_target), _new:false }, r);
+        },
+        onPollError(err) { this.lastError = err.message || String(err); },
+        mergeReports(items) {
+            let added = 0;
+            items.forEach(item => {
+                const idx = this.reports.findIndex(r => r.uid === item.uid);
+                if (idx >= 0) this.reports.splice(idx, 1);
+                else added++;
+                PAPI.markFresh(item);
+                this.reports.unshift(item);
+            });
+            if (this.reports.length > 60) this.reports.length = 60;
+            return added;
+        },
+        async fetchReports() {
+            const data = await PAPI.apiGet('/research', this.latestTs ? { since:this.latestTs, limit:30 } : { limit:60 });
+            const items = (data.items || []).map(this.normalizeReport);
+            if (data.summary) this.backendSummary = data.summary;
+            if (!this.latestTs) this.reports = items;
+            else this.mergeReports(items);
+            if (data.latest_ts) this.latestTs = Math.max(this.latestTs, data.latest_ts);
+            this.loading = false;
+            this.lastError = '';
+        },
+        startBackendPolling() {
+            this.disposers.push(PAPI.usePolling(this.fetchReports.bind(this), 45000, { onError:this.onPollError }));
+        },
+        pushReport() {
+            const t = POOL[Math.floor(Math.random()*POOL.length)];
+            const d = new Date();
+            const it = this.make(t, pad(d.getMonth()+1)+'-'+pad(d.getDate()), true);
+            this.reports.unshift(it);
+            if (this.reports.length>40) this.reports.pop();
+            setTimeout(() => { it._new=false; }, 2600);
+        },
+        seed() { for (let i=0;i<9;i++){ const t=POOL[i%POOL.length]; this.reports.push(this.make(t, '06-'+pad(27-i), false)); } this.loading = false; },
+    },
+    mounted() {
+        if (this.USE_BACKEND) this.startBackendPolling();
+        else {
+            this.seed();
+            this.timers.push(setInterval(this.pushReport, 18000));
+        }
+    },
+    beforeUnmount() {
+        this.timers.forEach(t => clearInterval(t));
+        this.disposers.forEach(dispose => dispose && dispose());
+    },
+}).mount('#app');
+</script>
+</body>
+</html>

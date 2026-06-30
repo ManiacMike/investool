@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// 抖音视频 → 豆包(专家模型)分析 → 结构化研报 JSON → 写入研报页面 localStorage
+// 抖音视频 → 豆包(专家模型)分析 → 结构化研报 JSON → POST 到后台 → 落 MySQL
 //
 // 用法:
 //   node scripts/douyin_to_report.mjs "<抖音视频链接>"
@@ -11,15 +11,15 @@
 // 前置条件:
 //   - 外部 Chrome 以远程调试方式启动(默认端口 9222),且已登录抖音/豆包
 //       /Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome --remote-debugging-port=9222
-//   - 研报服务运行在 http://localhost:4869 (可用 REPORT_URL 覆盖)
+//   - 后台服务运行在 http://localhost:4869 (可用 API_BASE 覆盖)，研报落 MySQL periphera 库
 //
 // 环境变量:
 //   CDP_PORT    Chrome 远程调试端口 (默认 9222)
-//   REPORT_URL  研报页面地址 (默认 http://localhost:4869/invest/zen-research-report)
+//   API_BASE    后台地址 (默认 http://localhost:4869)，写入 ${API_BASE}/api/v1/research/import
 //   GEN_TIMEOUT 等待豆包生成的最长秒数 (默认 360)
 
 const CDP_PORT = process.env.CDP_PORT || '9222';
-const REPORT_URL = process.env.REPORT_URL || 'http://localhost:4869/invest/zen-research-report';
+const API_BASE = (process.env.API_BASE || 'http://localhost:4869').replace(/\/+$/, '');
 const GEN_TIMEOUT = parseInt(process.env.GEN_TIMEOUT || '360', 10);
 
 const PROMPT_TEMPLATE = `请把这个视频分析整理成结构化 JSON 数组输出，每个视频对应一个对象。严格使用以下字段，值用中文，没有对应信息的填空字符串 ""。只输出 JSON，不要任何额外说明文字、不要代码块标记：
@@ -117,31 +117,19 @@ function parseReportsFromText(raw) {
   return chosen;
 }
 
-// 注入研报页面的 upsert(以 video_id 为唯一 key,存在则更新)
-function importExpr(records) {
-  return `(()=>{
-    const incoming=${JSON.stringify(records)};
-    const FIELDS=${JSON.stringify(FIELDS)};
-    let reports=[]; try{reports=JSON.parse(localStorage.getItem('zen_research_reports')||'[]')}catch(e){reports=[]}
-    const gid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2);
-    let added=0,updated=0;
-    for(const item of incoming){
-      if(!item||typeof item!=='object')continue;
-      const r={id:item.id||gid(),video_id:item.video_id||''};
-      for(const f of FIELDS) r[f]=item[f]||'';
-      if(r.video_id){
-        const i=reports.findIndex(x=>x.video_id===r.video_id);
-        if(i>-1){r.id=reports[i].id;reports[i]=r;updated++;}else{reports.push(r);added++;}
-      }else{
-        const ex=reports.some(x=>x.research_target===r.research_target&&x.publish_time===r.publish_time&&x.institution_name===r.institution_name);
-        if(!ex){reports.push(r);added++;}
-      }
-    }
-    localStorage.setItem('zen_research_reports',JSON.stringify(reports));
-    if(typeof loadReports==='function')loadReports();
-    if(typeof renderTable==='function')renderTable();
-    return {added,updated,total:reports.length};
-  })()`;
+// POST 到后台 /api/v1/research/import（后端按 video_id 去重 upsert，落 MySQL）
+async function postToBackend(records) {
+  const resp = await fetch(`${API_BASE}/api/v1/research/import`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ items: records }),
+  });
+  let body = {};
+  try { body = await resp.json(); } catch {}
+  if (!resp.ok || (typeof body.code === 'number' && body.code !== 0)) {
+    throw new Error(`后台写入失败 HTTP ${resp.status}: ${JSON.stringify(body).slice(0, 200)}`);
+  }
+  return body.data || {};
 }
 
 async function main() {
@@ -207,18 +195,10 @@ async function main() {
   // 7) 附加 video_id / source_url
   for (const r of records) { r.video_id = videoId; r.source_url = link; }
 
-  // 8) 写入研报页面(video_id 去重 upsert)
-  log('写入研报页面 ...');
-  const targets = (await cdp.send('Target.getTargets')).result.targetInfos.filter(t => t.type === 'page');
-  let reportTarget = targets.find(t => t.url.includes('zen-research-report'));
-  if (!reportTarget) {
-    const c = await cdp.send('Target.createTarget', { url: REPORT_URL });
-    reportTarget = { targetId: c.result.targetId };
-    await sleep(3500);
-  }
-  const rsid = await cdp.attach(reportTarget.targetId);
-  const res = await cdp.eval(rsid, importExpr(records));
-  log(`✓ 完成: 新增 ${res.added} 条, 更新 ${res.updated} 条, 页面共 ${res.total} 条`);
+  // 8) POST 到后台（落 MySQL，video_id 去重 upsert）
+  log('写入后台 ...');
+  const res = await postToBackend(records);
+  log(`✓ 完成: 新增 ${res.added ?? '?'} 条, 更新 ${res.updated ?? '?'} 条`);
 
   for (const r of records) log(`   • [${r.video_id}] ${r.institution_name} | ${r.industry_category} | ${r.research_target}`);
   cdp.ws.close();

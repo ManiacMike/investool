@@ -10,6 +10,7 @@
     
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="/statics/js/periphera-api.js"></script>
     
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -285,13 +286,14 @@
     <script>
         // 初始化 Lucide Icons
         lucide.createIcons();
+        const PAPI = window.PeripheraAPI;
 
         // 存储研报数据
         let reports = [];
 
         // 初始化
-        document.addEventListener('DOMContentLoaded', () => {
-            loadReports();
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadReports();
             renderTable();
         });
 
@@ -323,7 +325,17 @@
         }
 
         // 本地存储读写
-        function loadReports() {
+        async function loadReports() {
+            if (window.USE_BACKEND) {
+                try {
+                    const data = await PAPI.apiGet('/research', { limit: 100 });
+                    reports = (data.items || []).map(normalizeReport);
+                    return;
+                } catch (e) {
+                    console.warn('Backend research load failed, using localStorage:', e);
+                    showToast('后端研报读取失败，已切换本地缓存', 'info');
+                }
+            }
             const saved = localStorage.getItem('zen_research_reports');
             if (saved) {
                 try {
@@ -527,10 +539,11 @@
         }
 
         // 保存研报
-        function handleSaveReport(e) {
+        async function handleSaveReport(e) {
             e.preventDefault();
             
-            const id = document.getElementById('form-id').value || generateId();
+            const existingId = document.getElementById('form-id').value;
+            const id = existingId || generateId();
             const report = normalizeReport({
                 id,
                 video_id: document.getElementById('f-video_id').value.trim(),
@@ -549,6 +562,28 @@
                 core_risk_warning: document.getElementById('f-core_risk_warning').value,
                 author: document.getElementById('f-author').value
             });
+
+            if (window.USE_BACKEND) {
+                try {
+                    const payload = Object.assign({}, report);
+                    if (!existingId) delete payload.id;
+                    const saved = await PAPI.apiRequest(existingId ? `/research/${existingId}` : '/research', {
+                        method: existingId ? 'PUT' : 'POST',
+                        body: payload,
+                    });
+                    const normalized = normalizeReport(saved || report);
+                    const idx = reports.findIndex(r => r.id === normalized.id);
+                    if (idx > -1) reports[idx] = normalized;
+                    else reports.push(normalized);
+                    renderTable();
+                    toggleModal(false);
+                    showToast(existingId ? '研报已更新' : '研报已录入');
+                    return;
+                } catch (err) {
+                    console.warn('Backend save failed, falling back to localStorage:', err);
+                    showToast('后端写入未就绪，已保存到本地缓存', 'info');
+                }
+            }
 
             const index = reports.findIndex(r => r.id === id);
             if (index > -1) {
@@ -598,8 +633,20 @@
         }
 
         // 删除研报
-        function deleteReport(id) {
+        async function deleteReport(id) {
             if (confirm('确定要删除这条研报记录吗？')) {
+                if (window.USE_BACKEND) {
+                    try {
+                        await PAPI.apiRequest(`/research/${id}`, { method: 'DELETE' });
+                        reports = reports.filter(r => r.id !== id);
+                        renderTable();
+                        showToast('研报已删除');
+                        return;
+                    } catch (err) {
+                        console.warn('Backend delete failed, falling back to localStorage:', err);
+                        showToast('后端删除未就绪，已从本地视图移除', 'info');
+                    }
+                }
                 reports = reports.filter(r => r.id !== id);
                 saveReports();
                 renderTable();
@@ -608,7 +655,7 @@
         }
 
         // 导入粘贴的JSON
-        function handlePasteJSON() {
+        async function handlePasteJSON() {
             const content = document.getElementById('paste-json-content').value.trim();
             if (!content) {
                 showToast('请输入JSON数据', 'error');
@@ -617,6 +664,20 @@
 
             try {
                 const data = JSON.parse(content);
+                if (window.USE_BACKEND) {
+                    try {
+                        const items = Array.isArray(data) ? data : [data];
+                        const result = await PAPI.apiRequest('/research/import', { method: 'POST', body: { items } });
+                        await loadReports();
+                        renderTable();
+                        showToast(`成功导入：新增 ${result.added || 0} 条，更新 ${result.updated || 0} 条`);
+                        togglePasteModal(false);
+                        return;
+                    } catch (err) {
+                        console.warn('Backend import failed, falling back to localStorage:', err);
+                        showToast('后端批量导入未就绪，已导入本地缓存', 'info');
+                    }
+                }
                 const { added, updated } = importReports(data);
 
                 if (added > 0 || updated > 0) {
@@ -640,9 +701,23 @@
             if (!file) return;
 
             const reader = new FileReader();
-            reader.onload = function(e) {
+            reader.onload = async function(e) {
                 try {
                     const data = JSON.parse(e.target.result);
+                    if (window.USE_BACKEND) {
+                        try {
+                            const items = Array.isArray(data) ? data : [data];
+                            const result = await PAPI.apiRequest('/research/import', { method: 'POST', body: { items } });
+                            await loadReports();
+                            renderTable();
+                            showToast(`成功导入：新增 ${result.added || 0} 条，更新 ${result.updated || 0} 条`);
+                            event.target.value = '';
+                            return;
+                        } catch (err) {
+                            console.warn('Backend file import failed, falling back to localStorage:', err);
+                            showToast('后端批量导入未就绪，已导入本地缓存', 'info');
+                        }
+                    }
                     const { added, updated } = importReports(data);
 
                     if (added > 0 || updated > 0) {

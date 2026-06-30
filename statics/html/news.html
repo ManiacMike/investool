@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.PageTitle}}</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <script src="/statics/js/periphera-api.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = { theme: { extend: {
+            colors: { page:'#F4F0E8', cream:'#E0D7C7', card:'#FBF9F5', sand:'#E7A265', terra:'#D0643E', ink:'#3D362A' },
+            fontFamily: { display:['Fraunces','serif'], sans:['Inter','system-ui','sans-serif'], mono:['JetBrains Mono','monospace'] },
+            boxShadow: { block:'6px 6px 0 #3D362A', blockSm:'4px 4px 0 #3D362A', blockHover:'9px 9px 0 #3D362A' },
+        } } }
+    </script>
+    <style>
+        body { font-family:'Inter',system-ui,sans-serif; background:#F4F0E8; color:#3D362A; }
+        .font-display { font-family:'Fraunces',serif; } .mono { font-family:'JetBrains Mono',monospace; font-variant-numeric: tabular-nums; }
+        .widget { border:2px solid #3D362A; background:#FBF9F5; box-shadow:4px 4px 0 #3D362A; }
+        .pulse::after { content:''; position:absolute; inset:-4px; border-radius:9999px; border:2px solid #D0643E; opacity:0; animation: pulse 1.8s ease-out infinite; }
+        @keyframes pulse { 0%{ transform:scale(.6); opacity:.8 } 100%{ transform:scale(1.7); opacity:0 } }
+        .flash-new { animation: flashNew 2.6s ease-out; }
+        @keyframes flashNew { 0%{ background:rgba(231,162,101,.55) } 100%{ background:transparent } }
+        .marquee { display:flex; white-space:nowrap; animation: marquee 40s linear infinite; } .marquee:hover { animation-play-state: paused; }
+        @keyframes marquee { from{ transform:translateX(0) } to{ transform:translateX(-50%) } }
+        .item { transition: background .15s ease; } .item:hover { background:rgba(224,215,199,.35); }
+        .thin-scroll::-webkit-scrollbar { width:6px; } .thin-scroll::-webkit-scrollbar-thumb { background:#3D362A33; border-radius:6px; }
+        [v-cloak]{ display:none; } .reveal{ opacity:0; transform:translateY(12px); animation:rv .5s ease-out forwards; } @keyframes rv{ to{ opacity:1; transform:none } }
+        .newpill { animation: drop .3s ease-out; } @keyframes drop { from{ transform:translate(-50%,-12px); opacity:0 } to{ transform:translate(-50%,0); opacity:1 } }
+    </style>
+</head>
+<body class="antialiased selection:bg-terra/25">
+<div id="app" v-cloak>
+
+    <!-- ticker -->
+    <div class="bg-ink text-page overflow-hidden border-b-2 border-ink">
+        <div class="flex w-max marquee py-1.5 text-[12px] font-medium tracking-wide">
+            <template v-for="rep in 2"><span v-for="t in ticker" :key="rep+'-'+t.k" class="px-4 inline-flex items-center gap-1.5">
+                <span class="text-cream/60">[[ t.k ]]</span><span class="font-semibold mono">[[ t.v ]]</span>
+                <span :class="t.c>=0?'text-sand':'text-terra'" class="mono">[[ t.c>=0?'+':'' ]][[ t.c.toFixed(2) ]]%</span><span class="text-cream/25">·</span>
+            </span></template>
+        </div>
+    </div>
+
+    <!-- top bar -->
+    <header class="sticky top-0 z-20 bg-page/90 backdrop-blur border-b-2 border-ink">
+        <div class="max-w-[1280px] mx-auto px-4 md:px-6 h-14 flex items-center justify-between gap-4">
+            <div class="flex items-center gap-3 min-w-0">
+                <a href="/portal" class="inline-flex items-center gap-1.5 text-sm font-bold text-ink/60 hover:text-terra transition-colors">← 指挥中心</a>
+                <span class="w-px h-5 bg-ink/20"></span>
+                <h1 class="font-display font-bold text-lg flex items-center gap-2">📰 实时新闻
+                    <span class="inline-flex items-center gap-1 text-[11px] font-bold text-terra border-2 border-terra/30 bg-terra/10 rounded-full px-2 py-0.5">
+                        <span class="relative w-1.5 h-1.5"><span class="absolute inset-0 rounded-full bg-terra pulse"></span><span class="absolute inset-0 rounded-full bg-terra"></span></span>LIVE
+                    </span>
+                </h1>
+            </div>
+            <div class="flex items-center gap-3">
+                <span class="mono font-bold text-sm">[[ clock ]]</span>
+                <a href="/research" class="hidden sm:inline-flex text-sm font-bold text-ink/60 hover:text-terra transition-colors">外资研报 →</a>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-[1280px] mx-auto px-4 md:px-6 py-5 grid grid-cols-12 gap-5">
+        <div v-if="lastError" class="col-span-12 rounded-xl border-2 border-terra/30 bg-terra/10 px-4 py-2 text-[12px] font-bold text-terra">
+            数据接口暂不可用，已保留上一帧数据：[[ lastError ]]
+        </div>
+
+        <!-- left: source rail -->
+        <aside class="col-span-12 lg:col-span-3 order-2 lg:order-1">
+            <div class="lg:sticky lg:top-20 space-y-3">
+                <div class="widget rounded-xl p-2">
+                    <button v-for="s in tabs" :key="s.code" @click="filter=s.code"
+                            class="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg transition-colors text-left"
+                            :class="filter===s.code?'bg-ink text-page':'hover:bg-cream/50'">
+                        <div class="w-9 h-9 rounded-full border-2 flex items-center justify-center text-[9px] font-bold shrink-0"
+                             :class="filter===s.code?'border-page/40':'border-ink/20'"
+                             :style="filter!==s.code && s.color ? {color:s.color, borderColor:s.color} : {}">[[ s.tag ]]</div>
+                        <div class="min-w-0 flex-1">
+                            <div class="font-bold text-[14px] truncate">[[ s.name ]]</div>
+                            <div class="text-[11px] truncate" :class="filter===s.code?'text-page/60':'text-ink/45'">[[ s.desc ]]</div>
+                        </div>
+                        <span class="mono text-[12px] font-bold" :class="filter===s.code?'text-page/70':'text-ink/40'">[[ s.code==='all' ? news.length : countBy(s.code) ]]</span>
+                    </button>
+                </div>
+                <div class="widget rounded-xl p-4">
+                    <div class="text-[11px] font-bold uppercase tracking-wider text-ink/45 mb-2">热门话题</div>
+                    <div class="flex flex-wrap gap-1.5">
+                        <span v-for="t in topics" :key="t" class="text-[12px] font-bold text-terra bg-terra/10 border-2 border-terra/25 rounded-full px-2.5 py-1">#[[ t ]]</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- center: feed -->
+        <section class="col-span-12 lg:col-span-9 order-1 lg:order-2 relative">
+            <div v-if="pending>0" @click="applyPending"
+                 class="newpill sticky top-16 z-10 left-1/2 -translate-x-1/2 w-max mx-auto -mb-10 bg-terra text-page text-[13px] font-bold px-4 py-2 rounded-full border-2 border-ink shadow-blockSm cursor-pointer">
+                ↑ [[ pending ]] 条新推送
+            </div>
+
+            <!-- featured -->
+            <article v-if="featured" class="widget rounded-2xl p-6 mb-4 reveal" :class="featured._new?'flash-new':''">
+                <div class="flex items-center gap-2 mb-3">
+                    <span class="text-[11px] font-bold px-2 py-0.5 rounded border-2" :style="{borderColor:featured.color,color:featured.color}">[[ featured.source ]]</span>
+                    <span class="text-[11px] font-bold text-terra">🔥 头条</span>
+                    <span class="mono text-[12px] text-ink/45 ml-auto">[[ featured.time ]]</span>
+                </div>
+                <h2 class="font-display font-bold text-2xl leading-snug mb-2 hover:text-terra cursor-pointer">[[ featured.title ]]</h2>
+                <p class="text-[14px] text-ink/70 leading-relaxed">[[ featured.body ]]</p>
+            </article>
+
+            <div class="widget rounded-2xl divide-y-2 divide-ink/8">
+                <div v-if="loading && news.length===0" class="p-4 space-y-3">
+                    <div v-for="i in 6" :key="'skel-'+i" class="h-14 rounded-lg bg-cream/45 animate-pulse"></div>
+                </div>
+                <article v-for="n in rest" :key="n.uid" class="item p-4 flex gap-3.5" :class="n._new?'flash-new':''">
+                    <span class="mt-0.5 text-[11px] font-bold px-1.5 py-0.5 rounded border-2 shrink-0 h-fit" :style="{borderColor:n.color,color:n.color}">[[ n.source ]]</span>
+                    <div class="min-w-0 flex-1">
+                        <h3 class="text-[15px] font-semibold leading-snug hover:text-terra cursor-pointer">[[ n.title ]]
+                            <span v-if="n.hot" class="text-[11px] text-terra ml-1">🔥</span></h3>
+                        <p class="text-[13px] text-ink/60 mt-1 leading-relaxed line-clamp-2">[[ n.body ]]</p>
+                        <span class="mono text-[12px] text-ink/40">[[ n.time ]]</span>
+                    </div>
+                </article>
+                <div v-if="!loading && rest.length===0" class="p-10 text-center text-ink/45 font-semibold">该来源暂无更多新闻</div>
+            </div>
+        </section>
+    </main>
+</div>
+
+<script>
+const { createApp } = Vue;
+const PAPI = window.PeripheraAPI;
+function pad(x){ return (x<10?'0':'')+x; }
+const NEWS_POOL = [
+    { source:'路透社', source_code:'reuters', color:'#D0643E', tag:'RT', title:'霍尔木兹海峡油轮通行量环比下降，布伦特原油盘中跳涨逾 2%', body:'地缘紧张推升供给担忧，交易员密切关注护航安排与战争险保费的变化，油运 ETF 盘前走高。', hot:true },
+    { source:'彭博社', source_code:'bloomberg', color:'#3D362A', tag:'BB', title:'美联储官员重申「数据依赖」，市场下调 9 月降息押注', body:'隔夜利率期货显示年内降息预期降温，美元指数小幅走强，2 年期美债收益率上行。' },
+    { source:'马斯克', source_code:'musk', color:'#E7A265', tag:'EM', title:'Musk：下季度将公布全新 AI 算力集群，相关供应链盘后异动', body:'算力扩张预期带动半导体、液冷与电力设备板块情绪，多只概念股盘后跳涨。', hot:true },
+    { source:'白毛女神', source_code:'baimao', color:'#8a6d3b', tag:'BM', title:'白毛复盘：能源与黄金共振，关注隔夜暗盘金价对 A 股有色的指引', body:'盘面观点：避险与再通胀交易并存，留意贵金属夜盘溢价及对周一开盘的传导。' },
+    { source:'彭博社', source_code:'bloomberg', color:'#3D362A', tag:'BB', title:'台积电 ADR 走强，带动台湾加权指数早盘创近月新高', body:'先进制程订单饱满，AI 加速卡需求维持高景气，供应链同步受益。' },
+    { source:'路透社', source_code:'reuters', color:'#D0643E', tag:'RT', title:'韩国 6 月出口数据好于预期，半导体出口同比转正', body:'外需回暖支撑 KOSPI，存储芯片价格连续两月回升，面板需求边际改善。' },
+    { source:'马斯克', source_code:'musk', color:'#E7A265', tag:'EM', title:'特斯拉能源业务部署量创纪录，储能板块情绪升温', body:'Megapack 产能爬坡，储能正成为新的增长极，产业链订单能见度提升。' },
+    { source:'路透社', source_code:'reuters', color:'#D0643E', tag:'RT', title:'OPEC+ 维持减产基调，分析师上调下半年油价中枢', body:'供给端纪律性增强，全球商业原油库存去化快于季节性预期。' },
+    { source:'彭博社', source_code:'bloomberg', color:'#3D362A', tag:'BB', title:'黄金站上阶段新高，央行购金需求延续', body:'实际利率见顶预期叠加地缘避险，金价获得双重支撑，白银跟涨。' },
+    { source:'白毛女神', source_code:'baimao', color:'#8a6d3b', tag:'BM', title:'白毛盯盘：铜价短线回调，关注电气化长期需求逻辑', body:'工业金属短期承压，但绿色转型与电网投资的中长期主线并未改变。' },
+];
+let UID = 2000;
+
+createApp({
+    delimiters: ['[[', ']]'],
+    data() {
+        return {
+            clock: '--:--:--', filter: 'all', pending: 0, buffer: [], timers: [], disposers: [],
+            latestTs: 0, lastError: '', loading: true, USE_BACKEND: window.USE_BACKEND,
+            tabs: [
+                { code:'all', name:'全部', tag:'ALL', desc:'所有来源', color:'' },
+                { code:'reuters', name:'路透社', tag:'RT', desc:'全球财经快讯', color:'#D0643E' },
+                { code:'bloomberg', name:'彭博社', tag:'BB', desc:'市场与宏观', color:'#3D362A' },
+                { code:'musk', name:'马斯克', tag:'EM', desc:'科技 / 情绪面', color:'#E7A265' },
+                { code:'baimao', name:'白毛女神', tag:'BM', desc:'盘面观点解读', color:'#8a6d3b' },
+            ],
+            topics: ['原油','黄金','霍尔木兹','FedWatch','半导体','储能','降息'],
+            ticker: [ {k:'黄金',v:'2356.4',c:0.82},{k:'白银',v:'30.18',c:1.34},{k:'铜',v:'4.41',c:-0.46},{k:'WTI',v:'81.92',c:2.31},{k:'标普',v:'5487',c:0.61},{k:'纳指',v:'17860',c:0.88},{k:'日经',v:'39120',c:0.42},{k:'KOSPI',v:'2745',c:-0.18},{k:'台股',v:'23180',c:1.05},{k:'BTC',v:'61240',c:1.9} ],
+            news: [],
+        };
+    },
+    computed: {
+        filtered() { return this.filter==='all' ? this.news : this.news.filter(n => n.source_code===this.filter); },
+        featured() { return this.filtered[0] || null; },
+        rest() { return this.filtered.slice(1); },
+    },
+    methods: {
+        countBy(code) { return this.news.filter(n => n.source_code===code).length; },
+        makeItem(t, time) { return Object.assign({ uid:++UID, time: time||'刚刚', _new:false }, t); },
+        normalizeNews(n) {
+            return {
+                uid: n.id || ('n_'+n.published_at+'_'+n.title),
+                source: n.source_name || n.source || '',
+                source_code: n.source || '',
+                color: n.color || '#D0643E',
+                tag: n.tag || '',
+                title: n.title || '',
+                body: n.summary || n.body || '',
+                time: PAPI.relativeTime(n.published_at),
+                published_at: n.published_at || 0,
+                hot: !!n.hot,
+                url: n.url || '',
+                _new: false,
+            };
+        },
+        onPollError(err) { this.lastError = err.message || String(err); },
+        applyPending() {
+            // 把缓冲区的新推送并入，并标记闪现
+            this.buffer.forEach(it => {
+                const idx = this.news.findIndex(n => n.uid === it.uid);
+                if (idx >= 0) this.news.splice(idx, 1);
+                PAPI.markFresh(it);
+                this.news.unshift(it);
+            });
+            this.buffer = []; this.pending = 0;
+            if (this.news.length>60) this.news.length = 60;
+            window.scrollTo({ top:0, behavior:'smooth' });
+        },
+        async fetchSources() {
+            const data = await PAPI.apiGet('/news/sources');
+            const sources = (data.sources || []).map(s => ({
+                code:s.code, name:s.name, tag:s.tag, color:s.color, desc:s.desc, count:s.count,
+            }));
+            this.tabs = [{ code:'all', name:'全部', tag:'ALL', desc:'所有来源', color:'' }, ...sources];
+        },
+        async fetchTicker() {
+            const data = await PAPI.apiGet('/ticker');
+            this.ticker = (data.items || []).map(t => ({ k:t.key, v:t.value, c:t.change_pct || 0 }));
+        },
+        async fetchNews() {
+            const data = await PAPI.apiGet('/news', this.latestTs ? { since:this.latestTs, limit:30 } : { limit:30 });
+            const items = (data.items || []).map(this.normalizeNews);
+            if (!this.latestTs) {
+                this.news = items;
+            } else {
+                let added = 0;
+                items.forEach(item => {
+                    if (this.news.some(n => n.uid === item.uid) || this.buffer.some(n => n.uid === item.uid)) return;
+                    this.buffer.unshift(item);
+                    added++;
+                });
+                this.pending += added;
+            }
+            if (data.latest_ts) this.latestTs = Math.max(this.latestTs, data.latest_ts);
+            this.loading = false;
+            this.lastError = '';
+        },
+        pushNews() {
+            const t = NEWS_POOL[Math.floor(Math.random()*NEWS_POOL.length)];
+            this.buffer.unshift(this.makeItem(t)); this.pending++;
+            // 时间推移
+            this.news.forEach(n => { if (n.time==='刚刚') n.time='1 分钟前'; });
+        },
+        tickClock() { const d=new Date(); this.clock = pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds()); },
+        seed() { for (let i=0;i<10;i++){ const t=NEWS_POOL[i%NEWS_POOL.length]; this.news.push(this.makeItem(t, (i*3+1)+' 分钟前')); } this.loading = false; },
+        startBackendPolling() {
+            this.fetchSources().catch(this.onPollError);
+            this.disposers.push(PAPI.usePolling(this.fetchNews.bind(this), 9000, { onError:this.onPollError }));
+            this.disposers.push(PAPI.usePolling(this.fetchTicker.bind(this), 4000, { onError:this.onPollError }));
+        },
+    },
+    mounted() {
+        if (!this.USE_BACKEND) this.seed();
+        else this.startBackendPolling();
+        this.tickClock();
+        this.timers.push(setInterval(this.tickClock, 1000));
+        if (!this.USE_BACKEND) this.timers.push(setInterval(this.pushNews, 7000));
+    },
+    beforeUnmount() {
+        this.timers.forEach(t => clearInterval(t));
+        this.disposers.forEach(dispose => dispose && dispose());
+    },
+}).mount('#app');
+</script>
+</body>
+</html>

@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.PageTitle}}</title>
+
+    <!-- 首次访问引导：未看过理念页则跳转到 /intro（仅一次），放在最前以避免闪烁 -->
+    <script>
+        (function () {
+            try { if (!localStorage.getItem('periphera_intro_seen')) { location.replace('/intro'); } } catch (e) {}
+        })();
+    </script>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+    <script src="/statics/js/periphera-api.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: { extend: {
+                colors: { page:'#F4F0E8', cream:'#E0D7C7', card:'#FBF9F5', sand:'#E7A265', terra:'#D0643E', ink:'#3D362A' },
+                fontFamily: { display:['Fraunces','serif'], sans:['Inter','system-ui','sans-serif'], mono:['JetBrains Mono','monospace'] },
+                boxShadow: { block:'6px 6px 0 #3D362A', blockSm:'4px 4px 0 #3D362A', blockHover:'9px 9px 0 #3D362A' },
+            } },
+        }
+    </script>
+
+    <style>
+        html { scroll-behavior: smooth; }
+        body { font-family:'Inter',system-ui,sans-serif; background:#F4F0E8; color:#3D362A; }
+        .font-display { font-family:'Fraunces',serif; }
+        .mono { font-family:'JetBrains Mono',monospace; font-variant-numeric: tabular-nums; }
+
+        /* widget card */
+        .widget { border:2px solid #3D362A; background:#FBF9F5; box-shadow:4px 4px 0 #3D362A; display:flex; flex-direction:column; transition: box-shadow .16s ease, transform .16s ease; }
+        .widget:hover { box-shadow:6px 6px 0 #3D362A; transform:translate(-1px,-1px); }
+
+        /* live pulse dot */
+        .pulse::after { content:''; position:absolute; inset:-4px; border-radius:9999px; border:2px solid #D0643E; opacity:0; animation: pulse 1.8s ease-out infinite; }
+        @keyframes pulse { 0%{ transform:scale(.6); opacity:.8 } 100%{ transform:scale(1.7); opacity:0 } }
+
+        /* red unread badge */
+        .badge { animation: badgePop .25s ease-out; }
+        @keyframes badgePop { from{ transform:scale(0) } to{ transform:scale(1) } }
+
+        /* freshly pushed item flash */
+        .flash-new { animation: flashNew 2.4s ease-out; }
+        @keyframes flashNew { 0%{ background:rgba(231,162,101,.55) } 100%{ background:transparent } }
+
+        /* price tick flash */
+        .tick-up { animation: tickUp .7s ease-out; }
+        .tick-down { animation: tickDown .7s ease-out; }
+        @keyframes tickUp { 0%{ background:rgba(208,100,62,.30) } 100%{ background:transparent } }
+        @keyframes tickDown { 0%{ background:rgba(61,54,42,.18) } 100%{ background:transparent } }
+
+        /* marquee ticker */
+        .marquee { display:flex; gap:0; white-space:nowrap; animation: marquee 40s linear infinite; }
+        .marquee:hover { animation-play-state: paused; }
+        @keyframes marquee { from{ transform:translateX(0) } to{ transform:translateX(-50%) } }
+
+        /* drawer */
+        .drawer { transition: transform .3s cubic-bezier(.2,.8,.2,1); }
+        .backdrop { transition: opacity .25s ease; }
+
+        .no-scrollbar::-webkit-scrollbar { width:0; height:0; }
+        .thin-scroll::-webkit-scrollbar { width:6px; }
+        .thin-scroll::-webkit-scrollbar-thumb { background:#3D362A33; border-radius:6px; }
+        [v-cloak] { display:none; }
+        .reveal { opacity:0; transform:translateY(14px); animation: reveal .5s ease-out forwards; }
+        @keyframes reveal { to { opacity:1; transform:none; } }
+    </style>
+</head>
+<body class="antialiased selection:bg-terra/25">
+<div id="app" v-cloak>
+
+    <!-- ============ TOP TICKER ============ -->
+    <div class="bg-ink text-page overflow-hidden border-b-2 border-ink">
+        <div class="flex w-max marquee py-1.5 text-[12px] font-medium tracking-wide">
+            <template v-for="rep in 2">
+                <span v-for="t in ticker" :key="rep+'-'+t.k" class="px-4 inline-flex items-center gap-1.5">
+                    <span class="text-cream/60">[[ t.k ]]</span>
+                    <span class="font-semibold mono">[[ t.v ]]</span>
+                    <span :class="t.c>=0 ? 'text-sand' : 'text-terra'" class="mono">[[ t.c>=0 ? '+' : '' ]][[ t.c.toFixed(2) ]]%</span>
+                    <span class="text-cream/25">·</span>
+                </span>
+            </template>
+        </div>
+    </div>
+
+    <!-- ============ COMMAND BAR ============ -->
+    <header class="sticky top-0 z-30 bg-page/90 backdrop-blur border-b-2 border-ink">
+        <div class="max-w-[1700px] mx-auto px-4 md:px-6 h-14 flex items-center justify-between gap-4">
+            <div class="flex items-center gap-3 min-w-0">
+                <div class="w-8 h-8 rounded-md bg-terra border-2 border-ink shadow-blockSm flex items-center justify-center shrink-0">
+                    <span class="font-display font-bold text-page leading-none">P</span>
+                </div>
+                <div class="font-display font-bold text-lg tracking-tight">PERIPHERA</div>
+                <span class="hidden md:inline-flex items-center gap-1.5 text-[11px] font-bold text-terra border-2 border-terra/30 bg-terra/10 rounded-full px-2 py-0.5">
+                    <span class="relative w-1.5 h-1.5"><span class="absolute inset-0 rounded-full bg-terra pulse"></span><span class="absolute inset-0 rounded-full bg-terra"></span></span>
+                    LIVE 指挥中心
+                </span>
+            </div>
+
+            <div class="flex items-center gap-2 md:gap-3">
+                <div class="hidden sm:flex flex-col items-end leading-none">
+                    <span class="mono font-bold text-sm">[[ clock ]]</span>
+                    <span class="text-[10px] font-semibold text-ink/45">[[ dateStr ]] · [[ marketStatus ]]</span>
+                </div>
+                <!-- bell -->
+                <button @click="openPanel('news')" class="relative w-9 h-9 rounded-md border-2 border-ink bg-card hover:bg-cream/60 transition-colors flex items-center justify-center" title="新推送">
+                    <span class="text-base">🔔</span>
+                    <span v-if="totalUnread>0" class="badge absolute -top-2 -right-2 min-w-[18px] h-[18px] px-1 rounded-full bg-terra border-2 border-ink text-page text-[10px] font-bold flex items-center justify-center">[[ totalUnread>99?'99+':totalUnread ]]</span>
+                </button>
+                <!-- customize -->
+                <button @click="openPanel('library')" class="inline-flex items-center gap-1.5 h-9 px-3 rounded-md border-2 border-ink bg-ink text-page hover:bg-terra transition-colors text-sm font-bold">
+                    <span class="text-base leading-none">＋</span><span class="hidden sm:inline">定制模块</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- ============ BOARD ============ -->
+    <main class="max-w-[1700px] mx-auto px-4 md:px-6 py-4">
+        <div v-if="lastError" class="mb-4 rounded-xl border-2 border-terra/30 bg-terra/10 px-4 py-2 text-[12px] font-bold text-terra">
+            数据接口暂不可用，已保留上一帧数据：[[ lastError ]]
+        </div>
+
+        <div v-if="layout.length===0" class="text-center py-24 text-ink/50">
+            <div class="text-5xl mb-4">🧩</div>
+            <p class="font-bold text-lg">看板为空</p>
+            <button @click="openPanel('library')" class="mt-4 bg-ink text-page font-bold px-5 py-2.5 rounded-md border-2 border-ink">添加模块</button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-4 auto-rows-min">
+            <section v-for="id in layout" :key="id" :class="mod(id).span" class="widget rounded-xl reveal overflow-hidden">
+
+                <!-- widget header -->
+                <div class="flex items-center gap-2 px-4 h-11 border-b-2 border-ink/10 shrink-0"
+                     :class="mod(id).openable ? 'cursor-pointer hover:bg-cream/40' : ''"
+                     @click="mod(id).openable && openPanel(id)">
+                    <span class="text-base leading-none">[[ mod(id).icon ]]</span>
+                    <span class="font-bold text-[14px]">[[ mod(id).name ]]</span>
+                    <span v-if="mod(id).pushable" class="relative w-1.5 h-1.5 ml-0.5">
+                        <span class="absolute inset-0 rounded-full bg-terra pulse"></span><span class="absolute inset-0 rounded-full bg-terra"></span>
+                    </span>
+                    <span v-if="unread[id]>0" class="badge ml-1 min-w-[18px] h-[18px] px-1 rounded-full bg-terra text-page text-[10px] font-bold flex items-center justify-center">[[ unread[id] ]]</span>
+
+                    <div class="ml-auto flex items-center gap-1">
+                        <button v-if="mod(id).openable" @click.stop="openPanel(id)" class="w-6 h-6 rounded border-2 border-ink/15 hover:border-ink text-ink/50 hover:text-ink flex items-center justify-center" title="展开">⤢</button>
+                        <button @click.stop="removeModule(id)" class="w-6 h-6 rounded border-2 border-ink/15 hover:border-terra text-ink/40 hover:text-terra flex items-center justify-center" title="移除">✕</button>
+                    </div>
+                </div>
+
+                <!-- widget body -->
+                <div class="p-3 flex-1 min-h-0">
+
+                    <!-- 实时新闻 -->
+                    <template v-if="id==='news'">
+                        <div class="h-[208px] overflow-y-auto thin-scroll pr-1 -mr-1">
+                            <div v-if="loadingNews && news.length===0" class="space-y-2">
+                                <div v-for="i in 5" :key="'news-skel-'+i" class="h-8 rounded bg-cream/45 animate-pulse"></div>
+                            </div>
+                            <article v-for="(n,i) in news.slice(0,8)" :key="n.uid" class="py-2 border-b border-ink/8 flex gap-2.5" :class="n._new ? 'flash-new rounded' : ''">
+                                <span class="mt-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded border-2 shrink-0 h-fit" :style="{ borderColor:n.color, color:n.color }">[[ n.source ]]</span>
+                                <div class="min-w-0">
+                                    <p class="text-[13px] font-semibold leading-snug hover:text-terra cursor-pointer">[[ n.title ]]</p>
+                                    <span class="text-[11px] font-medium text-ink/40 mono">[[ n.time ]]</span>
+                                    <span v-if="n.hot" class="text-[10px] font-bold text-terra ml-1">🔥</span>
+                                </div>
+                            </article>
+                        </div>
+                    </template>
+
+                    <!-- 外资研报 -->
+                    <template v-else-if="id==='research'">
+                        <div class="h-[208px] overflow-y-auto thin-scroll pr-1 -mr-1 space-y-2">
+                            <div v-if="loadingResearch && research.length===0" class="space-y-2">
+                                <div v-for="i in 4" :key="'research-skel-'+i" class="h-11 rounded-lg bg-cream/45 animate-pulse"></div>
+                            </div>
+                            <article v-for="r in research.slice(0,6)" :key="r.uid" class="p-2.5 rounded-lg border-2 border-ink/10" :class="r._new ? 'flash-new' : ''">
+                                <div class="flex items-center justify-between mb-1">
+                                    <span class="text-[11px] font-bold text-ink/55">[[ r.institution_name ]]</span>
+                                    <span class="text-[10px] font-semibold text-ink/35 mono">[[ r.publish_time ]]</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span class="font-display font-bold text-[15px]">[[ r.research_target ]]</span>
+                                    <span class="text-[10px] font-bold rounded-full px-2 py-0.5 border-2" :style="ratingStyle(r.investment_rating)">[[ r.investment_rating ]]</span>
+                                    <span class="ml-auto mono font-bold text-terra text-sm">[[ r.target_price ]]</span>
+                                </div>
+                            </article>
+                        </div>
+                    </template>
+
+                    <!-- AI 简报 -->
+                    <template v-else-if="id==='briefing'">
+                        <div class="h-[208px] overflow-y-auto thin-scroll pr-1 -mr-1">
+                            <div v-if="loadingBriefing" class="space-y-3">
+                                <div class="h-7 w-3/4 rounded bg-cream/45 animate-pulse"></div>
+                                <div class="space-y-2">
+                                    <div class="h-3 rounded bg-cream/45 animate-pulse"></div>
+                                    <div class="h-3 rounded bg-cream/45 animate-pulse"></div>
+                                    <div class="h-3 w-2/3 rounded bg-cream/45 animate-pulse"></div>
+                                </div>
+                            </div>
+                            <div v-else class="space-y-3">
+                                <div class="flex items-center justify-between gap-3">
+                                    <span class="mono text-[11px] font-bold text-ink/40">[[ briefing.date ]] · [[ briefing.generated_time ]]</span>
+                                    <span class="text-[10px] font-bold text-page bg-ink rounded px-2 py-0.5">AI</span>
+                                </div>
+                                <h3 class="font-display font-bold text-xl leading-tight text-terra">[[ briefing.headline ]]</h3>
+                                <p class="text-[13px] leading-relaxed text-ink/70">[[ briefing.body ]]</p>
+                                <div class="grid sm:grid-cols-2 gap-1.5">
+                                    <div v-for="p in briefing.points.slice(0,4)" :key="p" class="text-[12px] font-semibold text-ink/70 rounded-lg border-2 border-ink/10 bg-cream/25 px-2.5 py-1.5">[[ p ]]</div>
+                                </div>
+                                <div class="flex flex-wrap gap-1.5 pt-1">
+                                    <span v-for="t in briefing.tags" :key="t" class="text-[10px] font-bold text-terra bg-terra/10 border-2 border-terra/20 rounded-full px-2 py-0.5">#[[ t ]]</span>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+
+                    <!-- 全球股市 -->
+                    <template v-else-if="id==='markets'">
+                        <div class="grid grid-cols-2 gap-2">
+                            <div v-for="m in indices" :key="m.code" class="p-2.5 rounded-lg border-2 border-ink/10" :class="m._flash">
+                                <div class="flex items-center gap-1.5"><span>[[ m.flag ]]</span><span class="text-[12px] font-bold">[[ m.name ]]</span></div>
+                                <div class="mono font-bold text-[15px] mt-0.5">[[ fmt(m.value) ]]</div>
+                                <div class="mono text-[12px] font-bold" :class="m.chg>=0?'text-terra':'text-ink/50'">[[ m.chg>=0?'▲':'▼' ]] [[ Math.abs(m.chg).toFixed(2) ]]%</div>
+                            </div>
+                        </div>
+                    </template>
+
+                    <!-- 金银铜油 -->
+                    <template v-else-if="id==='commodities'">
+                        <div class="grid grid-cols-2 gap-2">
+                            <div v-for="c in commodities" :key="c.code" class="p-2.5 rounded-lg border-2 border-ink/10" :class="c._flash">
+                                <div class="flex items-center justify-between"><span class="text-[12px] font-bold">[[ c.name ]]</span><span v-if="c.dark" class="text-[9px] font-bold text-page bg-ink rounded px-1">暗盘</span></div>
+                                <div class="mono font-bold text-[15px] mt-0.5">[[ c.price.toFixed(2) ]]</div>
+                                <div class="mono text-[12px] font-bold" :class="c.chg>=0?'text-terra':'text-ink/50'">[[ c.chg>=0?'▲':'▼' ]] [[ Math.abs(c.chg).toFixed(2) ]]%</div>
+                            </div>
+                        </div>
+                    </template>
+
+                    <!-- 美股板块涨幅 -->
+                    <template v-else-if="id==='sectors'">
+                        <div id="chart-sectors" class="h-[208px]"></div>
+                    </template>
+
+                    <!-- FedWatch -->
+                    <template v-else-if="id==='fedwatch'">
+                        <div class="flex items-center justify-between mb-1 px-1">
+                            <span class="text-[11px] font-semibold text-ink/55">[[ fed.meeting ]] 利率路径定价</span>
+                        </div>
+                        <div id="chart-fed" class="h-[176px]"></div>
+                    </template>
+
+                    <!-- 霍尔木兹 -->
+                    <template v-else-if="id==='hormuz'">
+                        <div class="flex items-baseline gap-1.5 px-1 mb-1">
+                            <span class="mono font-bold text-xl">[[ hormuz.today ]]</span><span class="text-[11px] font-semibold text-ink/55">艘/日</span>
+                            <span class="mono text-[12px] font-bold ml-1" :class="hormuz.chg>=0?'text-terra':'text-ink/50'">[[ hormuz.chg>=0?'▲':'▼' ]][[ Math.abs(hormuz.chg) ]]%</span>
+                        </div>
+                        <div id="chart-hormuz" class="h-[176px]"></div>
+                    </template>
+
+                    <!-- 原油实时行情（可定制添加示例） -->
+                    <template v-else-if="id==='crude'">
+                        <div class="flex items-center gap-4 px-1 mb-1">
+                            <div :class="crude.wti._flash" class="rounded px-1"><span class="text-[11px] font-bold text-ink/55">WTI</span> <span class="mono font-bold">[[ crude.wti.p.toFixed(2) ]]</span> <span class="mono text-[11px] font-bold" :class="crude.wti.c>=0?'text-terra':'text-ink/50'">[[ crude.wti.c>=0?'+':'' ]][[ crude.wti.c.toFixed(2) ]]%</span></div>
+                            <div :class="crude.brent._flash" class="rounded px-1"><span class="text-[11px] font-bold text-ink/55">Brent</span> <span class="mono font-bold">[[ crude.brent.p.toFixed(2) ]]</span> <span class="mono text-[11px] font-bold" :class="crude.brent.c>=0?'text-terra':'text-ink/50'">[[ crude.brent.c>=0?'+':'' ]][[ crude.brent.c.toFixed(2) ]]%</span></div>
+                        </div>
+                        <div id="chart-crude" class="h-[176px]"></div>
+                    </template>
+
+                    <!-- 加密行情 -->
+                    <template v-else-if="id==='crypto'">
+                        <div class="grid grid-cols-2 gap-2">
+                            <div v-for="k in crypto" :key="k.code" class="p-2.5 rounded-lg border-2 border-ink/10" :class="k._flash">
+                                <div class="text-[12px] font-bold">[[ k.name ]]</div>
+                                <div class="mono font-bold text-[15px] mt-0.5">[[ fmt(Math.round(k.p)) ]]</div>
+                                <div class="mono text-[12px] font-bold" :class="k.c>=0?'text-terra':'text-ink/50'">[[ k.c>=0?'▲':'▼' ]] [[ Math.abs(k.c).toFixed(2) ]]%</div>
+                            </div>
+                        </div>
+                    </template>
+
+                </div>
+            </section>
+        </div>
+
+        <!-- bottom manifesto link -->
+        <a href="/intro" class="mt-6 widget rounded-xl px-5 py-4 flex flex-col sm:flex-row items-start sm:items-center gap-3">
+            <div class="font-display font-bold text-lg text-terra leading-tight">Invest like a pro, profit like a pro.</div>
+            <div class="flex-1 text-[13px] text-ink/60 font-medium">第一性原理 —— 看见基金经理每天看见的，就赚到基金经理赚到的。</div>
+            <div class="text-[13px] font-bold inline-flex items-center gap-1">重温理念宣言 →</div>
+        </a>
+
+        <footer class="mt-5 text-center text-[12px] font-semibold text-ink/40">PERIPHERA · [[ USE_BACKEND ? '实时接口数据' : '模拟实时数据' ]]，仅供产品演示，非投资建议 · {{.Version}}</footer>
+    </main>
+
+    <!-- ============ RIGHT DRAWER (news / research / library) ============ -->
+    <div v-if="panel" class="fixed inset-0 z-40">
+        <div class="backdrop absolute inset-0 bg-ink/40" @click="panel=''"></div>
+        <aside class="drawer absolute top-0 right-0 h-full w-full max-w-md bg-page border-l-2 border-ink shadow-block flex flex-col">
+            <div class="flex items-center justify-between px-5 h-14 border-b-2 border-ink shrink-0">
+                <h3 class="font-display font-bold text-lg flex items-center gap-2">🧩 模块库 · 定制看板</h3>
+                <button @click="panel=''" class="w-8 h-8 rounded-md border-2 border-ink hover:bg-cream/60 font-bold">✕</button>
+            </div>
+            <div class="flex-1 overflow-y-auto thin-scroll p-4">
+
+                <!-- library / customize -->
+                <template>
+                    <p class="text-[13px] text-ink/55 font-medium mb-4">勾选要显示在看板上的模块，随时增减。布局会自动保存到本机。</p>
+                    <div class="space-y-2.5">
+                        <div v-for="m in allModules" :key="m.id" class="widget rounded-xl p-3 flex items-center gap-3">
+                            <span class="text-xl">[[ m.icon ]]</span>
+                            <div class="min-w-0 flex-1">
+                                <div class="font-bold text-[14px] flex items-center gap-2">[[ m.name ]]
+                                    <span v-if="m.hot" class="text-[9px] font-bold text-page bg-terra rounded px-1">热门</span>
+                                </div>
+                                <div class="text-[12px] text-ink/50 font-medium truncate">[[ m.desc ]]</div>
+                            </div>
+                            <button @click="toggleModule(m.id)"
+                                    class="shrink-0 text-[12px] font-bold px-3 py-1.5 rounded-md border-2 transition-colors"
+                                    :class="layout.includes(m.id)?'border-ink bg-cream text-ink':'border-ink bg-ink text-page hover:bg-terra'">
+                                [[ layout.includes(m.id) ? '✓ 已添加' : '＋ 添加' ]]
+                            </button>
+                        </div>
+                    </div>
+                    <button @click="resetLayout" class="mt-5 w-full text-[13px] font-bold text-ink/55 hover:text-terra border-2 border-ink/15 hover:border-terra rounded-md py-2.5 transition-colors">恢复默认看板</button>
+                </template>
+            </div>
+        </aside>
+    </div>
+</div>
+
+<script>
+const { createApp } = Vue;
+const PAPI = window.PeripheraAPI;
+const PALETTE = { ink:'#3D362A', terra:'#D0643E', sand:'#E7A265', cream:'#E0D7C7', card:'#FBF9F5' };
+function walk(n, base, vol, drift) { const o=[]; let v=base; for(let i=0;i<n;i++){ v+=(Math.random()-0.5)*vol+drift; o.push(+v.toFixed(2)); } return o; }
+function pad(x){ return (x<10?'0':'')+x; }
+
+// 推送候选池（模拟实时新闻流）
+const NEWS_POOL = [
+    { source:'路透社', color:'#D0643E', title:'霍尔木兹海峡油轮通行量环比下降，布伦特原油盘中跳涨逾 2%', body:'地缘紧张推升供给担忧，交易员关注后续护航与保险费率变化。', hot:true },
+    { source:'彭博社', color:'#3D362A', title:'美联储官员重申「数据依赖」，市场下调 9 月降息押注', body:'隔夜利率期货显示年内降息预期降温，美元指数小幅走强。' },
+    { source:'马斯克', color:'#E7A265', title:'Musk：下季度将公布全新 AI 算力集群，相关供应链盘后异动', body:'算力扩张预期带动半导体与电力设备板块情绪。', hot:true },
+    { source:'白毛股神', color:'#8a6d3b', title:'白毛复盘：能源与黄金共振，关注隔夜暗盘金价对 A 股有色的指引', body:'盘面观点：避险与再通胀交易并存，留意贵金属夜盘溢价。' },
+    { source:'彭博社', color:'#3D362A', title:'台积电 ADR 走强，带动台湾加权指数早盘创近月新高', body:'先进制程订单饱满，AI 加速卡需求维持高景气。' },
+    { source:'路透社', color:'#D0643E', title:'韩国 6 月出口数据好于预期，半导体出口同比转正', body:'外需回暖支撑 KOSPI，存储芯片价格连续两月回升。' },
+    { source:'马斯克', color:'#E7A265', title:'特斯拉能源业务部署量创纪录，储能板块情绪升温', body:'Megapack 产能爬坡，储能成为新增长极。' },
+    { source:'路透社', color:'#D0643E', title:'OPEC+ 维持减产基调，分析师上调下半年油价中枢', body:'供给端纪律性增强，库存去化快于预期。' },
+    { source:'彭博社', color:'#3D362A', title:'黄金站上阶段新高，央行购金需求延续', body:'实际利率见顶预期 + 地缘避险，金价获双重支撑。' },
+    { source:'白毛股神', color:'#8a6d3b', title:'白毛盯盘：铜价短线回调，关注电气化长期需求逻辑', body:'工业金属短期承压，但绿色转型主线未变。' },
+];
+const RESEARCH_POOL = [
+    { institution_name:'高盛 GS', research_target:'能源板块', investment_rating:'增持', target_price:'—', core_content:'地缘风险溢价回归，上调原油全年中枢至 85 美元，看好上游与油服。' },
+    { institution_name:'摩根士丹利', research_target:'黄金', investment_rating:'买入', target_price:'$2480', core_content:'实际利率见顶 + 央行购金延续，上调金价 12 个月目标价。' },
+    { institution_name:'摩根大通', research_target:'台积电', investment_rating:'买入', target_price:'NT$1180', core_content:'AI 加速卡需求强劲，先进制程产能利用率维持高位。' },
+    { institution_name:'瑞银 UBS', research_target:'铜', investment_rating:'中性', target_price:'$4.6', core_content:'短期需求走弱，下调铜价预期，但长期电气化逻辑不变。' },
+    { institution_name:'美银 BofA', research_target:'美股科技', investment_rating:'增持', target_price:'—', core_content:'盈利上修推动估值消化，AI 资本开支周期仍在早中期。' },
+    { institution_name:'花旗 Citi', research_target:'日经225', investment_rating:'增持', target_price:'42000', core_content:'治理改革 + 弱日元支撑出口盈利，上调指数目标。' },
+];
+let UID = 1000;
+
+createApp({
+    delimiters: ['[[', ']]'],
+    data() {
+        return {
+            clock: '--:--:--', dateStr: '', marketStatus: '',
+            panel: '', newsFilter: '全部',
+            charts: {}, timers: [], disposers: [], lastError: '', USE_BACKEND: window.USE_BACKEND,
+            latestNewsTs: 0, latestResearchTs: 0, loadingNews: true, loadingResearch: true, loadingBriefing: true,
+            unread: { news: 0, research: 0 },
+            allModules: [
+                { id:'briefing', name:'AI 简报', icon:'✦', desc:'每日外围情报五分钟摘要', span:'lg:col-span-8', hot:true },
+                { id:'news', name:'实时新闻', icon:'📰', desc:'路透·彭博·马斯克·白毛股神，推送式', span:'lg:col-span-4', pushable:true, openable:true },
+                { id:'research', name:'外资研报', icon:'📑', desc:'外资机构最新评级与目标价', span:'lg:col-span-4', pushable:true, openable:true },
+                { id:'markets', name:'全球股市', icon:'🌐', desc:'美·日·韩·台 指数实时', span:'lg:col-span-4' },
+                { id:'commodities', name:'金银铜油', icon:'🪙', desc:'贵金属与原油，含暗盘', span:'lg:col-span-4' },
+                { id:'sectors', name:'美股板块涨幅', icon:'📊', desc:'隔夜美股各板块表现', span:'lg:col-span-4' },
+                { id:'fedwatch', name:'FedWatch', icon:'🏦', desc:'FOMC 利率路径概率', span:'lg:col-span-4' },
+                { id:'crude', name:'原油实时行情', icon:'⛽', desc:'WTI / Brent 实时分时', span:'lg:col-span-4', hot:true },
+                { id:'hormuz', name:'霍尔木兹通行量', icon:'🛢️', desc:'油运咽喉每日通行船数', span:'lg:col-span-4' },
+                { id:'crypto', name:'加密行情', icon:'₿', desc:'BTC / ETH 实时报价', span:'lg:col-span-4' },
+            ],
+            defaultLayout: ['briefing','news','research','markets','commodities','sectors','fedwatch'],
+            layout: [],
+            ticker: [
+                { k:'黄金', v:'2356.4', c:0.82 }, { k:'白银', v:'30.18', c:1.34 }, { k:'铜', v:'4.41', c:-0.46 },
+                { k:'WTI', v:'81.92', c:2.31 }, { k:'标普', v:'5487', c:0.61 }, { k:'纳指', v:'17860', c:0.88 },
+                { k:'日经', v:'39120', c:0.42 }, { k:'KOSPI', v:'2745', c:-0.18 }, { k:'台股', v:'23180', c:1.05 },
+                { k:'美元', v:'104.3', c:-0.22 }, { k:'10Y', v:'4.28', c:-0.03 }, { k:'BTC', v:'61240', c:1.9 },
+            ],
+            news: [], research: [],
+            indices: [
+                { code:'SPX', name:'标普500', flag:'🇺🇸', value:5487, chg:0.61, _flash:'' },
+                { code:'N225', name:'日经225', flag:'🇯🇵', value:39120, chg:0.42, _flash:'' },
+                { code:'KOSPI', name:'KOSPI', flag:'🇰🇷', value:2745, chg:-0.18, _flash:'' },
+                { code:'TWSE', name:'台湾加权', flag:'🇹🇼', value:23180, chg:1.05, _flash:'' },
+            ],
+            commodities: [
+                { code:'XAU', name:'黄金', price:2356.4, chg:0.82, dark:false, _flash:'' },
+                { code:'XAG', name:'白银', price:30.18, chg:1.34, dark:false, _flash:'' },
+                { code:'HG', name:'铜', price:4.41, chg:-0.46, dark:false, _flash:'' },
+                { code:'WTI', name:'WTI原油', price:81.92, chg:2.31, dark:false, _flash:'' },
+                { code:'DXAU', name:'暗金', price:2361.0, chg:0.20, dark:true, _flash:'' },
+                { code:'DWTI', name:'暗油', price:82.40, chg:0.59, dark:true, _flash:'' },
+            ],
+            sectors: [ {name:'能源',v:2.4},{name:'信息技术',v:1.8},{name:'通信',v:1.2},{name:'金融',v:0.7},{name:'材料',v:0.5},{name:'工业',v:0.3},{name:'医疗',v:-0.2},{name:'消费',v:-0.4},{name:'房地产',v:-0.8},{name:'公用',v:-1.1} ],
+            fed: { meeting:'7月 FOMC', outcomes:[ {label:'维持不变',prob:58},{label:'降息25bp',prob:38},{label:'降息50bp',prob:4} ] },
+            hormuz: { today:92, chg:-7 },
+            crude: { wti:{p:81.92,c:2.31,_flash:''}, brent:{p:86.10,c:1.98,_flash:''}, wtiSeries:[], brentSeries:[], labels:[] },
+            crypto: [ {code:'BTC',name:'BTC',p:61240,c:1.9,_flash:''}, {code:'ETH',name:'ETH',p:3410,c:2.6,_flash:''} ],
+            briefing: {
+                date: '',
+                headline: '等待 AI 简报生成',
+                body: '',
+                points: [],
+                tags: [],
+                generated_time: '',
+            },
+        };
+    },
+    computed: {
+        sourceNames() { return [...new Set(this.news.map(n => n.source))]; },
+        filteredNews() { return this.newsFilter==='全部' ? this.news : this.news.filter(n => n.source===this.newsFilter); },
+        totalUnread() { return this.unread.news + this.unread.research; },
+    },
+    methods: {
+        mod(id) { return this.allModules.find(m => m.id===id) || {}; },
+        fmt(n) { return n.toLocaleString('en-US'); },
+        ratingStyle(r) {
+            if (['买入','强烈推荐','增持'].includes(r)) return { borderColor:PALETTE.terra, color:PALETTE.terra };
+            if (['中性','维持'].includes(r)) return { borderColor:'rgba(61,54,42,.25)', color:'rgba(61,54,42,.7)' };
+            return { borderColor:'rgba(61,54,42,.2)', color:'rgba(61,54,42,.55)' };
+        },
+        // ---- layout persistence ----
+        saveLayout() { try { localStorage.setItem('periphera_layout', JSON.stringify(this.layout)); } catch(e){} },
+        loadLayout() {
+            try { const s = localStorage.getItem('periphera_layout'); if (s) { const a = JSON.parse(s); if (Array.isArray(a)) return a.filter(id => this.allModules.some(m=>m.id===id)); } } catch(e){}
+            return null;
+        },
+        toggleModule(id) {
+            if (this.layout.includes(id)) this.layout = this.layout.filter(x => x!==id);
+            else this.layout = [...this.layout, id];
+            this.saveLayout(); this.$nextTick(() => this.renderCharts());
+        },
+        removeModule(id) { this.layout = this.layout.filter(x => x!==id); this.saveLayout(); },
+        resetLayout() { this.layout = [...this.defaultLayout]; this.saveLayout(); this.$nextTick(() => this.renderCharts()); },
+        openPanel(p) {
+            // 新闻 / 研报 跳转到各自的独立页面，其余（模块库）仍用右侧抽屉
+            if (p==='news') { window.location.href = '/news'; return; }
+            if (p==='research') { window.location.href = '/research'; return; }
+            this.panel = p;
+        },
+        // ---- charts ----
+        axis(extra) { return Object.assign({ axisLine:{lineStyle:{color:PALETTE.ink,width:2}}, axisTick:{show:false}, axisLabel:{color:'rgba(61,54,42,.6)',fontWeight:600,fontSize:10}, splitLine:{show:false} }, extra||{}); },
+        chart(id) {
+            const el=document.getElementById(id); if(!el) return null;
+            const ex=echarts.getInstanceByDom(el); if(ex) ex.dispose();
+            const c=echarts.init(el); this.charts[id]=c;
+            // Tailwind CDN 异步应用样式，init 时容器可能仍为 0 尺寸导致图表为空；
+            // 用 ResizeObserver 在容器获得真实尺寸/布局变化时自动重绘
+            if (!this.observers) this.observers = {};
+            if (this.observers[id]) this.observers[id].disconnect();
+            if (window.ResizeObserver) {
+                const ro = new ResizeObserver(() => { if (el.clientWidth && el.clientHeight) c.resize(); });
+                ro.observe(el); this.observers[id] = ro;
+            }
+            return c;
+        },
+        renderSectors() { const c=this.chart('chart-sectors'); if(!c) return; const s=[...this.sectors].sort((a,b)=>a.v-b.v);
+            c.setOption({ grid:{left:62,right:30,top:6,bottom:6}, tooltip:{trigger:'axis',axisPointer:{type:'shadow'},backgroundColor:PALETTE.ink,textStyle:{color:'#F4F0E8'}},
+                xAxis:this.axis({type:'value',axisLabel:{formatter:'{value}%',fontSize:10}}), yAxis:this.axis({type:'category',data:s.map(x=>x.name),axisLabel:{fontWeight:700,color:PALETTE.ink,fontSize:11}}),
+                series:[{type:'bar',barWidth:'60%',data:s.map(x=>({value:x.v,itemStyle:{color:x.v>=0?PALETTE.terra:'rgba(61,54,42,.45)',borderColor:PALETTE.ink,borderWidth:1.5}})),label:{show:true,position:'right',formatter:'{c}%',fontWeight:700,color:PALETTE.ink,fontSize:10}}] }); },
+        renderFed() { const c=this.chart('chart-fed'); if(!c) return;
+            c.setOption({ grid:{left:62,right:38,top:6,bottom:6}, tooltip:{trigger:'axis',axisPointer:{type:'shadow'},backgroundColor:PALETTE.ink,textStyle:{color:'#F4F0E8'}},
+                xAxis:this.axis({type:'value',max:100,axisLabel:{formatter:'{value}%',fontSize:10}}), yAxis:this.axis({type:'category',data:this.fed.outcomes.map(o=>o.label).reverse(),axisLabel:{fontWeight:700,color:PALETTE.ink,fontSize:11}}),
+                series:[{type:'bar',barWidth:'52%',data:this.fed.outcomes.map(o=>o.prob).reverse(),itemStyle:{color:PALETTE.terra,borderColor:PALETTE.ink,borderWidth:2},label:{show:true,position:'right',formatter:'{c}%',fontWeight:700,color:PALETTE.ink,fontSize:10}}] }); },
+        renderHormuz() { const c=this.chart('chart-hormuz'); if(!c) return; const d=walk(30,100,6,-0.4).map(v=>Math.round(v));
+            const series = this.hormuz.series && this.hormuz.series.length ? this.hormuz.series.map(x=>x.value) : d;
+            const labels = this.hormuz.series && this.hormuz.series.length ? this.hormuz.series.map(x=>x.date) : d.map((_,i)=>i+1);
+            c.setOption({ grid:{left:28,right:12,top:10,bottom:18}, tooltip:{trigger:'axis',backgroundColor:PALETTE.ink,textStyle:{color:'#F4F0E8'}},
+                xAxis:this.axis({type:'category',boundaryGap:false,data:labels,axisLabel:{show:false}}), yAxis:this.axis({type:'value',scale:true}),
+                series:[{type:'bar',data:series,barWidth:'50%',itemStyle:{color:PALETTE.sand,borderColor:PALETTE.ink,borderWidth:1}}] }); },
+        renderCrude() { const c=this.chart('chart-crude'); if(!c) return;
+            c.setOption({ grid:{left:38,right:12,top:12,bottom:18}, legend:{show:false}, tooltip:{trigger:'axis',backgroundColor:PALETTE.ink,textStyle:{color:'#F4F0E8'}},
+                xAxis:this.axis({type:'category',boundaryGap:false,data:this.crude.labels,axisLabel:{show:false}}), yAxis:this.axis({type:'value',scale:true}),
+                series:[
+                    {name:'WTI',type:'line',smooth:true,symbol:'none',data:this.crude.wtiSeries,lineStyle:{width:3,color:PALETTE.terra},areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(208,100,62,.25)'},{offset:1,color:'rgba(208,100,62,0)'}])}},
+                    {name:'Brent',type:'line',smooth:true,symbol:'none',data:this.crude.brentSeries,lineStyle:{width:2.5,color:PALETTE.ink}},
+                ] }); },
+        renderCharts() {
+            if (this.layout.includes('sectors')) this.renderSectors();
+            if (this.layout.includes('fedwatch')) this.renderFed();
+            if (this.layout.includes('hormuz')) this.renderHormuz();
+            if (this.layout.includes('crude')) this.renderCrude();
+        },
+        // ---- backend polling ----
+        flash(obj, up) { obj._flash = up ? 'tick-up' : 'tick-down'; setTimeout(() => { obj._flash=''; }, 720); },
+        onPollError(err) {
+            this.lastError = err.message || String(err);
+            this.loadingNews = false;
+            this.loadingResearch = false;
+            this.loadingBriefing = false;
+        },
+        normalizeNews(n) {
+            return {
+                uid: n.id || ('n_'+n.published_at+'_'+n.title),
+                id: n.id,
+                source: n.source_name || n.source || '',
+                source_code: n.source || '',
+                color: n.color || PALETTE.terra,
+                tag: n.tag || '',
+                title: n.title || '',
+                body: n.summary || n.body || '',
+                time: PAPI.relativeTime(n.published_at),
+                published_at: n.published_at || 0,
+                url: n.url || '',
+                hot: !!n.hot,
+                _new: false,
+            };
+        },
+        normalizeResearch(r) {
+            return Object.assign({ uid: r.id || ('r_'+r.created_at+'_'+r.research_target), _new:false }, r);
+        },
+        normalizeBriefing(b) {
+            return {
+                date: b.date || '',
+                headline: b.headline || '今日 AI 简报',
+                body: b.body || '',
+                points: b.points || [],
+                tags: b.tags || [],
+                generated_time: b.generated_at ? PAPI.relativeTime(b.generated_at) : '',
+            };
+        },
+        mergeIncoming(target, items, opts) {
+            const idKey = (opts && opts.idKey) || 'uid';
+            const limit = (opts && opts.limit) || 60;
+            let added = 0;
+            items.forEach(item => {
+                const idx = target.findIndex(x => x[idKey] === item[idKey]);
+                if (idx >= 0) target.splice(idx, 1);
+                else added++;
+                if (opts && opts.fresh) PAPI.markFresh(item);
+                target.unshift(item);
+            });
+            if (target.length > limit) target.length = limit;
+            return added;
+        },
+        async fetchTicker() {
+            const data = await PAPI.apiGet('/ticker');
+            this.ticker = (data.items || []).map(t => ({ k:t.key, v:t.value, c:t.change_pct || 0 }));
+            this.lastError = '';
+        },
+        async fetchMarkets() {
+            const data = await PAPI.apiGet('/markets/indices', { codes:'SPX,N225,KOSPI,TWSE' });
+            const incoming = (data.items || []).map(m => ({ code:m.code, name:m.name, flag:m.flag, value:m.value, chg:m.change_pct, _flash:'' }));
+            incoming.forEach(m => {
+                const old = this.indices.find(x => x.code === m.code);
+                if (old) this.flash(m, m.value >= old.value);
+            });
+            if (incoming.length) this.indices = incoming;
+            this.lastError = '';
+        },
+        async fetchCommodities() {
+            const data = await PAPI.apiGet('/commodities');
+            const incoming = (data.items || []).map(c => ({ code:c.code, name:c.name, price:c.price, chg:c.change_pct, dark:!!c.dark, _flash:'' }));
+            incoming.forEach(c => {
+                const old = this.commodities.find(x => x.code === c.code);
+                if (old) this.flash(c, c.price >= old.price);
+            });
+            if (incoming.length) this.commodities = incoming;
+            this.lastError = '';
+        },
+        async fetchCrude() {
+            const data = await PAPI.apiGet('/commodities/crude');
+            const oldWti = this.crude.wti.p;
+            const oldBrent = this.crude.brent.p;
+            this.crude.wti = { p:data.wti.price, c:data.wti.change_pct, _flash:'' };
+            this.crude.brent = { p:data.brent.price, c:data.brent.change_pct, _flash:'' };
+            this.flash(this.crude.wti, this.crude.wti.p >= oldWti);
+            this.flash(this.crude.brent, this.crude.brent.p >= oldBrent);
+            this.crude.labels = data.labels || [];
+            this.crude.wtiSeries = data.wti_series || [];
+            this.crude.brentSeries = data.brent_series || [];
+            if (this.charts['chart-crude']) this.charts['chart-crude'].setOption({ xAxis:{data:this.crude.labels}, series:[{data:this.crude.wtiSeries},{data:this.crude.brentSeries}] });
+            this.lastError = '';
+        },
+        async fetchCrypto() {
+            const data = await PAPI.apiGet('/crypto');
+            const incoming = (data.items || []).map(k => ({ code:k.code, name:k.name, p:k.price, c:k.change_pct, _flash:'' }));
+            incoming.forEach(k => {
+                const old = this.crypto.find(x => x.code === k.code);
+                if (old) this.flash(k, k.p >= old.p);
+            });
+            if (incoming.length) this.crypto = incoming;
+            this.lastError = '';
+        },
+        async fetchSectors() {
+            const data = await PAPI.apiGet('/markets/us-sectors');
+            this.sectors = (data.items || []).map(s => ({ name:s.name, v:s.change_pct }));
+            this.$nextTick(() => this.renderSectors());
+            this.lastError = '';
+        },
+        async fetchFedWatch() {
+            const data = await PAPI.apiGet('/macro/fedwatch');
+            this.fed = { meeting:data.meeting, outcomes:data.outcomes || [] };
+            this.$nextTick(() => this.renderFed());
+            this.lastError = '';
+        },
+        async fetchHormuz() {
+            const data = await PAPI.apiGet('/macro/hormuz');
+            this.hormuz = { today:data.today, chg:data.change_pct, series:data.series || [] };
+            this.$nextTick(() => this.renderHormuz());
+            this.lastError = '';
+        },
+        async fetchBriefing() {
+            const data = await PAPI.apiGet('/ai/briefing');
+            this.briefing = this.normalizeBriefing(data || {});
+            this.loadingBriefing = false;
+            this.lastError = '';
+        },
+        async fetchNews() {
+            const data = await PAPI.apiGet('/news', this.latestNewsTs ? { since:this.latestNewsTs, limit:20 } : { limit:8 });
+            const items = (data.items || []).map(this.normalizeNews);
+            if (!this.latestNewsTs) this.news = items;
+            else {
+                const added = this.mergeIncoming(this.news, items, { fresh:true, limit:40 });
+                if (added) this.unread.news += added;
+            }
+            if (data.latest_ts) this.latestNewsTs = Math.max(this.latestNewsTs, data.latest_ts);
+            this.loadingNews = false;
+            this.lastError = '';
+        },
+        async fetchResearch() {
+            const data = await PAPI.apiGet('/research', this.latestResearchTs ? { since:this.latestResearchTs, limit:20 } : { limit:6 });
+            const items = (data.items || []).map(this.normalizeResearch);
+            if (!this.latestResearchTs) this.research = items;
+            else {
+                const added = this.mergeIncoming(this.research, items, { fresh:true, limit:30 });
+                if (added) this.unread.research += added;
+            }
+            if (data.latest_ts) this.latestResearchTs = Math.max(this.latestResearchTs, data.latest_ts);
+            this.loadingResearch = false;
+            this.lastError = '';
+        },
+        startBackendPolling() {
+            const poll = (fn, ms) => this.disposers.push(PAPI.usePolling(fn.bind(this), ms, { onError:this.onPollError }));
+            poll(this.fetchTicker, 4000);
+            poll(this.fetchMarkets, 5000);
+            poll(this.fetchCommodities, 5000);
+            poll(this.fetchCrude, 5000);
+            poll(this.fetchCrypto, 5000);
+            poll(this.fetchNews, 9000);
+            poll(this.fetchResearch, 45000);
+            poll(this.fetchSectors, 60000);
+            poll(this.fetchFedWatch, 5 * 60 * 1000);
+            poll(this.fetchHormuz, 5 * 60 * 1000);
+            poll(this.fetchBriefing, 60 * 60 * 1000);
+        },
+        // ---- live simulation ----
+        tickPrices() {
+            this.commodities.forEach(c => { const d=(Math.random()-0.48)*c.price*0.0015; c.price=+(c.price+d).toFixed(2); c.chg=+(c.chg+d/c.price*100).toFixed(2); this.flash(c, d>=0); });
+            this.indices.forEach(m => { const d=(Math.random()-0.48)*m.value*0.0008; m.value=Math.round(m.value+d); m.chg=+(m.chg+d/m.value*100).toFixed(2); this.flash(m, d>=0); });
+            this.crypto.forEach(k => { const d=(Math.random()-0.46)*k.p*0.003; k.p=+(k.p+d).toFixed(2); k.c=+(k.c+d/k.p*100).toFixed(2); this.flash(k, d>=0); });
+            // crude tick + chart append
+            ['wti','brent'].forEach(key => { const o=this.crude[key]; const d=(Math.random()-0.46)*0.18; o.p=+(o.p+d).toFixed(2); o.c=+(o.c+d/o.p*100).toFixed(2); this.flash(o, d>=0); });
+            this.crude.labels.push(''); this.crude.wtiSeries.push(this.crude.wti.p); this.crude.brentSeries.push(this.crude.brent.p);
+            if (this.crude.labels.length>60) { this.crude.labels.shift(); this.crude.wtiSeries.shift(); this.crude.brentSeries.shift(); }
+            if (this.charts['chart-crude']) this.charts['chart-crude'].setOption({ xAxis:{data:this.crude.labels}, series:[{data:this.crude.wtiSeries},{data:this.crude.brentSeries}] });
+            // ticker sync (top bar)
+            this.ticker.forEach(t => { t.c = +(t.c + (Math.random()-0.5)*0.06).toFixed(2); });
+        },
+        pushNews() {
+            const t = NEWS_POOL[Math.floor(Math.random()*NEWS_POOL.length)];
+            const item = Object.assign({ uid:++UID, time:'刚刚', _new:true }, t);
+            this.news.unshift(item);
+            if (this.news.length>40) this.news.pop();
+            // 时间推移
+            this.news.forEach((n,i) => { if (i>0 && n.time==='刚刚') n.time = '1 分钟前'; });
+            if (this.panel!=='news') this.unread.news++;
+            setTimeout(() => { item._new=false; }, 2500);
+        },
+        pushResearch() {
+            const t = RESEARCH_POOL[Math.floor(Math.random()*RESEARCH_POOL.length)];
+            const d = new Date();
+            const item = Object.assign({ uid:++UID, publish_time: pad(d.getMonth()+1)+'-'+pad(d.getDate()), rating_change:'更新', _new:true }, t);
+            this.research.unshift(item);
+            if (this.research.length>30) this.research.pop();
+            if (this.panel!=='research') this.unread.research++;
+            setTimeout(() => { item._new=false; }, 2500);
+        },
+        tickClock() {
+            const d = new Date();
+            this.clock = pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds());
+            this.dateStr = (d.getMonth()+1)+'月'+d.getDate()+'日';
+            const h = d.getHours();
+            this.marketStatus = (h>=21 || h<5) ? '美股盘中' : (h>=9 && h<16) ? '亚太盘中' : '休市';
+        },
+        seed() {
+            // 预填新闻 / 研报
+            for (let i=0;i<8;i++) { const t=NEWS_POOL[i%NEWS_POOL.length]; this.news.push(Object.assign({uid:++UID, time:(i*4+2)+' 分钟前'}, t)); }
+            for (let i=0;i<6;i++) { const t=RESEARCH_POOL[i%RESEARCH_POOL.length]; this.research.push(Object.assign({uid:++UID, publish_time:'06-'+pad(27-i), rating_change:'维持'}, t)); }
+            // crude 初始分时
+            const w=walk(40,80,0.5,0.05), b=walk(40,84,0.5,0.05);
+            this.crude.labels = w.map(()=> ''); this.crude.wtiSeries=w; this.crude.brentSeries=b;
+            this.crude.wti.p=w[w.length-1]; this.crude.brent.p=b[b.length-1];
+            this.briefing = this.normalizeBriefing({
+                date: new Date().toISOString().slice(0, 10),
+                headline: '原油与避险金属同步走强，市场在霍尔木兹紧张与降息预期之间反复定价。',
+                body: '隔夜美股科技与能源领涨，WTI 原油受霍尔木兹通行量回落影响跳涨，黄金、白银同步走高。亚洲早盘半导体链条继续支撑台股和日经情绪。',
+                points: ['WTI 原油 +2.3%，供给风险溢价回归', '黄金创阶段新高，避险需求延续', 'FedWatch 显示 7 月维持不变概率升至 58%', '台股受半导体带动走强'],
+                tags: ['原油', '黄金', 'FedWatch', '半导体'],
+                generated_at: Date.now(),
+            });
+            this.loadingNews = false; this.loadingResearch = false; this.loadingBriefing = false;
+        },
+    },
+    mounted() {
+        this.layout = this.loadLayout() || [...this.defaultLayout];
+        if (!this.USE_BACKEND) this.seed();
+        this.tickClock();
+        this.$nextTick(() => this.renderCharts());
+        this.timers.push(setInterval(this.tickClock, 1000));
+        if (this.USE_BACKEND) {
+            this.startBackendPolling();
+        } else {
+            this.timers.push(setInterval(this.tickPrices, 2600));
+            this.timers.push(setInterval(this.pushNews, 9000));
+            this.timers.push(setInterval(this.pushResearch, 26000));
+        }
+        window.addEventListener('resize', () => { Object.values(this.charts).forEach(c => c && c.resize()); });
+        // 兜底：页面（含 Tailwind CDN）完全加载后再次重绘，确保首屏图表不为空
+        window.addEventListener('load', () => { this.$nextTick(() => Object.values(this.charts).forEach(c => c && c.resize())); });
+    },
+    beforeUnmount() {
+        this.timers.forEach(t => clearInterval(t));
+        this.disposers.forEach(dispose => dispose && dispose());
+        if (this.observers) Object.values(this.observers).forEach(o => o && o.disconnect());
+    },
+}).mount('#app');
+</script>
+</body>
+</html>

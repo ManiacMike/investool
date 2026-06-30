@@ -738,6 +738,54 @@ func ZenResearchReportHandler(c *gin.Context) {
 	c.HTML(http.StatusOK, "zen_research_report.html", data)
 }
 
+// NewsHandler 实时新闻独立页面
+func NewsHandler(c *gin.Context) {
+	data := gin.H{
+		"Env":       viper.GetString("env"),
+		"HostURL":   viper.GetString("server.host_url"),
+		"Version":   version.Version,
+		"PageTitle": "PERIPHERA · 实时新闻",
+		"Error":     "",
+	}
+	c.HTML(http.StatusOK, "news.html", data)
+}
+
+// ResearchHandler 外资研报独立页面
+func ResearchHandler(c *gin.Context) {
+	data := gin.H{
+		"Env":       viper.GetString("env"),
+		"HostURL":   viper.GetString("server.host_url"),
+		"Version":   version.Version,
+		"PageTitle": "PERIPHERA · 外资研报",
+		"Error":     "",
+	}
+	c.HTML(http.StatusOK, "research.html", data)
+}
+
+// IntroHandler 理念宣言 / 首次进入的引导页（仅展示一次）
+func IntroHandler(c *gin.Context) {
+	data := gin.H{
+		"Env":       viper.GetString("env"),
+		"HostURL":   viper.GetString("server.host_url"),
+		"Version":   version.Version,
+		"PageTitle": "PERIPHERA · Invest like a pro, profit like a pro",
+		"Error":     "",
+	}
+	c.HTML(http.StatusOK, "intro.html", data)
+}
+
+// PortalHandler 投资资讯一站式门户（外围信息 + 每日 AI 简报）
+func PortalHandler(c *gin.Context) {
+	data := gin.H{
+		"Env":       viper.GetString("env"),
+		"HostURL":   viper.GetString("server.host_url"),
+		"Version":   version.Version,
+		"PageTitle": "PERIPHERA · 外围信息一站式 · 每日 AI 简报",
+		"Error":     "",
+	}
+	c.HTML(http.StatusOK, "portal.html", data)
+}
+
 // MarketClockHandler 市场风格时钟页面
 func MarketClockHandler(c *gin.Context) {
 	data := gin.H{

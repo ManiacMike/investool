@@ -28,3 +28,13 @@ statics/js/app.min.*.js
 # *.json
 cron/*.json
 .idea/
+# 本地密钥 / 凭据（X cookie、MySQL 密码等），勿提交
+.env
+.env.*
+config.prod.toml
+
+# twscrape 旁路：虚拟环境 + 账号库（含 cookie 派生 session，勿提交）
+scripts/venv/
+scripts/.twscrape_accounts.db
+__pycache__/
+*.pyc
