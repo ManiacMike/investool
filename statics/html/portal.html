@@ -252,10 +252,25 @@
 
                     <!-- FedWatch -->
                     <template v-else-if="id==='fedwatch'">
-                        <div class="flex items-center justify-between mb-1 px-1">
-                            <span class="text-[11px] font-semibold text-ink/55">[[ fed.meeting ]] 利率路径定价</span>
+                        <div class="grid grid-cols-3 gap-2 mb-3">
+                            <div class="rounded-lg border-2 border-terra/25 bg-terra/10 p-2">
+                                <div class="text-[10px] font-bold text-terra/70">降息概率</div>
+                                <div class="mono text-xl font-bold text-terra leading-tight">[[ fedCutProb.toFixed(0) ]]%</div>
+                            </div>
+                            <div class="rounded-lg border-2 border-ink/15 bg-cream/30 p-2">
+                                <div class="text-[10px] font-bold text-ink/45">维持概率</div>
+                                <div class="mono text-xl font-bold text-ink leading-tight">[[ fedHoldProb.toFixed(0) ]]%</div>
+                            </div>
+                            <div class="rounded-lg border-2 border-ink/15 bg-ink/5 p-2">
+                                <div class="text-[10px] font-bold text-ink/45">主情景</div>
+                                <div class="text-[13px] font-bold text-ink truncate leading-tight">[[ fedBestOutcome.label ]]</div>
+                            </div>
                         </div>
-                        <div id="chart-fed" class="h-[176px]"></div>
+                        <div class="flex items-center justify-between mb-1 px-1">
+                            <span class="text-[11px] font-semibold text-ink/55">[[ fed.meeting ]] 美联储降息预测</span>
+                            <span class="mono text-[10px] font-semibold text-ink/35">[[ fed.updated_time ]]</span>
+                        </div>
+                        <div id="chart-fed" class="h-[124px]"></div>
                     </template>
 
                     <!-- 霍尔木兹 -->
@@ -383,7 +398,7 @@ createApp({
                 { id:'markets', name:'全球股市', icon:'🌐', desc:'美·日·韩·台 指数实时', span:'lg:col-span-4' },
                 { id:'commodities', name:'金银铜油', icon:'🪙', desc:'贵金属与原油，含暗盘', span:'lg:col-span-4' },
                 { id:'sectors', name:'美股板块涨幅', icon:'📊', desc:'隔夜美股各板块表现', span:'lg:col-span-4' },
-                { id:'fedwatch', name:'FedWatch', icon:'🏦', desc:'FOMC 利率路径概率', span:'lg:col-span-4' },
+                { id:'fedwatch', name:'FedWatch 降息预测', icon:'🏦', desc:'美联储 FOMC 降息 / 维持概率', span:'lg:col-span-4' },
                 { id:'crude', name:'原油实时行情', icon:'⛽', desc:'WTI / Brent 实时分时', span:'lg:col-span-4', hot:true },
                 { id:'hormuz', name:'霍尔木兹通行量', icon:'🛢️', desc:'油运咽喉每日通行船数', span:'lg:col-span-4' },
                 { id:'crypto', name:'加密行情', icon:'₿', desc:'BTC / ETH 实时报价', span:'lg:col-span-4' },
@@ -412,7 +427,7 @@ createApp({
                 { code:'DWTI', name:'暗油', price:82.40, chg:0.59, dark:true, _flash:'' },
             ],
             sectors: [ {name:'能源',v:2.4},{name:'信息技术',v:1.8},{name:'通信',v:1.2},{name:'金融',v:0.7},{name:'材料',v:0.5},{name:'工业',v:0.3},{name:'医疗',v:-0.2},{name:'消费',v:-0.4},{name:'房地产',v:-0.8},{name:'公用',v:-1.1} ],
-            fed: { meeting:'7月 FOMC', outcomes:[ {label:'维持不变',prob:58},{label:'降息25bp',prob:38},{label:'降息50bp',prob:4} ] },
+            fed: { meeting:'7月 FOMC', meeting_date:'', updated_time:'', outcomes:[ {label:'维持不变',prob:58},{label:'降息25bp',prob:38},{label:'降息50bp',prob:4} ] },
             hormuz: { today:92, chg:-7 },
             crude: { wti:{p:81.92,c:2.31,_flash:''}, brent:{p:86.10,c:1.98,_flash:''}, wtiSeries:[], brentSeries:[], labels:[] },
             crypto: [ {code:'BTC',name:'BTC',p:61240,c:1.9,_flash:''}, {code:'ETH',name:'ETH',p:3410,c:2.6,_flash:''} ],
@@ -430,6 +445,12 @@ createApp({
         sourceNames() { return [...new Set(this.news.map(n => n.source))]; },
         filteredNews() { return this.newsFilter==='全部' ? this.news : this.news.filter(n => n.source===this.newsFilter); },
         totalUnread() { return this.unread.news + this.unread.research; },
+        fedCutProb() { return this.fed.outcomes.filter(o => /降息|cut|ease/i.test(o.label)).reduce((sum, o) => sum + Number(o.prob || 0), 0); },
+        fedHoldProb() { return this.fed.outcomes.filter(o => /维持|不变|hold|no change/i.test(o.label)).reduce((sum, o) => sum + Number(o.prob || 0), 0); },
+        fedHikeProb() { return this.fed.outcomes.filter(o => /加息|hike/i.test(o.label)).reduce((sum, o) => sum + Number(o.prob || 0), 0); },
+        fedBestOutcome() {
+            return [...this.fed.outcomes].sort((a, b) => Number(b.prob || 0) - Number(a.prob || 0))[0] || { label:'--', prob:0 };
+        },
     },
     methods: {
         mod(id) { return this.allModules.find(m => m.id===id) || {}; },
@@ -481,7 +502,10 @@ createApp({
         renderFed() { const c=this.chart('chart-fed'); if(!c) return;
             c.setOption({ grid:{left:62,right:38,top:6,bottom:6}, tooltip:{trigger:'axis',axisPointer:{type:'shadow'},backgroundColor:PALETTE.ink,textStyle:{color:'#F4F0E8'}},
                 xAxis:this.axis({type:'value',max:100,axisLabel:{formatter:'{value}%',fontSize:10}}), yAxis:this.axis({type:'category',data:this.fed.outcomes.map(o=>o.label).reverse(),axisLabel:{fontWeight:700,color:PALETTE.ink,fontSize:11}}),
-                series:[{type:'bar',barWidth:'52%',data:this.fed.outcomes.map(o=>o.prob).reverse(),itemStyle:{color:PALETTE.terra,borderColor:PALETTE.ink,borderWidth:2},label:{show:true,position:'right',formatter:'{c}%',fontWeight:700,color:PALETTE.ink,fontSize:10}}] }); },
+                series:[{type:'bar',barWidth:'52%',data:this.fed.outcomes.map(o=>({
+                    value:o.prob,
+                    itemStyle:{color:/降息|cut|ease/i.test(o.label)?PALETTE.terra:/维持|不变|hold|no change/i.test(o.label)?PALETTE.sand:'rgba(61,54,42,.45)',borderColor:PALETTE.ink,borderWidth:2}
+                })).reverse(),label:{show:true,position:'right',formatter:'{c}%',fontWeight:700,color:PALETTE.ink,fontSize:10}}] }); },
         renderHormuz() { const c=this.chart('chart-hormuz'); if(!c) return; const d=walk(30,100,6,-0.4).map(v=>Math.round(v));
             const series = this.hormuz.series && this.hormuz.series.length ? this.hormuz.series.map(x=>x.value) : d;
             const labels = this.hormuz.series && this.hormuz.series.length ? this.hormuz.series.map(x=>x.date) : d.map((_,i)=>i+1);
@@ -610,7 +634,12 @@ createApp({
         },
         async fetchFedWatch() {
             const data = await PAPI.apiGet('/macro/fedwatch');
-            this.fed = { meeting:data.meeting, outcomes:data.outcomes || [] };
+            this.fed = {
+                meeting:data.meeting || 'FOMC',
+                meeting_date:data.meeting_date || '',
+                updated_time:data.updated_at ? PAPI.relativeTime(data.updated_at) : '',
+                outcomes:data.outcomes || [],
+            };
             this.$nextTick(() => this.renderFed());
             this.lastError = '';
         },
