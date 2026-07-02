@@ -70,6 +70,8 @@ func Routes(app *gin.Engine) {
 	periphera.StartNews()
 	// 开启霍尔木兹公开日报抓取（失败自动回退 seed）
 	periphera.StartHormuz()
+	// 开启 FedWatch 概率抓取（默认 Investing 免费页；失败自动回退 seed）
+	periphera.StartFedWatch()
 	// 开启每日 AI 简报生成（火山 Ark Seed 模型，未配 SEED_API_KEY 时自动跳过走 seed）
 	periphera.StartBriefing()
 }

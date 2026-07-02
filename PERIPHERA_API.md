@@ -301,6 +301,7 @@ Query：`codes`（默认 `BTC,ETH,PAXG,XAUT`）。响应 `data`：
 
 ### `GET /api/v1/macro/fedwatch`
 下次 FOMC 利率路径概率（CME FedWatch）。响应 `data`：
+> 后端优先读取 live 缓存；默认通过 `PERIPHERA_FEDWATCH_PROXY=http://127.0.0.1:33210` 抓取 Investing Fed Rate Monitor 免费页第一张会议卡，也可设置 `PERIPHERA_FEDWATCH_SOURCE=cme/json` 接 CME 或兼容 JSON。抓取失败时回退 seed，JSON 契约不变。刷新间隔 `PERIPHERA_FEDWATCH_INTERVAL` 默认 300s。
 ```json
 {
   "meeting": "7月 FOMC",

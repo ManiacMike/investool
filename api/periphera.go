@@ -304,6 +304,10 @@ func PeripheraHormuz(c *gin.Context) {
 
 // PeripheraFedWatch GET /api/v1/macro/fedwatch
 func PeripheraFedWatch(c *gin.Context) {
+	if fw, ok := periphera.LiveFedWatch(); ok {
+		response.JSON(c, fw)
+		return
+	}
 	response.JSON(c, periphera.SeedFedWatch())
 }
 

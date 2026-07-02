@@ -90,7 +90,11 @@
 
 ### 后端 [BE]
 - [x] 霍尔木兹通行量 `/macro/hormuz`：解析 **Windward 公开页**（`hormuz_live.go`，15min 刷新），E2E 跑通（today=42=28进+14出）。序列只累积**真实观测日**（不伪造），change_pct 用真实相邻日；Windward 句式每日变，正则需随之维护
-- [ ] FedWatch `/macro/fedwatch`：CME FedWatch 概率（抓取/接口），cron 刷新
+- [x] FedWatch `/macro/fedwatch`：新增 live 接口层（`fedwatch_live.go`），默认抓 Investing Fed Rate Monitor 免费页第一张会议卡（本地代理 `PERIPHERA_FEDWATCH_PROXY=http://127.0.0.1:33210`），同时保留 CME/兼容 JSON；抓取失败自动回退 seed
+  - live 管线已 **E2E 跑通**（`fedwatch_live_integration_test.go`：本地 httptest 真实 HTTP 往返，走 `refreshFedWatch → fetchBytes → parseFedWatch → record → LiveFedWatch`，并校验 CME 模式的 `Authorization: Bearer …` / `CME-Application-*` header）；解析层覆盖 Investing HTML 第一张卡、CME 原生 payload、兼容 JSON、就近未来会议四种用例
+  - **Investing 真实页真跑验证（2026-07-02）**：经本地代理 `GET .../fed-rate-monitor` 返回 200（354KB，12 张会议卡），Go 解析器直接吃真实 HTML 得出 `7月 FOMC / 2026-07-29`、`降息25bp 80.1% / 维持不变 19.9%`、更新时间 `Jul 02 2026 10:15AM EDT`，标签与概率逻辑正确
+  - 真实第一张卡片已固化为夹具 `testdata/investing_fedwatch_card.html` + 回归测试 `TestParseInvestingFedWatchRealMarkup`，防 Investing 改版后正则静默失配；默认后台 300s 刷新一次，失败保留旧缓存/回退 seed
+  - ⚠️ 代理必须带浏览器 UA（Go 侧 `fetchBytesClient` 默认已带 Chrome UA）；裸 UA 会被 Cloudflare 返回 403
 - [x] AI 简报 `/ai/briefing`：**改用火山引擎方舟 Ark（豆包 Seed 模型，非 Coze）** 生成，已 E2E 跑通
   - `datacenter/periphera/briefing_live.go`：Ark OpenAI 兼容 `chat/completions`，以当前 live 行情+新闻头条为上下文，产出结构化 JSON（headline/body/points/tags），按 `date` 缓存；启动后延迟 60s 预热生成，之后每 6h 重生成；失败/未配 key 自动回退 `SeedBriefing`
   - 凭据走 `.env`（新增 Go 侧 `LoadDotEnv`，真实 env 优先）：`SEED_API_KEY` / `SEED_BASE_URL`(默认 `https://ark.cn-beijing.volces.com`) / `SEED_MODEL`(默认 `doubao-seed-1-6-250615`) / `PERIPHERA_BRIEFING_INTERVAL`(默认 21600s)
