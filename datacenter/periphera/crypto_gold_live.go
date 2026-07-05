@@ -3,7 +3,9 @@ package periphera
 import (
 	"context"
 	"encoding/json"
+	"sort"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
@@ -22,6 +24,7 @@ var goldCrypto = &cryptoGoldStore{
 }
 var goldCryptoOnce sync.Once
 
+// Binance 直连的加密品种（金锚定币 + ETH）。BTC 仍走 sina hf_BTC。
 var cryptoGoldSpecs = map[string]struct {
 	name          string
 	binanceSymbol string
@@ -29,6 +32,7 @@ var cryptoGoldSpecs = map[string]struct {
 }{
 	"PAXG": {"PAXG", "PAXGUSDT", "pax-gold"},
 	"XAUT": {"XAUT", "XAUTUSDT", "tether-gold"},
+	"ETH":  {"ETH", "ETHUSDT", "ethereum"},
 }
 
 func ensureCryptoGold() {
@@ -123,7 +127,14 @@ type coinGeckoPrice map[string]struct {
 }
 
 func fetchCoinGeckoCryptoGold(ctx context.Context) map[string]CryptoQuote {
-	body, err := fetchBytes(ctx, "https://api.coingecko.com/api/v3/simple/price?ids=pax-gold,tether-gold&vs_currencies=usd&include_24hr_change=true&include_last_updated_at=true", nil)
+	ids := make([]string, 0, len(cryptoGoldSpecs))
+	for _, spec := range cryptoGoldSpecs {
+		ids = append(ids, spec.coingeckoID)
+	}
+	sort.Strings(ids) // 稳定 URL，便于缓存/调试
+	url := "https://api.coingecko.com/api/v3/simple/price?ids=" + strings.Join(ids, ",") +
+		"&vs_currencies=usd&include_24hr_change=true&include_last_updated_at=true"
+	body, err := fetchBytes(ctx, url, nil)
 	if err != nil {
 		return nil
 	}

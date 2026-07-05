@@ -7,6 +7,7 @@ package periphera
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -31,8 +32,17 @@ var idxSymbols = map[string]idxMap{
 	"N225": {"int_nikkei", "int"}, "TWSE": {"znb_TWSE", "znb"}, "KOSPI": {"znb_KOSPI", "znb"},
 }
 
-// 加密 code -> sina symbol（仅 BTC，ETH 无 sina 源走 seed 回退）
+// 加密 code -> sina symbol（仅 BTC；ETH 走 Binance，见 crypto_gold_live.go）
 var cryptoSymbols = map[string]string{"BTC": "hf_BTC"}
+
+// 美股板块：SPDR 11 只行业 ETF -> 板块中文名，走 sina gb_（字段[2]=涨跌幅%）。
+// 顺序仅为定义用，输出按涨跌幅倒序。
+var sectorSymbols = []struct{ sym, name string }{
+	{"gb_xle", "能源"}, {"gb_xlk", "信息技术"}, {"gb_xlc", "通信"},
+	{"gb_xlf", "金融"}, {"gb_xlb", "材料"}, {"gb_xli", "工业"},
+	{"gb_xlv", "医疗"}, {"gb_xly", "可选消费"}, {"gb_xlp", "必需消费"},
+	{"gb_xlre", "房地产"}, {"gb_xlu", "公用"},
+}
 
 // crude 用到的两腿
 const symWTI, symBrent = "hf_CL", "hf_OIL"
@@ -48,6 +58,9 @@ func allSymbols() []string {
 	}
 	for _, v := range cryptoSymbols {
 		set[v] = true
+	}
+	for _, v := range sectorSymbols {
+		set[v.sym] = true
 	}
 	set[symBrent] = true
 	out := make([]string, 0, len(set))
@@ -126,18 +139,18 @@ func atof(f []string, i int) float64 {
 	return v
 }
 
-// priceOf 当前价：hf_ 在字段0，int_/znb_ 在字段1
+// priceOf 当前价：hf_ 在字段0，int_/znb_/gb_ 在字段1
 func priceOf(sym string, f []string) float64 {
 	switch {
 	case strings.HasPrefix(sym, "hf_"):
 		return atof(f, 0)
-	case strings.HasPrefix(sym, "int_"), strings.HasPrefix(sym, "znb_"):
+	case strings.HasPrefix(sym, "int_"), strings.HasPrefix(sym, "znb_"), strings.HasPrefix(sym, "gb_"):
 		return atof(f, 1)
 	}
 	return 0
 }
 
-// chgPct 涨跌幅%：hf_ 用 (现价-昨结)/昨结，int_/znb_ 直接给在字段3
+// chgPct 涨跌幅%：hf_ 用 (现价-昨结)/昨结；gb_ 在字段2；int_/znb_ 在字段3
 func chgPct(sym string, f []string) float64 {
 	if strings.HasPrefix(sym, "hf_") {
 		cur, prev := atof(f, 0), atof(f, 7)
@@ -145,6 +158,9 @@ func chgPct(sym string, f []string) float64 {
 			return round2((cur - prev) / prev * 100)
 		}
 		return 0
+	}
+	if strings.HasPrefix(sym, "gb_") {
+		return round2(atof(f, 2))
 	}
 	return round2(atof(f, 3))
 }
@@ -237,7 +253,45 @@ func LiveIndices(codes []string) ([]IndexQuote, bool) {
 	return out, true
 }
 
-// LiveCrypto 真实加密行情（BTC 真，ETH 无源回退 seed）
+// LiveSectors 真实美股板块涨幅（SPDR 11 行业 ETF via sina gb_），按涨跌幅倒序。
+// 返回 trade_date（取 ETF 报价时间的日期）与 updated_at。
+func LiveSectors() ([]SectorItem, string, int64, bool) {
+	ensureLive()
+	store.mu.RLock()
+	defer store.mu.RUnlock()
+	if !store.ok {
+		return nil, "", 0, false
+	}
+	out := make([]SectorItem, 0, len(sectorSymbols))
+	tradeDate := ""
+	for _, s := range sectorSymbols {
+		f := store.raw[s.sym]
+		if f == nil {
+			continue
+		}
+		if tradeDate == "" {
+			tradeDate = sectorTradeDate(f)
+		}
+		out = append(out, SectorItem{Name: s.name, ChangePct: chgPct(s.sym, f)})
+	}
+	if len(out) == 0 {
+		return nil, "", 0, false
+	}
+	sort.SliceStable(out, func(i, j int) bool { return out[i].ChangePct > out[j].ChangePct })
+	return out, tradeDate, store.updatedAt, true
+}
+
+// sectorTradeDate 从 gb_ 报价时间字段（形如 "2026-07-02 22:55:20"）取日期部分。
+func sectorTradeDate(f []string) string {
+	if len(f) > 3 {
+		if d, _, ok := strings.Cut(strings.TrimSpace(f[3]), " "); ok {
+			return d
+		}
+	}
+	return ""
+}
+
+// LiveCrypto 真实加密行情（BTC via sina，ETH/PAXG/XAUT via Binance，均失败回退 seed）
 func LiveCrypto(codes []string) ([]CryptoQuote, bool) {
 	ensureLive()
 	store.mu.RLock()

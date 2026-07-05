@@ -39,10 +39,10 @@
 - [x] `datacenter/sina/realtime.go`：`hq.sinajs.cn` 实时行情拉取（带 Referer，免 GBK 解码，只取 ASCII 数字字段）
 - [x] 金 `hf_GC`、银 `hf_SI`、铜 `hf_HG`(美分/磅)、WTI `hf_CL`、Brent `hf_OIL`
 - [x] 股指：标普 `int_sp500`、纳指 `int_nasdaq`、道指 `int_dji`、日经 `int_nikkei`；**台股 `znb_TWSE`、韩 KOSPI `znb_KOSPI`**（已验证可用）
-- [x] 加密 BTC `hf_BTC`（真实）；**ETH 无 sina 源 → 暂回退 seed**（待找 ETH 源）
+- [x] 加密 BTC `hf_BTC`（真实）；**ETH 已接 Binance `ETHUSDT`**（复用金锚定币通道 `crypto_gold_live.go`，CoinGecko `ethereum` 兜底；真跑 1701.19 +5.88%）
 - [x] 后台 3s 刷新（惰性+启动即开 `StartLive()`）写入内存缓存 `datacenter/periphera/live.go`；每 symbol 维护价格滚动窗口（sparkline / 原油分时）
 - [x] 实装 `/commodities`、`/commodities/crude`、`/markets/indices`、`/crypto`、`/ticker`（live 优先，sina 失败/未就绪回退 seed）
-- [ ] `/markets/us-sectors` 真实源（美股板块隔夜涨幅，源待定）—— 仍为 seed
+- [x] `/markets/us-sectors` 真实源：**SPDR 11 只行业 ETF via sina `gb_`**（`XLE/XLK/XLC/XLF/XLB/XLI/XLV/XLY/XLP/XLRE/XLU` → 11 GICS 板块），复用 `FetchRaw` 管线（`gb_` 涨跌幅在字段[2]），`LiveSectors()` 按涨跌幅倒序；已真跑（医疗 +2.53% / 材料 +1.32% … 信息技术 −1.51%），失败回退 seed
 - [~] **暗金/暗油**：当前＝连续电子盘（hf_ 本就是近 24h 全球盘），与日盘同源同值；真实独立「夜盘 vs 日盘」口径待补（见 Open Q6）
 - 备注：台/韩 znb_ 为延迟数据，`is_open` 暂固定 true
 
@@ -63,6 +63,7 @@
   - [x] **代理**：国内 x.com 必须走代理，`.env` 配 `X_PROXY=http://127.0.0.1:33210`；脚本已 monkeypatch 修复 twscrape XClIdGen 不透传 proxy 的 bug
   - [ ] 风险预案：doc_id 轮换/限频/封号 → 退避重试 + 账号轮换（当前单账号；cookie 轮换＝删 `scripts/.twscrape_accounts.db` 重建）
 - [x] 路透/彭博 → **Google News RSS**（`news_rss.go`，E2E 跑通 reuters 33 / bloomberg 86 条）。⚠️ news.google.com 国内被墙，复用 `X_PROXY` 代理（仅 RSS 走代理，Binance/Windward 直连）
+- [x] **金十快讯 → 免登录静态源 `flash_newest.js`**（`jin10_live.go`：解析 `var newest=[...]`，仅取 `type==0` 快讯，北京时区转 Unix ms，`important==1` 可标热点；直连，无需签名/代理）。已真跑解析 47 条，接入 `/news`（source=`jin10`）+ `/news/sources` 注册。解析层有回归单测 `TestParseJin10Flash`
 - [x] 归一化为契约结构，按 `tweet_id`（`x_<id>`）去重，环形缓冲（近 ~200 条）
 - [x] cron 定时抓取；`/news` 支持 `since/source/limit`；`/news/sources` 真实计数
 > 注：twscrape 引入 **Python 依赖**（旁路脚本，独立 venv），其余后端仍是 Go。
@@ -78,6 +79,7 @@
 - [x] `GET /research`、`/research/:id`（筛选 `rating/institution/q` + `summary` 统计；库不可用降级 seed）
 - [x] `POST/PUT/DELETE /research` + `POST /research/import`（按 `dedup_key` upsert，全部 curl 验证）
 - [x] **抖音→豆包脚本接入**：`scripts/douyin_to_report.mjs` 改为 POST 到 `/api/v1/research/import`（落 MySQL，video_id 去重），已 E2E 验证
+- [x] **页内一键采集**：`POST /research/collect`（NDJSON 流），脚本扩展 `--profile/--stream/--limit/--skip-ids` 支持博主主页枚举 + 单视频；后端 `research_collect.go` 起子进程、逐条落库、并发 409、去重前置；页面「采集研报」弹窗实时进度。⚠️ 主页枚举 best-effort，需对真机 Chrome 微调
 - [ ] （可选）一次性迁移：把旧前端 localStorage 里的研报推到后端
 
 ### 外资研报 [FE]

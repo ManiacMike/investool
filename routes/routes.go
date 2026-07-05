@@ -49,6 +49,7 @@ func Routes(app *gin.Engine) {
 		v1.GET("/research/:id", api.PeripheraResearchByID)
 		v1.POST("/research", api.PeripheraResearchCreate)
 		v1.POST("/research/import", api.PeripheraResearchImport)
+		v1.POST("/research/collect", api.PeripheraResearchCollect)
 		v1.PUT("/research/:id", api.PeripheraResearchUpdate)
 		v1.DELETE("/research/:id", api.PeripheraResearchDelete)
 		v1.GET("/markets/indices", api.PeripheraIndices)

@@ -61,6 +61,10 @@
                     </div>
 
                     <div class="flex items-center gap-2 flex-wrap">
+                        <button onclick="toggleCollectModal(true)" class="flex items-center gap-1.5 bg-[#10b981] hover:bg-[#059669] text-white px-3 py-2 rounded-lg text-sm font-medium transition-all shadow-lg shadow-[#10b981]/20 hover:shadow-[#10b981]/40 active:translate-y-0.5 whitespace-nowrap">
+                            <i data-lucide="radar" class="w-3.5 h-3.5"></i>
+                            <span>采集研报</span>
+                        </button>
                         <button onclick="togglePasteModal(true)" class="flex items-center gap-1.5 bg-white hover:bg-[#f9fafb] text-[#6b7280] hover:text-[#6366f1] px-3 py-2 rounded-lg text-sm font-medium transition-all border border-[#e5e7eb] hover:border-[#6366f1] whitespace-nowrap">
                             <i data-lucide="clipboard" class="w-3.5 h-3.5"></i>
                             <span>粘贴JSON</span>
@@ -277,6 +281,78 @@
         </div>
     </div>
 
+    <!-- Modal: 采集研报（抖音博主主页 → 豆包 → 落库，实时进度） -->
+    <div id="collect-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-[#1f2937]/70 backdrop-blur-sm transition-opacity" onclick="toggleCollectModal(false)"></div>
+
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto relative z-10 modal-enter border border-[#e5e7eb] no-scrollbar">
+            <div class="p-4 border-b border-[#e5e7eb] flex justify-between items-center bg-[#f9fafb] sticky top-0 z-20">
+                <h3 class="text-base font-bold text-[#111827] flex items-center gap-2">
+                    <div class="bg-[#ecfdf5] p-1.5 rounded-lg text-[#10b981]">
+                        <i data-lucide="radar" class="w-3.5 h-3.5"></i>
+                    </div>
+                    采集研报
+                </h3>
+                <button onclick="toggleCollectModal(false)" class="text-[#9ca3af] hover:text-[#4b5563] hover:bg-[#e5e7eb] p-1.5 rounded-full transition-colors">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+
+            <div class="p-6 space-y-4">
+                <!-- 前置条件提示 -->
+                <div class="bg-[#fffbeb] border border-[#fde68a] rounded-lg p-3 flex items-start gap-2">
+                    <i data-lucide="alert-triangle" class="w-4 h-4 text-[#d97706] mt-0.5 flex-shrink-0"></i>
+                    <p class="text-xs text-[#92400e] leading-relaxed">
+                        采集需本机 Chrome 以远程调试启动（<code class="font-mono">--remote-debugging-port=9222</code>）且已登录<b>豆包</b>与<b>抖音</b>。每条视频需等豆包分析（约 1–6 分钟）。
+                    </p>
+                </div>
+
+                <div class="space-y-1">
+                    <label class="block text-xs font-bold text-[#6b7280] uppercase tracking-wider">抖音链接</label>
+                    <input type="text" id="collect-url" placeholder="博主主页 https://www.douyin.com/user/...  或  单视频链接" class="w-full px-3 py-2 bg-white border border-[#d1d5db] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#10b981] transition-all text-sm font-mono text-[#111827]">
+                    <p class="text-xs text-[#9ca3af]">主页链接将枚举最新视频逐条采集；单视频链接（含 modal_id 或 /video/）只采集该条。</p>
+                </div>
+
+                <div class="flex items-end gap-4">
+                    <div class="space-y-1">
+                        <label class="block text-xs font-bold text-[#6b7280] uppercase tracking-wider">采集数量（主页模式）</label>
+                        <input type="number" id="collect-limit" value="10" min="1" max="50" class="w-32 px-3 py-2 bg-white border border-[#d1d5db] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#10b981] transition-all text-sm font-medium text-[#111827]">
+                    </div>
+                    <div class="flex-1"></div>
+                    <button id="collect-start-btn" type="button" onclick="startCollect()" class="px-5 py-2 text-sm font-semibold text-white bg-[#10b981] rounded-lg hover:bg-[#059669] shadow-md shadow-[#10b981]/20 transition-all flex items-center gap-2">
+                        <i data-lucide="play" class="w-4 h-4"></i>
+                        开始采集
+                    </button>
+                    <button id="collect-stop-btn" type="button" onclick="stopCollect()" class="hidden px-5 py-2 text-sm font-semibold text-white bg-[#ef4444] rounded-lg hover:bg-[#dc2626] shadow-md transition-all flex items-center gap-2">
+                        <i data-lucide="square" class="w-4 h-4"></i>
+                        停止
+                    </button>
+                </div>
+
+                <!-- 豆包分析 Prompt（可编辑，video_id 为动态占位符）-->
+                <details class="space-y-1 border border-[#e5e7eb] rounded-lg p-3 bg-[#fafafa]">
+                    <summary class="text-xs font-bold text-[#6b7280] uppercase tracking-wider cursor-pointer select-none flex items-center justify-between">
+                        <span>豆包分析 Prompt（可编辑）</span>
+                        <button type="button" onclick="resetCollectPrompt(event)" class="text-[#10b981] hover:underline normal-case font-medium">恢复默认</button>
+                    </summary>
+                    <textarea id="collect-prompt" rows="10" spellcheck="false" class="mt-2 w-full px-3 py-2 bg-white border border-[#d1d5db] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#10b981] transition-all text-xs font-mono text-[#111827] leading-relaxed no-scrollbar"></textarea>
+                    <p class="text-xs text-[#9ca3af]">发送给豆包前，<code class="font-mono">{{"{{video_id}}"}}</code> 会被替换为当前视频 ID（拼成 https://www.douyin.com/video/&lt;id&gt;）。修改会自动保存在本浏览器。</p>
+                </details>
+
+                <!-- 进度统计 -->
+                <div id="collect-stats" class="hidden grid grid-cols-4 gap-2 text-center">
+                    <div class="bg-[#f3f4f6] rounded-lg py-2"><div class="text-lg font-bold text-[#111827]" id="stat-total">0</div><div class="text-xs text-[#6b7280]">总数</div></div>
+                    <div class="bg-[#ecfdf5] rounded-lg py-2"><div class="text-lg font-bold text-[#10b981]" id="stat-done">0</div><div class="text-xs text-[#6b7280]">已采集</div></div>
+                    <div class="bg-[#eff6ff] rounded-lg py-2"><div class="text-lg font-bold text-[#3b82f6]" id="stat-skip">0</div><div class="text-xs text-[#6b7280]">已跳过</div></div>
+                    <div class="bg-[#fef2f2] rounded-lg py-2"><div class="text-lg font-bold text-[#ef4444]" id="stat-fail">0</div><div class="text-xs text-[#6b7280]">失败</div></div>
+                </div>
+
+                <!-- 实时日志 -->
+                <div id="collect-log" class="hidden bg-[#0f172a] text-[#e2e8f0] rounded-lg p-3 h-64 overflow-y-auto font-mono text-xs leading-relaxed no-scrollbar space-y-1"></div>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast 提示 -->
     <div id="toast" class="fixed top-4 left-1/2 -translate-x-1/2 z-[60] bg-[#111827] text-white px-4 py-2.5 rounded-lg shadow-lg flex items-center gap-2 transition-all duration-300 opacity-0 translate-y-[-20px] pointer-events-none">
         <i data-lucide="check-circle" class="w-4 h-4 text-[#10b981]" id="toast-icon"></i>
@@ -293,9 +369,49 @@
 
         // 初始化
         document.addEventListener('DOMContentLoaded', async () => {
+            initCollectPrompt();
             await loadReports();
             renderTable();
         });
+
+        // 采集用的豆包分析 prompt：占位符是发送前替换的动态视频 ID（拼成视频链接）。
+        // 注意：本文件由 Go html/template 解析，源码里不能直接出现连续的花括号占位串，
+        // 否则会被当成模板动作导致启动报错，这里用拼接的方式在运行时生成占位符。
+        const VID_TOKEN = '{' + '{video_id}' + '}';
+        const DEFAULT_COLLECT_PROMPT = `请把这个视频分析整理成结构化 JSON 数组输出，每个视频对应一个对象。严格使用以下字段，值用中文，没有对应信息的填空字符串 ""。只输出 JSON，不要任何额外说明文字、不要代码块标记：
+[{
+  "publish_time": "研报时间",
+  "industry_category": "行业分类",
+  "institution_name": "机构名称",
+  "research_target": "调研目标",
+  "report_type": "研报类型",
+  "core_content": "核心内容",
+  "target_price": "目标价",
+  "investment_rating": "投资评级",
+  "rating_change": "评级变动",
+  "earnings_forecast_adjustment": "盈利预测调整",
+  "core_catalyst": "核心催化剂",
+  "core_risk_warning": "核心风险提示",
+  "author": "作者"
+}]
+https://www.douyin.com/video/` + VID_TOKEN;
+
+        // 初始化 prompt 输入框：优先用 localStorage 里保存过的，否则用默认模板；编辑即存。
+        function initCollectPrompt() {
+            const ta = document.getElementById('collect-prompt');
+            if (!ta) return;
+            ta.value = localStorage.getItem('collect_prompt') || DEFAULT_COLLECT_PROMPT;
+            ta.addEventListener('input', () => localStorage.setItem('collect_prompt', ta.value));
+        }
+
+        // 恢复默认 prompt（按钮在 <summary> 内，需阻止冒泡以免折叠面板）。
+        function resetCollectPrompt(e) {
+            if (e) { e.preventDefault(); e.stopPropagation(); }
+            const ta = document.getElementById('collect-prompt');
+            if (!ta) return;
+            ta.value = DEFAULT_COLLECT_PROMPT;
+            localStorage.setItem('collect_prompt', ta.value);
+        }
 
         // 提示信息
         function showToast(message, type = 'success') {
@@ -754,6 +870,179 @@
             downloadAnchorNode.remove();
             
             showToast('数据导出成功');
+        }
+
+        // ===== 采集研报（抖音 → 豆包 → 落库，NDJSON 流式实时进度）=====
+        let collectAbort = null;      // 当前采集的 AbortController
+        let collectStats = { total: 0, done: 0, skip: 0, fail: 0 };
+        let collectPersisted = 0;     // 实际落库条数(added+updated 累计)
+        let collectDbFailed = false;  // 是否出现过落库失败
+
+        function toggleCollectModal(show) {
+            const modal = document.getElementById('collect-modal');
+            if (show) {
+                modal.classList.remove('hidden');
+                lucide.createIcons();
+            } else {
+                // 关闭即中止正在进行的采集
+                if (collectAbort) { collectAbort.abort(); collectAbort = null; }
+                modal.classList.add('hidden');
+            }
+        }
+
+        function collectAppendLog(html, color) {
+            const box = document.getElementById('collect-log');
+            const line = document.createElement('div');
+            line.className = color || 'text-[#e2e8f0]';
+            line.innerHTML = html;
+            box.appendChild(line);
+            box.scrollTop = box.scrollHeight;
+        }
+
+        function collectRenderStats() {
+            document.getElementById('stat-total').textContent = collectStats.total;
+            document.getElementById('stat-done').textContent = collectStats.done;
+            document.getElementById('stat-skip').textContent = collectStats.skip;
+            document.getElementById('stat-fail').textContent = collectStats.fail;
+        }
+
+        function collectSetRunning(running) {
+            document.getElementById('collect-start-btn').classList.toggle('hidden', running);
+            document.getElementById('collect-stop-btn').classList.toggle('hidden', !running);
+            document.getElementById('collect-url').disabled = running;
+            document.getElementById('collect-limit').disabled = running;
+        }
+
+        function stopCollect() {
+            if (collectAbort) { collectAbort.abort(); collectAbort = null; }
+            collectAppendLog('⏹ 已手动停止采集', 'text-[#fca5a5]');
+            collectSetRunning(false);
+        }
+
+        // 处理单个 NDJSON 事件对象
+        function handleCollectEvent(ev) {
+            switch (ev.type) {
+                case 'stage':
+                    collectAppendLog('· ' + (ev.msg || ev.stage), 'text-[#94a3b8]');
+                    break;
+                case 'list_done':
+                    collectStats.total = ev.total || 0;
+                    collectRenderStats();
+                    collectAppendLog(`✓ 待采集 ${ev.total} 条视频`, 'text-[#7dd3fc]');
+                    break;
+                case 'video_skip':
+                    collectStats.skip++;
+                    collectRenderStats();
+                    collectAppendLog(`[${ev.index}/${ev.total}] ⤼ 跳过已采集 ${ev.video_id}`, 'text-[#93c5fd]');
+                    break;
+                case 'video_start':
+                    collectAppendLog(`[${ev.index}/${ev.total}] ⟳ 采集中 ${ev.video_id} …（等豆包生成）`, 'text-[#e2e8f0]');
+                    break;
+                case 'video_done': {
+                    collectStats.done++;
+                    collectRenderStats();
+                    const n = (ev.records && ev.records.length) || 0;
+                    if (ev.db_error) {
+                        collectDbFailed = true;
+                        collectAppendLog(`[${ev.index}/${ev.total}] ⚠ ${ev.video_id} 解析 ${n} 条，但落库失败: ${ev.db_error}`, 'text-[#fca5a5]');
+                    } else {
+                        collectPersisted += (ev.added || 0) + (ev.updated || 0);
+                        collectAppendLog(`[${ev.index}/${ev.total}] ✓ ${ev.video_id} 解析 ${n} 条（新增 ${ev.added || 0}, 更新 ${ev.updated || 0}）`, 'text-[#6ee7b7]');
+                    }
+                    break;
+                }
+                case 'video_error':
+                    collectStats.fail++;
+                    collectRenderStats();
+                    collectAppendLog(`[${ev.index}/${ev.total}] ✗ ${ev.video_id} 失败: ${ev.error || ''}`, 'text-[#fca5a5]');
+                    break;
+                case 'done':
+                    collectAppendLog(`✔ 采集完成：处理 ${ev.processed} / 跳过 ${ev.skipped} / 失败 ${ev.failed} / 共 ${ev.total}`, 'text-[#6ee7b7]');
+                    break;
+                case 'error':
+                    collectAppendLog(`⚠ ${ev.error}`, 'text-[#fca5a5]');
+                    break;
+                default:
+                    collectAppendLog(JSON.stringify(ev), 'text-[#64748b]');
+            }
+        }
+
+        async function startCollect() {
+            const url = document.getElementById('collect-url').value.trim();
+            if (!url) { showToast('请输入抖音链接', 'error'); return; }
+            const limit = parseInt(document.getElementById('collect-limit').value, 10) || 10;
+            const prompt = (document.getElementById('collect-prompt')?.value || '').trim();
+
+            // 重置 UI
+            collectStats = { total: 0, done: 0, skip: 0, fail: 0 };
+            collectPersisted = 0;
+            collectDbFailed = false;
+            document.getElementById('collect-log').innerHTML = '';
+            document.getElementById('collect-log').classList.remove('hidden');
+            document.getElementById('collect-stats').classList.remove('hidden');
+            collectRenderStats();
+            collectSetRunning(true);
+            collectAppendLog('→ 提交采集请求 …', 'text-[#94a3b8]');
+
+            collectAbort = new AbortController();
+            let anyPersisted = false;
+            try {
+                const res = await fetch('/api/v1/research/collect', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/x-ndjson' },
+                    body: JSON.stringify({ profile: url, limit, prompt }),
+                    signal: collectAbort.signal,
+                });
+                if (res.status === 409) { collectAppendLog('⚠ 已有采集任务进行中，请稍后再试', 'text-[#fca5a5]'); collectSetRunning(false); return; }
+                if (!res.ok) {
+                    let msg = 'HTTP ' + res.status;
+                    try { const j = await res.json(); if (j && j.error) msg = j.error; } catch {}
+                    collectAppendLog('⚠ 请求失败: ' + msg, 'text-[#fca5a5]');
+                    collectSetRunning(false);
+                    return;
+                }
+
+                // 增量读取 NDJSON 流
+                const reader = res.body.getReader();
+                const decoder = new TextDecoder();
+                let buf = '';
+                while (true) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
+                    buf += decoder.decode(value, { stream: true });
+                    let nl;
+                    while ((nl = buf.indexOf('\n')) >= 0) {
+                        const line = buf.slice(0, nl).trim();
+                        buf = buf.slice(nl + 1);
+                        if (!line) continue;
+                        try {
+                            const ev = JSON.parse(line);
+                            if (ev.type === 'video_done') anyPersisted = true;
+                            handleCollectEvent(ev);
+                        } catch (e) { collectAppendLog(line, 'text-[#64748b]'); }
+                    }
+                }
+            } catch (e) {
+                if (e.name === 'AbortError') collectAppendLog('⏹ 采集已中止', 'text-[#fca5a5]');
+                else collectAppendLog('⚠ 连接错误: ' + (e.message || e), 'text-[#fca5a5]');
+            } finally {
+                collectAbort = null;
+                collectSetRunning(false);
+                // 只有真正写进库才算成功、才刷新表格
+                if (collectPersisted > 0) {
+                    await loadReports();
+                    renderTable();
+                    if (collectDbFailed) showToast(`部分落库成功 ${collectPersisted} 条，有失败项，请查看日志`, 'info');
+                    else showToast(`采集完成：入库 ${collectPersisted} 条研报`);
+                } else if (collectDbFailed) {
+                    showToast('落库失败：数据库未连接，数据未保存', 'error');
+                } else if (anyPersisted) {
+                    // 有 video_done 但无新增/更新(全是重复)
+                    await loadReports();
+                    renderTable();
+                    showToast('采集完成：无新增(均已存在)', 'info');
+                }
+            }
         }
     </script>
 </body>

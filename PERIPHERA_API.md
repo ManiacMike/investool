@@ -72,13 +72,13 @@
 
 ## 1. 实时新闻
 
-> **数据源现状**：`musk`/`baimao` 已接真实源（twscrape 抓 X，cron 300s 刷新，id 形如 `x_<tweetid>`）；`reuters`/`bloomberg` 仍为占位（`/news/sources` 中 count=0），待接 RSS/聚合源。结构不变。
+> **数据源现状**：`musk`/`baimao`（twscrape 抓 X，id 形如 `x_<tweetid>`）、`reuters`/`bloomberg`（Google News RSS，走 `X_PROXY` 代理）、`jin10`（金十快讯免登录静态源 `flash_newest.js`，id 形如 `jin10_<id>`）均已接真实源，cron 合并刷新。结构不变。
 
 ### `GET /api/v1/news`
 Query：
 | 参数 | 类型 | 默认 | 说明 |
 |------|------|------|------|
-| `source` | string | `all` | 来源筛选：`all` / `reuters` / `bloomberg` / `musk` / `baimao` |
+| `source` | string | `all` | 来源筛选：`all` / `reuters` / `bloomberg` / `jin10` / `musk` / `baimao` |
 | `since` | int(ms) | - | 增量游标，仅返回更新的 |
 | `limit` | int | 30 | 最大 100 |
 
@@ -169,6 +169,31 @@ Query：`rating`（`all`/买入/增持/中性/减持）、`institution`、`q`（
 > **抖音→豆包脚本接入**：`scripts/douyin_to_report.mjs` 抖音链接 → 豆包专家模型抽取结构化研报 → **POST 到 `/api/v1/research/import`**（落 MySQL，按 `video_id` 去重 upsert）。运行：`node scripts/douyin_to_report.mjs "<抖音链接>"`，可用环境变量 `API_BASE`（默认 `http://localhost:4869`）覆盖后台地址。
 > DB 凭据走环境变量 `PERIPHERA_MYSQL_PASSWORD`（或完整 `PERIPHERA_MYSQL_DSN`），不入 `config.toml`。
 
+### （P1，页内采集）研报采集 · 实时流
+
+`zen-research-report` 页面「采集研报」按钮触发。后端起 node 子进程（`douyin_to_report.mjs --stream`）驱动已登录 Chrome（CDP）枚举抖音博主主页视频 / 单视频 → 豆包分析 → 落 MySQL，并以 **NDJSON 流** 实时回传进度。持久化在 Go 侧（脚本流式模式不自连后台）。
+
+- `POST /api/v1/research/collect`
+  - body：`{ "profile": "<抖音主页或视频链接>", "limit": 10 }`（`limit` 主页模式最多条数，默认 10、上限 50）
+  - 响应：`Content-Type: application/x-ndjson`，**每行一个 JSON 事件**（非统一 envelope）。前端用 `fetch()` + `ReadableStream` 增量解析；关闭连接（AbortController）即中止采集并 kill 子进程。
+  - 前置错误走标准 HTTP：缺 `profile` → 400；已有采集在跑 → **409**（单 Chrome/单豆包会话不可并行）。
+  - 去重前置：后端采集前取库中已有 `video_id`，经 `--skip-ids` 传给脚本，在豆包分析前跳过已入库视频。
+
+  事件类型：
+  ```
+  {"type":"stage","stage":"connect|list","msg":"..."}
+  {"type":"list_done","total":12,"video_ids":["..."]}
+  {"type":"video_skip","video_id":"...","index":1,"total":12}
+  {"type":"video_start","video_id":"...","index":2,"total":12}
+  {"type":"video_done","video_id":"...","index":2,"total":12,"records":[{...}],"added":1,"updated":0}
+  {"type":"video_error","video_id":"...","index":3,"total":12,"error":"..."}
+  {"type":"done","processed":8,"skipped":3,"failed":1,"total":12}
+  {"type":"error","error":"CDP 连接失败(Chrome 未开远程调试或未登录)"}
+  ```
+
+  **运行前提**：本机 Chrome 以 `--remote-debugging-port=9222` 启动且已登录**豆包**与**抖音**（主页枚举需要）；后端与 Chrome 同机。可用环境变量：`PERIPHERA_DOUYIN_NODE`（node 路径，默认 `node`）、`PERIPHERA_DOUYIN_SCRIPT`（脚本路径）、`CDP_PORT`（默认 9222）。
+  > 抖音主页视频枚举依赖抖音前端 DOM 结构，为 best-effort，抖音改版后可能需微调 `douyin_to_report.mjs` 里的枚举/滚动逻辑。
+
 ---
 
 ## 3. 全球股市
@@ -195,7 +220,7 @@ Query：`codes`（逗号分隔，默认 `SPX,IXIC,N225,KOSPI,TWSE`）。
 > 代码表：`SPX`=标普500、`IXIC`=纳指、`DJI`=道指、`N225`=日经225、`KOSPI`=韩国综合、`TWSE`=台湾加权。台/韩覆盖需后端验证，缺失时返回最近可得值并标 `is_open:false`。
 
 ### `GET /api/v1/markets/us-sectors`
-美股隔夜板块涨幅。响应 `data`：
+美股隔夜板块涨幅（源：SPDR 11 只行业 ETF via sina `gb_`，`LiveSectors` 按涨跌幅倒序；上游失败回退 seed）。响应 `data`：
 ```json
 {
   "items": [
@@ -257,7 +282,7 @@ Query：`codes`（逗号分隔，默认 `SPX,IXIC,N225,KOSPI,TWSE`）。
 
 ### `GET /api/v1/crypto`
 Query：`codes`（默认 `BTC,ETH,PAXG,XAUT`）。响应 `data`：
-> `PAXG`/`XAUT` 为黄金锚定币（Binance `PAXGUSDT`/`XAUTUSDT`，CoinGecko 兜底），可作「暗金」近似；`BTC` 走 sina，`ETH` 暂回退 seed。
+> `PAXG`/`XAUT` 为黄金锚定币（Binance `PAXGUSDT`/`XAUTUSDT`，CoinGecko 兜底），可作「暗金」近似；`BTC` 走 sina `hf_BTC`；`ETH` 走 Binance `ETHUSDT`（CoinGecko `ethereum` 兜底）。上游失败逐条回退 seed。
 ```json
 {
   "items": [

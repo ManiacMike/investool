@@ -52,6 +52,7 @@ var newsSourceMeta = map[string]struct{ tag, color, desc string }{
 	"baimao":    {"BM", "#8a6d3b", "盘面观点解读"},
 	"reuters":   {"RT", "#D0643E", "全球财经快讯"},
 	"bloomberg": {"BB", "#3D362A", "市场与宏观"},
+	"jin10":     {"金十", "#C0A062", "宏观 / 财经快讯"},
 }
 
 type newsStore struct {
@@ -98,6 +99,11 @@ func refreshNews() {
 	rssCtx, rssCancel := context.WithTimeout(context.Background(), 60*time.Second)
 	items := fetchNewsRSS(rssCtx)
 	rssCancel()
+
+	// 金十快讯（免登录静态源，直连）
+	j10Ctx, j10Cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	items = append(items, fetchJin10News(j10Ctx)...)
+	j10Cancel()
 
 	python := envOr("PERIPHERA_TWITTER_PYTHON", "scripts/venv/bin/python")
 	script := envOr("PERIPHERA_TWITTER_SCRIPT", "scripts/twitter_fetch.py")
@@ -208,8 +214,8 @@ func LiveNewsSources() ([]NewsSource, bool) {
 		counts[news.byID[id].Source]++
 	}
 	// 固定来源顺序，计数为 0 也展示，便于前端筛选栏稳定
-	order := []string{"reuters", "bloomberg", "musk", "baimao"}
-	names := map[string]string{"reuters": "路透社", "bloomberg": "彭博社", "musk": "马斯克", "baimao": "白毛女神"}
+	order := []string{"reuters", "bloomberg", "jin10", "musk", "baimao"}
+	names := map[string]string{"reuters": "路透社", "bloomberg": "彭博社", "jin10": "金十数据", "musk": "马斯克", "baimao": "白毛女神"}
 	out := make([]NewsSource, 0, len(order))
 	for _, code := range order {
 		meta := newsSourceMeta[code]

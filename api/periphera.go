@@ -4,8 +4,10 @@
 package api
 
 import (
+	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/axiaoxin-com/investool/datacenter/periphera"
 	"github.com/axiaoxin-com/investool/routes/response"
@@ -236,6 +238,67 @@ func PeripheraResearchImport(c *gin.Context) {
 	response.JSON(c, gin.H{"added": added, "updated": updated})
 }
 
+// PeripheraResearchCollect POST /api/v1/research/collect
+// 触发抖音博主主页/单视频 → 豆包 → 落库 的采集,并以 NDJSON 流式回传实时进度事件。
+// 与统一 envelope 不同:本接口直接回传每行一个 JSON 事件(application/x-ndjson),
+// 前端用 fetch + ReadableStream 增量解析。前置错误(缺参/并发)走标准 HTTP 状态码。
+func PeripheraResearchCollect(c *gin.Context) {
+	// 入参:profile(主页或视频链接)、limit(主页模式最多条数,默认 10,上限 50)
+	var body struct {
+		Profile string `json:"profile"`
+		Limit   int    `json:"limit"`
+		Prompt  string `json:"prompt"` // 页面可编辑的豆包分析 prompt(含 {{video_id}} 占位符),为空则用脚本内置模板
+	}
+	_ = c.ShouldBindJSON(&body)
+	input := strings.TrimSpace(body.Profile)
+	if input == "" {
+		input = strings.TrimSpace(c.Query("profile"))
+	}
+	if input == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "缺少 profile(抖音主页或视频链接)"})
+		return
+	}
+	limit := body.Limit
+	if limit <= 0 {
+		limit = 10
+	}
+	if limit > 50 {
+		limit = 50
+	}
+
+	// 单 Chrome/单豆包会话不可并行:抢不到锁返回 409。
+	if !periphera.TryStartCollect() {
+		c.JSON(http.StatusConflict, gin.H{"error": "已有采集任务进行中,请稍后再试"})
+		return
+	}
+	defer periphera.FinishCollect()
+
+	flusher, ok := c.Writer.(http.Flusher)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "服务端不支持流式响应"})
+		return
+	}
+	// 采集是单条长连接、逐个视频等豆包生成,整体可能远超 server 的 WriteTimeout(10min);
+	// 关掉本请求的写截止时间,否则跑到 ~10min 会被 net/http 掐断,前端表现为 network error。
+	if rc := http.NewResponseController(c.Writer); rc != nil {
+		_ = rc.SetWriteDeadline(time.Time{})
+	}
+	c.Header("Content-Type", "application/x-ndjson; charset=utf-8")
+	c.Header("Cache-Control", "no-cache")
+	c.Header("X-Accel-Buffering", "no") // 关闭 nginx 缓冲,保证实时
+	c.Writer.WriteHeader(http.StatusOK)
+
+	emit := func(line []byte) {
+		c.Writer.Write(line)
+		c.Writer.Write([]byte("\n"))
+		flusher.Flush()
+	}
+
+	if err := periphera.RunCollect(c.Request.Context(), input, limit, body.Prompt, emit); err != nil {
+		logging.Warnf(c, "periphera research collect ended with error: %v", err)
+	}
+}
+
 // ---- 行情 ----
 
 // PeripheraIndices GET /api/v1/markets/indices?codes=
@@ -250,6 +313,10 @@ func PeripheraIndices(c *gin.Context) {
 
 // PeripheraUSSectors GET /api/v1/markets/us-sectors
 func PeripheraUSSectors(c *gin.Context) {
+	if items, tradeDate, updatedAt, ok := periphera.LiveSectors(); ok {
+		response.JSON(c, gin.H{"items": items, "trade_date": tradeDate, "updated_at": updatedAt})
+		return
+	}
 	response.JSON(c, gin.H{"items": periphera.SeedSectors(), "trade_date": "2026-06-27", "updated_at": pServerTS()})
 }
 
