@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>股票池评分报告</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-[#f9fafb] text-[#111827] min-h-screen selection:bg-[#6366f1]/20 selection:text-[#3730a3]">
+
+    <div class="max-w-[min(100%,1600px)] mx-auto p-4 md:px-6 lg:px-8 py-8">
+
+        <!-- Header -->
+        <header class="mb-8 flex flex-col items-center">
+            <div class="flex items-center gap-3 mb-2">
+                <div class="bg-gradient-to-br from-[#6366f1] to-[#4f46e5] p-2.5 rounded-xl shadow-lg shadow-[#6366f1]/30">
+                    <i data-lucide="clipboard-check" class="w-6 h-6 text-white"></i>
+                </div>
+                <h1 class="text-3xl font-extrabold text-[#111827] tracking-tight">股票池评分报告</h1>
+            </div>
+            <p class="text-[#6b7280] font-medium text-sm">护城河 · 定价 · 技术面 · 弹性 · 确定性</p>
+            <p class="text-[#9ca3af] text-xs mt-2 flex items-center gap-1.5">
+                <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+                运行 <code class="bg-[#eef2ff] text-[#4338ca] px-1.5 py-0.5 rounded font-mono">.claude/skills/boom-advisor/scoring/run.sh</code> 生成新报告
+                <a href="/invest/boom-tracker" class="ml-3 text-[#4f46e5] hover:underline flex items-center gap-1"><i data-lucide="trending-up" class="w-3.5 h-3.5"></i>返回景气追踪</a>
+            </p>
+        </header>
+
+        <!-- 报告列表视图 -->
+        <div id="listView" class="hidden fade-in">
+            <div id="reportList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+            <div id="listEmpty" class="hidden text-center py-16 text-[#9ca3af]">
+                <i data-lucide="inbox" class="w-10 h-10 mx-auto mb-3"></i>
+                <p>还没有报告，先运行评分脚本生成一份</p>
+            </div>
+        </div>
+
+        <!-- 报告详情视图 -->
+        <div id="detailView" class="hidden fade-in">
+            <div class="flex flex-wrap items-center gap-3 mb-5">
+                <button onclick="location.hash=''" class="flex items-center gap-1.5 text-sm font-semibold text-[#4f46e5] bg-[#eef2ff] hover:bg-[#e0e7ff] px-3 py-1.5 rounded-lg transition">
+                    <i data-lucide="arrow-left" class="w-4 h-4"></i>报告列表
+                </button>
+                <h2 id="detailTitle" class="text-xl font-bold"></h2>
+                <span id="detailMeta" class="text-xs text-[#9ca3af]"></span>
+                <div class="ml-auto flex items-center gap-2 text-sm">
+                    <button id="filterAll" onclick="setFilter('all')" class="px-3 py-1.5 rounded-lg font-medium transition"></button>
+                    <button id="filterHeld" onclick="setFilter('held')" class="px-3 py-1.5 rounded-lg font-medium transition"></button>
+                    <button id="filterBuy" onclick="setFilter('buy')" class="px-3 py-1.5 rounded-lg font-medium transition"></button>
+                    <button id="filterSell" onclick="setFilter('sell')" class="px-3 py-1.5 rounded-lg font-medium transition"></button>
+                </div>
+            </div>
+            <div id="detailBody" class="flex flex-col gap-6"></div>
+        </div>
+
+        <div id="loading" class="text-center py-16 text-[#9ca3af]">
+            <i data-lucide="loader-2" class="w-8 h-8 mx-auto animate-spin"></i>
+        </div>
+    </div>
+
+<script>
+let reportCache = {};
+let currentFilter = 'all';
+let currentReport = null;
+
+const certColor = {
+    'A': 'bg-emerald-100 text-emerald-700',
+    'B': 'bg-sky-100 text-sky-700',
+    'C': 'bg-amber-100 text-amber-700',
+    'D': 'bg-rose-100 text-rose-700',
+};
+const techColor = {
+    '强趋势': 'text-emerald-600', '趋势健康': 'text-sky-600',
+    '趋势走弱': 'text-amber-600', '空头排列': 'text-rose-600',
+};
+const moatColor = {
+    '宽': 'bg-indigo-100 text-indigo-700', '中': 'bg-slate-100 text-slate-600',
+    '弱': 'bg-amber-100 text-amber-700', '无': 'bg-rose-100 text-rose-700',
+};
+const elasticColor = { '高': 'text-rose-600', '中': 'text-amber-600', '低': 'text-slate-500' };
+
+function esc(s) {
+    return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+async function api(path) {
+    const rsp = await fetch(path);
+    const j = await rsp.json();
+    if (!j.success) throw new Error(j.error || '请求失败');
+    return j.data;
+}
+
+function show(id) {
+    for (const v of ['listView', 'detailView', 'loading']) {
+        document.getElementById(v).classList.toggle('hidden', v !== id);
+    }
+}
+
+async function renderList() {
+    show('loading');
+    try {
+        const list = await api('/api/boom/scores');
+        const box = document.getElementById('reportList');
+        box.innerHTML = list.map(r => `
+            <a href="#/${esc(r.date)}" class="block bg-white rounded-2xl border border-[#e5e7eb] shadow-sm hover:shadow-md hover:border-[#c7d2fe] transition p-5">
+                <div class="flex items-center justify-between mb-3">
+                    <span class="text-lg font-bold">${esc(r.date)}</span>
+                    <i data-lucide="chevron-right" class="w-5 h-5 text-[#9ca3af]"></i>
+                </div>
+                <div class="flex flex-wrap gap-2 text-xs font-medium">
+                    <span class="bg-[#eef2ff] text-[#4338ca] px-2 py-1 rounded-md">${r.total} 只标的</span>
+                    <span class="bg-emerald-50 text-emerald-700 px-2 py-1 rounded-md">持仓 ${r.held}</span>
+                    ${r.buyCount ? `<span class="bg-rose-50 text-rose-600 px-2 py-1 rounded-md">买入 ${r.buyCount}</span>` : ''}
+                    ${r.sellCount ? `<span class="bg-emerald-50 text-emerald-600 px-2 py-1 rounded-md">卖出 ${r.sellCount}</span>` : ''}
+                </div>
+                <p class="text-xs text-[#9ca3af] mt-3">生成于 ${esc((r.generatedAt || '').replace('T', ' ').slice(0, 16))}</p>
+            </a>`).join('');
+        document.getElementById('listEmpty').classList.toggle('hidden', list.length > 0);
+        show('listView');
+    } catch (e) {
+        show('listView');
+        document.getElementById('reportList').innerHTML =
+            `<p class="text-rose-600 text-sm col-span-3">${esc(e.message)}</p>`;
+    }
+    lucide.createIcons();
+}
+
+function scoreChip(text, cls) {
+    return `<span class="inline-block px-1.5 py-0.5 rounded text-xs font-semibold ${cls}">${text}</span>`;
+}
+
+function fmtPricing(s) {
+    const parts = [];
+    if (s.growth) {
+        const g = s.growth;
+        const cls = g.score >= 2 ? 'bg-emerald-50 text-emerald-700' : g.score >= 0 ? 'bg-slate-100 text-slate-600' : 'bg-rose-50 text-rose-600';
+        parts.push(scoreChip(`成长${g.score >= 0 ? '+' : ''}${g.score} ${esc(g.label)}`, cls) +
+            `<span class="text-[11px] text-[#9ca3af] ml-1">PEG ${esc(g.PEG?.[0])} · 3yPE ${esc(g['三年预期PE']?.[0])}</span>`);
+    }
+    if (s.dividend) {
+        const d = s.dividend;
+        const cls = d.score >= 1 ? 'bg-emerald-50 text-emerald-700' : d.score >= 0 ? 'bg-slate-100 text-slate-600' : 'bg-rose-50 text-rose-600';
+        parts.push(scoreChip(`红利${d.score >= 0 ? '+' : ''}${d.score} ${esc(d.label)}`, cls) +
+            `<span class="text-[11px] text-[#9ca3af] ml-1">PE ${esc(d.PE?.[0])} · 分位${esc(d['PE分位']?.[0])}</span>`);
+    }
+    if (s.cycle_pos) parts.push(scoreChip('周期 ' + esc(s.cycle_pos), 'bg-violet-50 text-violet-700'));
+    return parts.length ? parts.join('<br>') : '<span class="text-xs text-[#9ca3af]">数据缺失</span>';
+}
+
+function fmtTech(s) {
+    const t = s.tech;
+    if (!t) return '<span class="text-xs text-[#9ca3af]">—</span>';
+    return `<span class="font-semibold ${techColor[t.label] || ''}">${t.total}/10 ${esc(t.label)}</span>` +
+        `<span class="text-[11px] text-[#9ca3af] ml-1">日${t.day}+周${t.week}</span>`;
+}
+
+const actionColor = {
+    '左侧买入': 'bg-rose-100 text-rose-700', '右侧买入': 'bg-rose-100 text-rose-700',
+    '左侧加仓': 'bg-orange-100 text-orange-700',
+    '持有': 'bg-sky-100 text-sky-700',
+    '减仓': 'bg-emerald-100 text-emerald-700', '卖出': 'bg-emerald-100 text-emerald-800',
+    '观望': 'bg-slate-100 text-slate-500', '回避': 'bg-slate-200 text-slate-600',
+};
+const BUY_ACTIONS = ['左侧买入', '右侧买入', '左侧加仓'];
+const SELL_ACTIONS = ['卖出', '减仓'];
+
+function fmtStrategy(s) {
+    const st = s.strategy;
+    if (!st) return '<span class="text-xs text-[#9ca3af]">—</span>';
+    return `<span class="inline-block px-2 py-0.5 rounded-md text-xs font-bold ${actionColor[st.action] || 'bg-slate-100'}">${esc(st.action)}</span>` +
+        `<div class="text-[11px] text-[#6b7280] mt-1 max-w-[260px]">${esc(st.text)}</div>`;
+}
+
+function stockRow(s) {
+    const held = s.held ? '<span class="text-[10px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded font-bold ml-1">持仓</span>' : '';
+    const role = s.role === 'leader' ? '龙头' : '弹性';
+    const chg = s.chg60d == null ? '' :
+        `<span class="${s.chg60d >= 0 ? 'text-rose-500' : 'text-emerald-600'}">${s.chg60d >= 0 ? '+' : ''}${s.chg60d.toFixed(0)}%/60日</span>`;
+    return `
+    <tr class="border-b border-[#f3f4f6] hover:bg-[#fafaff]">
+        <td class="py-2.5 pr-3 align-top">
+            <div class="font-semibold text-sm">${esc(s.name)}${held}</div>
+            <div class="text-[11px] text-[#9ca3af]">${esc(s.code)} · ${role} · ${s.marketCap ? s.marketCap.toFixed(0) + '亿' : '—'} ${chg}</div>
+        </td>
+        <td class="py-2.5 pr-3 align-top whitespace-nowrap">
+            ${s.moat != null ? scoreChip(`${s.moat}/10 ${esc(s.moat_label)}`, moatColor[s.moat_label] || 'bg-slate-100') : '—'}
+        </td>
+        <td class="py-2.5 pr-3 align-top min-w-[180px]">${fmtPricing(s)}</td>
+        <td class="py-2.5 pr-3 align-top min-w-[130px] text-sm">${fmtTech(s)}</td>
+        <td class="py-2.5 pr-3 align-top text-sm font-semibold ${elasticColor[s.elastic?.label] || ''}">${esc(s.elastic?.label || '—')}</td>
+        <td class="py-2.5 pr-3 align-top">${scoreChip(esc(s.certainty), certColor[s.certainty] || 'bg-slate-100 text-slate-600')}</td>
+        <td class="py-2.5 pr-3 align-top min-w-[200px]">${fmtStrategy(s)}</td>
+        <td class="py-2.5 align-top text-xs text-[#6b7280] max-w-[280px]">${esc(s.risk)}</td>
+    </tr>`;
+}
+
+function setFilter(f) {
+    currentFilter = f;
+    for (const [id, key] of [['filterAll', 'all'], ['filterHeld', 'held'], ['filterBuy', 'buy'], ['filterSell', 'sell']]) {
+        const btn = document.getElementById(id);
+        btn.className = 'px-3 py-1.5 rounded-lg font-medium transition ' +
+            (currentFilter === key ? 'bg-[#4f46e5] text-white' : 'bg-white border border-[#e5e7eb] text-[#6b7280] hover:bg-[#f3f4f6]');
+    }
+    if (currentReport) renderDetailBody();
+}
+
+function renderDetailBody() {
+    const d = currentReport;
+    let stocks = d.stocks;
+    if (currentFilter === 'held') stocks = stocks.filter(s => s.held);
+    if (currentFilter === 'buy') stocks = stocks.filter(s => BUY_ACTIONS.includes(s.strategy?.action));
+    if (currentFilter === 'sell') stocks = stocks.filter(s => SELL_ACTIONS.includes(s.strategy?.action));
+    const bySector = {};
+    for (const s of stocks) (bySector[s.sector] = bySector[s.sector] || []).push(s);
+    const body = document.getElementById('detailBody');
+    body.innerHTML = Object.entries(bySector).map(([sec, items]) => {
+        items.sort((a, b) => (a.held === b.held ? 0 : a.held ? -1 : 1) ||
+            (a.role === b.role ? 0 : a.role === 'leader' ? -1 : 1) || (b.moat || 0) - (a.moat || 0));
+        return `
+        <section class="bg-white rounded-2xl border border-[#e5e7eb] shadow-sm p-5">
+            <h3 class="font-bold text-base mb-3 flex items-center gap-2">
+                <i data-lucide="layers" class="w-4 h-4 text-[#6366f1]"></i>${esc(sec)}
+                <span class="text-xs font-medium text-[#9ca3af]">${items.length} 只</span>
+            </h3>
+            <div class="overflow-x-auto no-scrollbar">
+                <table class="w-full text-left">
+                    <thead>
+                        <tr class="text-[11px] uppercase tracking-wide text-[#9ca3af] border-b border-[#e5e7eb]">
+                            <th class="py-2 pr-3 font-semibold">标的</th>
+                            <th class="py-2 pr-3 font-semibold">护城河</th>
+                            <th class="py-2 pr-3 font-semibold">定价</th>
+                            <th class="py-2 pr-3 font-semibold">技术面</th>
+                            <th class="py-2 pr-3 font-semibold">弹性</th>
+                            <th class="py-2 pr-3 font-semibold">确定性</th>
+                            <th class="py-2 pr-3 font-semibold">策略</th>
+                            <th class="py-2 font-semibold">最大挑战</th>
+                        </tr>
+                    </thead>
+                    <tbody>${items.map(stockRow).join('')}</tbody>
+                </table>
+            </div>
+        </section>`;
+    }).join('') || '<p class="text-center text-[#9ca3af] py-10">无匹配标的</p>';
+    lucide.createIcons();
+}
+
+async function renderDetail(date) {
+    show('loading');
+    try {
+        if (!reportCache[date]) reportCache[date] = await api('/api/boom/scores/' + encodeURIComponent(date));
+        currentReport = reportCache[date];
+        const d = currentReport;
+        document.getElementById('detailTitle').textContent = '评分报告 ' + d.date;
+        document.getElementById('detailMeta').textContent =
+            '生成于 ' + (d.generatedAt || '').replace('T', ' ').slice(0, 16);
+        const buys = d.stocks.filter(s => BUY_ACTIONS.includes(s.strategy?.action)).length;
+        const sells = d.stocks.filter(s => SELL_ACTIONS.includes(s.strategy?.action)).length;
+        document.getElementById('filterAll').textContent = `全部 ${d.total}`;
+        document.getElementById('filterHeld').textContent = `持仓 ${d.held}`;
+        document.getElementById('filterBuy').textContent = `买入 ${buys}`;
+        document.getElementById('filterSell').textContent = `卖出 ${sells}`;
+        setFilter(currentFilter);
+        show('detailView');
+    } catch (e) {
+        show('detailView');
+        document.getElementById('detailBody').innerHTML = `<p class="text-rose-600 text-sm">${esc(e.message)}</p>`;
+        lucide.createIcons();
+    }
+}
+
+function route() {
+    const m = location.hash.match(/^#\/(\d{4}-\d{2}-\d{2})$/);
+    if (m) renderDetail(m[1]);
+    else renderList();
+}
+
+window.addEventListener('hashchange', route);
+route();
+</script>
+</body>
+</html>

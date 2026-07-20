@@ -38,3 +38,4 @@ scripts/venv/
 scripts/.twscrape_accounts.db
 __pycache__/
 *.pyc
+misc/data/boom_tracker.json
